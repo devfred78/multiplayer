@@ -1,0 +1,3 @@
+# IDE and virtual environment directories
+.idea/
+.venv/

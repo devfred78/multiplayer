@@ -13,13 +13,13 @@ This Python module provides a simple framework for managing multiplayer games. I
 
 ## Installation
 
-To use this module in your project, you can clone this repository and install the dependencies.
+To install the module, download the `.whl` file from the release page and run the following command:
 
 ```sh
-git clone <repository-url>
-cd multiplayer
-pip install -e .
+pip install multiplayer-0.1.0-py3-none-any.whl
 ```
+
+Replace `multiplayer-0.1.0-py3-none-any.whl` with the actual name of the downloaded file.
 
 ## Usage
 

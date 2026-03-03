@@ -54,39 +54,26 @@ class GameServer:
     def _handle_client(self, conn, addr, games, lock):
         """Handles a single client connection."""
         print(f"Connected by {addr}")
-        client_player_name = None
-        game_id = None
-        
         try:
             with conn:
-                while True:
-                    data = conn.recv(1024)
-                    if not data:
-                        break
+                data = conn.recv(1024)
+                if not data:
+                    return
+                
+                try:
+                    command = json.loads(data.decode('utf-8'))
+                    action = command.get('action')
+                    params = command.get('params', {})
                     
-                    try:
-                        command = json.loads(data.decode('utf-8'))
-                        action = command.get('action')
-                        params = command.get('params', {})
-                        
-                        if action == 'add_player':
-                            client_player_name = params.get('player', {}).get('name')
-                            game_id = params.get('game_id')
-                        
-                        with lock:
-                            response = self._execute_command(games, action, params)
-                        
-                        conn.sendall(json.dumps(response).encode('utf-8'))
-                    except (json.JSONDecodeError, TypeError) as e:
-                        error_response = {'status': 'error', 'type': 'ServerError', 'message': str(e)}
-                        conn.sendall(json.dumps(error_response).encode('utf-8'))
+                    with lock:
+                        response = self._execute_command(games, action, params)
+                    
+                    conn.sendall(json.dumps(response).encode('utf-8'))
+                except (json.JSONDecodeError, TypeError) as e:
+                    error_response = {'status': 'error', 'type': 'ServerError', 'message': str(e)}
+                    conn.sendall(json.dumps(error_response).encode('utf-8'))
         finally:
-            if client_player_name and game_id and game_id in games:
-                with lock:
-                    games[game_id].remove_player(client_player_name)
-                print(f"Player '{client_player_name}' from {addr} has disconnected and been removed from game {game_id}.")
-            else:
-                print(f"Disconnected from {addr}")
+            print(f"Disconnected from {addr}")
 
     def _execute_command(self, games, action, params):
         """Executes a command on the game objects and returns a response."""

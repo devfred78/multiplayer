@@ -73,10 +73,8 @@ def test_error_handling(game_server):
     """
     client = GameClient(port=TEST_PORT)
     
-    # Test GameNotFoundError
+    # Test GameNotFoundError by creating a proxy with a fake ID
     with pytest.raises(GameNotFoundError):
-        non_existent_game = client.create_game()
-        # Manually create a proxy with a fake ID
         from multiplayer.client import RemoteGame
         fake_game = RemoteGame("fake-id", port=TEST_PORT)
         _ = fake_game.state

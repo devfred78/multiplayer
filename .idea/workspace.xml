@@ -4,13 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Added the ability to manage multiple games on the server.">
-      <change afterPath="$PROJECT_DIR$/multiplayer/exceptions.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/multiplayer/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/multiplayer/client.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/client.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/multiplayer/game.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/game.py" afterDir="false" />
+    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Implementation of the unit test suite taking these new features into account.">
       <change beforePath="$PROJECT_DIR$/multiplayer/server.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/server.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_network.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_network.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -135,7 +131,23 @@
       <option name="project" value="LOCAL" />
       <updated>1772568223491</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="Improved error handling">
+      <option name="closed" value="true" />
+      <created>1772568560690</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1772568560690</updated>
+    </task>
+    <task id="LOCAL-00008" summary="Implementation of the unit test suite taking these new features into account.">
+      <option name="closed" value="true" />
+      <created>1772568756207</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1772568756207</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -148,6 +160,8 @@
     <MESSAGE value="First implementation of the client-server logic" />
     <MESSAGE value="Management of customer disconnection." />
     <MESSAGE value="Added the ability to manage multiple games on the server." />
-    <option name="LAST_COMMIT_MESSAGE" value="Added the ability to manage multiple games on the server." />
+    <MESSAGE value="Improved error handling" />
+    <MESSAGE value="Implementation of the unit test suite taking these new features into account." />
+    <option name="LAST_COMMIT_MESSAGE" value="Implementation of the unit test suite taking these new features into account." />
   </component>
 </project>

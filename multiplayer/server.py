@@ -39,6 +39,7 @@ class GameServer:
     def _run_server(self):
         """The main server loop that listens for and handles connections."""
         game = Game(**self.game_options)
+        game_lock = threading.Lock()
         
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((self.host, self.port))
@@ -46,29 +47,44 @@ class GameServer:
             
             while True:
                 conn, addr = s.accept()
-                thread = threading.Thread(target=self._handle_client, args=(conn, addr, game))
+                thread = threading.Thread(target=self._handle_client, args=(conn, addr, game, game_lock))
                 thread.start()
 
-    def _handle_client(self, conn, addr, game):
+    def _handle_client(self, conn, addr, game, lock):
         """Handles a single client connection."""
         print(f"Connected by {addr}")
-        with conn:
-            while True:
-                data = conn.recv(1024)
-                if not data:
-                    break
-                
-                try:
-                    command = json.loads(data.decode('utf-8'))
-                    action = command.get('action')
-                    params = command.get('params', {})
+        client_player_name = None
+        
+        try:
+            with conn:
+                while True:
+                    data = conn.recv(1024)
+                    if not data:
+                        break
                     
-                    response = self._execute_command(game, action, params)
-                    conn.sendall(json.dumps(response).encode('utf-8'))
-                except (json.JSONDecodeError, TypeError) as e:
-                    error_response = {'status': 'error', 'message': str(e)}
-                    conn.sendall(json.dumps(error_response).encode('utf-8'))
-        print(f"Disconnected from {addr}")
+                    try:
+                        command = json.loads(data.decode('utf-8'))
+                        action = command.get('action')
+                        params = command.get('params', {})
+                        
+                        # Associate the connection with a player name
+                        if action == 'add_player' and 'name' in params:
+                            client_player_name = params['name']
+                        
+                        with lock:
+                            response = self._execute_command(game, action, params)
+                        
+                        conn.sendall(json.dumps(response).encode('utf-8'))
+                    except (json.JSONDecodeError, TypeError) as e:
+                        error_response = {'status': 'error', 'message': str(e)}
+                        conn.sendall(json.dumps(error_response).encode('utf-8'))
+        finally:
+            if client_player_name:
+                with lock:
+                    game.remove_player(client_player_name)
+                print(f"Player '{client_player_name}' from {addr} has disconnected and been removed.")
+            else:
+                print(f"Disconnected from {addr}")
 
     def _execute_command(self, game, action, params):
         """Executes a command on the game object and returns a response."""
@@ -94,7 +110,10 @@ class GameServer:
                 result = {'status': 'success'}
             elif action == 'get_current_player':
                 player = game.current_player
-                result = {'status': 'success', 'data': {'name': player.name, 'attributes': player.attributes}}
+                if player:
+                    result = {'status': 'success', 'data': {'name': player.name, 'attributes': player.attributes}}
+                else:
+                    result = {'status': 'success', 'data': None}
             elif action == 'get_game_state':
                 result = {'status': 'success', 'data': game.state.value}
             else:

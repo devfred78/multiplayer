@@ -55,6 +55,24 @@ class Game:
             raise ValueError("Maximum number of players reached")
         self.players.append(player)
 
+    def remove_player(self, player_name):
+        """
+        Removes a player from the game by name.
+
+        Args:
+            player_name (str): The name of the player to remove.
+        """
+        player_to_remove = next((p for p in self.players if p.name == player_name), None)
+        if player_to_remove:
+            removed_player_index = self.players.index(player_to_remove)
+            self.players.remove(player_to_remove)
+            
+            if self.turn_based and self.state == GameState.IN_PROGRESS:
+                if not self.players:
+                    self.state = GameState.PENDING
+                elif self.current_player_index >= removed_player_index:
+                    self.current_player_index = self.current_player_index % len(self.players)
+
     def start(self):
         """
         Starts the game.
@@ -105,7 +123,8 @@ class Game:
             raise ValueError("Game is not turn-based")
         if self.state != GameState.IN_PROGRESS:
             raise ValueError("Game is not in progress")
-        self.current_player_index = (self.current_player_index + 1) % len(self.players)
+        if self.players:
+            self.current_player_index = (self.current_player_index + 1) % len(self.players)
 
     @property
     def current_player(self):
@@ -122,4 +141,6 @@ class Game:
             raise ValueError("Game is not turn-based")
         if self.state != GameState.IN_PROGRESS:
             raise ValueError("Game is not in progress")
+        if not self.players:
+            return None
         return self.players[self.current_player_index]

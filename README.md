@@ -9,6 +9,7 @@ This Python module provides a simple and flexible framework for managing multipl
 *   **Flexible Configuration:** Create games with an optional maximum number of players, turn-based or simultaneous play, and custom attributes.
 *   **Dynamic Attributes:** Add any custom key-value attributes to both `Game` and `Player` objects.
 *   **Complete Game Lifecycle:** Manage the game's flow with `start()`, `pause()`, `resume()`, and `stop()` methods.
+*   **Robust Error Handling:** A clear set of custom exceptions for both game logic and network issues.
 *   **Automatic Cleanup:** Players are automatically removed from a game when they disconnect from the server.
 
 ## Installation
@@ -92,6 +93,43 @@ game.start()
 # The game logic runs on the server
 current_player = game.current_player
 print(f"Current player is: {current_player.name}")
+```
+
+## Error Handling
+
+The module provides a set of custom exceptions to handle specific errors gracefully. This is especially useful in the client-server model.
+
+You can import the exceptions directly from the `multiplayer` package:
+
+```python
+from multiplayer import GameClient, Player
+from multiplayer.exceptions import (
+    ConnectionError,
+    GameLogicError,
+    PlayerLimitReachedError,
+    GameNotFoundError
+)
+
+client = GameClient(host='127.0.0.1', port=12345)
+
+try:
+    # Try to create a game with a limit of 1 player
+    game = client.create_game(max_players=1)
+
+    game.add_player(Player("Alice"))
+    print("Alice joined the game.")
+
+    # This next line is expected to fail
+    game.add_player(Player("Bob"))
+
+except PlayerLimitReachedError as e:
+    print(f"As expected, the game is full: {e}")
+except GameLogicError as e:
+    print(f"A game logic error occurred: {e}")
+except GameNotFoundError as e:
+    print(f"The requested game was not found on the server: {e}")
+except ConnectionError as e:
+    print(f"Could not connect to the game server: {e}")
 ```
 
 ## Running Tests

@@ -7,6 +7,7 @@ import threading
 import uuid
 from multiprocessing import Process
 from .game import Game, Player
+from .exceptions import GameLogicError, PlayerLimitReachedError
 
 class GameServer:
     """
@@ -77,7 +78,7 @@ class GameServer:
                         
                         conn.sendall(json.dumps(response).encode('utf-8'))
                     except (json.JSONDecodeError, TypeError) as e:
-                        error_response = {'status': 'error', 'message': str(e)}
+                        error_response = {'status': 'error', 'type': 'ServerError', 'message': str(e)}
                         conn.sendall(json.dumps(error_response).encode('utf-8'))
         finally:
             if client_player_name and game_id and game_id in games:
@@ -100,7 +101,7 @@ class GameServer:
             else:
                 game_id = params.get('game_id')
                 if not game_id or game_id not in games:
-                    return {'status': 'error', 'message': 'Game not found'}
+                    return {'status': 'error', 'type': 'GameNotFoundError', 'message': 'Game not found'}
                 
                 game = games[game_id]
                 
@@ -133,8 +134,10 @@ class GameServer:
                 elif action == 'get_game_state':
                     result = {'status': 'success', 'data': game.state.value}
                 else:
-                    result = {'status': 'error', 'message': 'Unknown action'}
+                    result = {'status': 'error', 'type': 'ServerError', 'message': 'Unknown action'}
+        except (GameLogicError, PlayerLimitReachedError) as e:
+            result = {'status': 'error', 'type': type(e).__name__, 'message': str(e)}
         except Exception as e:
-            result = {'status': 'error', 'message': str(e)}
+            result = {'status': 'error', 'type': 'ServerError', 'message': str(e)}
             
         return result

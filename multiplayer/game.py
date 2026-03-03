@@ -3,6 +3,7 @@ This module provides classes for managing a multiplayer game.
 """
 
 import enum
+from .exceptions import GameLogicError, PlayerLimitReachedError
 
 class GameState(enum.Enum):
     """
@@ -49,10 +50,10 @@ class Game:
             player (Player): The player to add.
 
         Raises:
-            ValueError: If the maximum number of players has been reached.
+            PlayerLimitReachedError: If the maximum number of players has been reached.
         """
         if self.max_players is not None and len(self.players) >= self.max_players:
-            raise ValueError("Maximum number of players reached")
+            raise PlayerLimitReachedError("Maximum number of players reached")
         self.players.append(player)
 
     def remove_player(self, player_name):
@@ -78,10 +79,10 @@ class Game:
         Starts the game.
 
         Raises:
-            ValueError: If there are no players in the game.
+            GameLogicError: If there are no players in the game.
         """
         if not self.players:
-            raise ValueError("Cannot start a game with no players")
+            raise GameLogicError("Cannot start a game with no players")
         self.state = GameState.IN_PROGRESS
 
     def pause(self):
@@ -89,10 +90,10 @@ class Game:
         Pauses the game.
 
         Raises:
-            ValueError: If the game is not in progress.
+            GameLogicError: If the game is not in progress.
         """
         if self.state != GameState.IN_PROGRESS:
-            raise ValueError("Game is not in progress")
+            raise GameLogicError("Game is not in progress")
         self.state = GameState.PENDING
 
     def resume(self):
@@ -100,10 +101,10 @@ class Game:
         Resumes the game.
 
         Raises:
-            ValueError: If the game is not pending.
+            GameLogicError: If the game is not pending.
         """
         if self.state != GameState.PENDING:
-            raise ValueError("Game is not pending")
+            raise GameLogicError("Game is not pending")
         self.state = GameState.IN_PROGRESS
 
     def stop(self):
@@ -117,12 +118,12 @@ class Game:
         Advances to the next turn in a turn-based game.
 
         Raises:
-            ValueError: If the game is not turn-based or not in progress.
+            GameLogicError: If the game is not turn-based or not in progress.
         """
         if not self.turn_based:
-            raise ValueError("Game is not turn-based")
+            raise GameLogicError("Game is not turn-based")
         if self.state != GameState.IN_PROGRESS:
-            raise ValueError("Game is not in progress")
+            raise GameLogicError("Game is not in progress")
         if self.players:
             self.current_player_index = (self.current_player_index + 1) % len(self.players)
 
@@ -135,12 +136,12 @@ class Game:
             Player: The current player.
 
         Raises:
-            ValueError: If the game is not turn-based or not in progress.
+            GameLogicError: If the game is not turn-based or not in progress.
         """
         if not self.turn_based:
-            raise ValueError("Game is not turn-based")
+            raise GameLogicError("Game is not turn-based")
         if self.state != GameState.IN_PROGRESS:
-            raise ValueError("Game is not in progress")
+            raise GameLogicError("Game is not in progress")
         if not self.players:
             return None
         return self.players[self.current_player_index]

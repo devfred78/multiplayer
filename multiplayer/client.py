@@ -4,6 +4,7 @@ This module provides the client-side implementation for networked multiplayer ga
 import socket
 import json
 from .game import Player
+from . import exceptions
 
 class GameClient:
     """
@@ -15,18 +16,29 @@ class GameClient:
 
     def _send_command(self, action, params=None):
         """Sends a command to the server and returns the response."""
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((self.host, self.port))
-            command = {'action': action, 'params': params or {}}
-            s.sendall(json.dumps(command).encode('utf-8'))
-            
-            response_data = s.recv(1024)
-            response = json.loads(response_data.decode('utf-8'))
-            
-            if response.get('status') == 'error':
-                raise RuntimeError(f"Server error: {response.get('message')}")
-            
-            return response.get('data')
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect((self.host, self.port))
+                command = {'action': action, 'params': params or {}}
+                s.sendall(json.dumps(command).encode('utf-8'))
+                
+                response_data = s.recv(1024)
+                response = json.loads(response_data.decode('utf-8'))
+                
+                if response.get('status') == 'error':
+                    self._handle_error(response)
+                
+                return response.get('data')
+        except socket.error as e:
+            raise exceptions.ConnectionError(f"Failed to connect to server: {e}")
+
+    def _handle_error(self, response):
+        """Raises the appropriate client-side exception based on the server's response."""
+        error_type = response.get('type', 'ServerError')
+        message = response.get('message', 'An unknown error occurred.')
+        
+        exception_class = getattr(exceptions, error_type, exceptions.ServerError)
+        raise exception_class(message)
 
     def create_game(self, **game_options):
         """Requests the server to create a new game and returns a proxy to it."""
@@ -45,25 +57,14 @@ class RemoteGame:
         self.game_id = game_id
         self.host = host
         self.port = port
+        self._client = GameClient(host, port)
 
     def _send_command(self, action, params=None):
         """Sends a command to the server for a specific game and returns the response."""
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((self.host, self.port))
-            full_params = {'game_id': self.game_id}
-            if params:
-                full_params.update(params)
-            
-            command = {'action': action, 'params': full_params}
-            s.sendall(json.dumps(command).encode('utf-8'))
-            
-            response_data = s.recv(1024)
-            response = json.loads(response_data.decode('utf-8'))
-            
-            if response.get('status') == 'error':
-                raise RuntimeError(f"Server error: {response.get('message')}")
-            
-            return response.get('data')
+        full_params = {'game_id': self.game_id}
+        if params:
+            full_params.update(params)
+        return self._client._send_command(action, full_params)
 
     def add_player(self, player):
         """Adds a player to the remote game."""

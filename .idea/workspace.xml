@@ -4,9 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Management of customer disconnection.">
+    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Added the ability to manage multiple games on the server.">
+      <change afterPath="$PROJECT_DIR$/multiplayer/exceptions.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/multiplayer/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/multiplayer/client.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/client.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/multiplayer/game.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/game.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/multiplayer/server.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/server.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -124,7 +127,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772567852249</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="Added the ability to manage multiple games on the server.">
+      <option name="closed" value="true" />
+      <created>1772568223491</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1772568223491</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -136,6 +147,7 @@
     <MESSAGE value="Starting the 0.2.0.dev2 development" />
     <MESSAGE value="First implementation of the client-server logic" />
     <MESSAGE value="Management of customer disconnection." />
-    <option name="LAST_COMMIT_MESSAGE" value="Management of customer disconnection." />
+    <MESSAGE value="Added the ability to manage multiple games on the server." />
+    <option name="LAST_COMMIT_MESSAGE" value="Added the ability to manage multiple games on the server." />
   </component>
 </project>

@@ -5,9 +5,9 @@ import socket
 import json
 from .game import Player
 
-class RemoteGame:
+class GameClient:
     """
-    A proxy for a Game object on a remote server.
+    A client for connecting to a GameServer.
     """
     def __init__(self, host='127.0.0.1', port=65432):
         self.host = host
@@ -28,9 +28,46 @@ class RemoteGame:
             
             return response.get('data')
 
+    def create_game(self, **game_options):
+        """Requests the server to create a new game and returns a proxy to it."""
+        data = self._send_command('create_game', game_options)
+        return RemoteGame(data['game_id'], self.host, self.port)
+
+    def list_games(self):
+        """Retrieves a list of available games from the server."""
+        return self._send_command('list_games')
+
+class RemoteGame:
+    """
+    A proxy for a Game object on a remote server.
+    """
+    def __init__(self, game_id, host='127.0.0.1', port=65432):
+        self.game_id = game_id
+        self.host = host
+        self.port = port
+
+    def _send_command(self, action, params=None):
+        """Sends a command to the server for a specific game and returns the response."""
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((self.host, self.port))
+            full_params = {'game_id': self.game_id}
+            if params:
+                full_params.update(params)
+            
+            command = {'action': action, 'params': full_params}
+            s.sendall(json.dumps(command).encode('utf-8'))
+            
+            response_data = s.recv(1024)
+            response = json.loads(response_data.decode('utf-8'))
+            
+            if response.get('status') == 'error':
+                raise RuntimeError(f"Server error: {response.get('message')}")
+            
+            return response.get('data')
+
     def add_player(self, player):
         """Adds a player to the remote game."""
-        params = {'name': player.name, 'attributes': player.attributes}
+        params = {'player': {'name': player.name, 'attributes': player.attributes}}
         self._send_command('add_player', params)
 
     def start(self):
@@ -57,7 +94,9 @@ class RemoteGame:
     def current_player(self):
         """Gets the current player from the remote game."""
         data = self._send_command('get_current_player')
-        return Player(data['name'], **data['attributes'])
+        if data:
+            return Player(data['name'], **data['attributes'])
+        return None
 
     @property
     def state(self):

@@ -4,10 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Starting the 0.2.0.dev2 development">
-      <change afterPath="$PROJECT_DIR$/multiplayer/client.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/multiplayer/server.py" afterDir="false" />
+    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Management of customer disconnection.">
       <change beforePath="$PROJECT_DIR$/multiplayer/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/multiplayer/client.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/client.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/multiplayer/server.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/server.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -108,7 +108,23 @@
       <option name="project" value="LOCAL" />
       <updated>1772567013731</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="First implementation of the client-server logic">
+      <option name="closed" value="true" />
+      <created>1772567657440</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1772567657440</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Management of customer disconnection.">
+      <option name="closed" value="true" />
+      <created>1772567852249</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1772567852249</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -118,6 +134,8 @@
     <MESSAGE value="Initial commit" />
     <MESSAGE value="Add MIT License" />
     <MESSAGE value="Starting the 0.2.0.dev2 development" />
-    <option name="LAST_COMMIT_MESSAGE" value="Starting the 0.2.0.dev2 development" />
+    <MESSAGE value="First implementation of the client-server logic" />
+    <MESSAGE value="Management of customer disconnection." />
+    <option name="LAST_COMMIT_MESSAGE" value="Management of customer disconnection." />
   </component>
 </project>

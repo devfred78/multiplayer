@@ -2,7 +2,18 @@
 name = "multiplayer"
 version = "0.1.0"
 description = "Library that allows you to manage multiple players, locally, on a network, or on the Internet."
+license-files = ["LICENSE.md"]
+author = "devfred78"
+readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "pytest",
 ]
+
+[build-system]
+requires = ["uv_build>=0.10.7,<0.11.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "multiplayer"
+module-root = ""

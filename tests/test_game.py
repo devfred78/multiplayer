@@ -1,8 +1,9 @@
 """
-Unit tests for the multiplayer game module.
+Unit tests for the local multiplayer game module.
 """
 import pytest
 from multiplayer import Game, Player, GameState
+from multiplayer.exceptions import GameLogicError, PlayerLimitReachedError
 
 def test_create_game():
     """
@@ -56,11 +57,11 @@ def test_add_player_with_attributes():
 
 def test_add_player_raises_error_when_max_players_reached():
     """
-    Tests that adding a player to a full game raises a ValueError.
+    Tests that adding a player to a full game raises PlayerLimitReachedError.
     """
     game = Game(max_players=1)
     game.add_player(Player("Alice"))
-    with pytest.raises(ValueError, match="Maximum number of players reached"):
+    with pytest.raises(PlayerLimitReachedError, match="Maximum number of players reached"):
         game.add_player(Player("Bob"))
 
 def test_start_game():
@@ -74,10 +75,10 @@ def test_start_game():
 
 def test_start_game_raises_error_with_no_players():
     """
-    Tests that starting a game with no players raises a ValueError.
+    Tests that starting a game with no players raises GameLogicError.
     """
     game = Game()
-    with pytest.raises(ValueError, match="Cannot start a game with no players"):
+    with pytest.raises(GameLogicError, match="Cannot start a game with no players"):
         game.start()
 
 def test_pause_and_resume_game():
@@ -95,20 +96,20 @@ def test_pause_and_resume_game():
 
 def test_pause_game_raises_error_if_not_in_progress():
     """
-    Tests that pausing a game that is not in progress raises a ValueError.
+    Tests that pausing a game that is not in progress raises GameLogicError.
     """
     game = Game()
-    with pytest.raises(ValueError, match="Game is not in progress"):
+    with pytest.raises(GameLogicError, match="Game is not in progress"):
         game.pause()
 
 def test_resume_game_raises_error_if_not_pending():
     """
-    Tests that resuming a game that is not pending raises a ValueError.
+    Tests that resuming a game that is not pending raises GameLogicError.
     """
     game = Game()
     game.add_player(Player("Alice"))
     game.start()
-    with pytest.raises(ValueError, match="Game is not pending"):
+    with pytest.raises(GameLogicError, match="Game is not pending"):
         game.resume()
 
 def test_stop_game():
@@ -139,16 +140,33 @@ def test_next_turn():
 
 def test_next_turn_raises_error_if_not_turn_based():
     """
-    Tests that advancing the turn in a non-turn-based game raises a ValueError.
+    Tests that advancing the turn in a non-turn-based game raises GameLogicError.
     """
     game = Game()
-    with pytest.raises(ValueError, match="Game is not turn-based"):
+    with pytest.raises(GameLogicError, match="Game is not turn-based"):
         game.next_turn()
 
 def test_current_player_raises_error_if_not_turn_based():
     """
-    Tests that getting the current player in a non-turn-based game raises a ValueError.
+    Tests that getting the current player in a non-turn-based game raises GameLogicError.
     """
     game = Game()
-    with pytest.raises(ValueError, match="Game is not turn-based"):
+    with pytest.raises(GameLogicError, match="Game is not turn-based"):
         _ = game.current_player
+
+def test_remove_player():
+    """
+    Tests that a player can be removed from a game.
+    """
+    game = Game(turn_based=True)
+    alice = Player("Alice")
+    bob = Player("Bob")
+    game.add_player(alice)
+    game.add_player(bob)
+    game.start()
+    
+    assert len(game.players) == 2
+    game.remove_player("Alice")
+    assert len(game.players) == 1
+    assert game.players[0] == bob
+    assert game.current_player == bob

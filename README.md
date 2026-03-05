@@ -6,7 +6,7 @@ This Python module provides a simple and flexible framework for managing multipl
 
 *   **Local & Networked:** Use in a single process or in a client-server architecture.
 *   **Automatic Server Discovery:** Clients can automatically find running servers on the local network.
-*   **Game Name Suggestions:** Includes a utility function to suggest creative game names.
+*   **Name Suggestions:** Includes utility functions to suggest creative names for games and players.
 *   **Multiple Games:** The server can manage multiple game sessions simultaneously.
 *   **Flexible Configuration:** Create games with an optional maximum number of players, turn-based or simultaneous play, and custom attributes.
 *   **Dynamic Attributes:** Add any custom key-value attributes to both `Game` and `Player` objects.
@@ -31,14 +31,14 @@ You can use this module in two ways: locally for a single-process application, o
 For simple, single-process applications, you can use the `Game` class directly.
 
 ```python
-from multiplayer import Game, Player
+from multiplayer import Game, Player, suggest_player_name
 
 # Create a new turn-based game
 game = Game(max_players=4, turn_based=True, name="My Local Game")
 
-# Add players
-game.add_player(Player("Alice", score=100))
-game.add_player(Player("Bob", score=50))
+# Add players with suggested names
+game.add_player(Player(suggest_player_name(), score=100))
+game.add_player(Player(suggest_player_name(), score=50))
 
 # Start the game
 game.start()
@@ -74,7 +74,7 @@ server.start()
 Clients can now automatically discover and connect to the server.
 
 ```python
-from multiplayer import GameClient, Player, suggest_game_name
+from multiplayer import GameClient, Player, suggest_game_name, suggest_player_name
 
 # 1. Discover servers on the network
 print("Searching for servers...")
@@ -98,7 +98,10 @@ else:
     print(f"Created game '{game_name}' with ID: {game.game_id}")
 
     # 5. Interact with the game through the proxy
-    game.add_player(Player("Charlie", level=5))
+    player_name = suggest_player_name()
+    game.add_player(Player(player_name, level=5))
+    print(f"Player '{player_name}' joined the game.")
+
     game.start()
 
     current_player = game.current_player

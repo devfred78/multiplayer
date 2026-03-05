@@ -26,3 +26,25 @@ def suggest_game_name():
     except (FileNotFoundError, IndexError):
         # Fallback in case the file is missing or empty
         return None
+
+def suggest_player_name():
+    """
+    Suggests a random player name from a list of Roman gods.
+
+    This function reads from a data file included with the package.
+
+    Returns:
+        A string containing a god's name, or None if the data cannot be loaded.
+    """
+    try:
+        # Safely access the data file packaged with the module
+        with resources.files('multiplayer').joinpath('data/roman_gods.csv').open('r', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            next(reader)  # Skip the header row
+            gods = [row[0] for row in reader]
+            if not gods:
+                return None
+            return random.choice(gods)
+    except (FileNotFoundError, IndexError):
+        # Fallback in case the file is missing or empty
+        return None

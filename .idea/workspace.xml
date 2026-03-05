@@ -4,12 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Start developing 0.4.0.dev1">
-      <change afterPath="$PROJECT_DIR$/multiplayer/data/cities.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/multiplayer/utils.py" afterDir="false" />
+    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Implement suggesting new name functionality with a list of 100 cities">
+      <change afterPath="$PROJECT_DIR$/multiplayer/data/roman_gods.csv" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/multiplayer/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/multiplayer/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -164,7 +163,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772739343263</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="Implement suggesting new name functionality with a list of 100 cities">
+      <option name="closed" value="true" />
+      <created>1772739931912</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1772739931912</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -180,6 +187,7 @@
     <MESSAGE value="Unit tests implementation" />
     <MESSAGE value="Finalize 0.3.0 version" />
     <MESSAGE value="Start developing 0.4.0.dev1" />
-    <option name="LAST_COMMIT_MESSAGE" value="Start developing 0.4.0.dev1" />
+    <MESSAGE value="Implement suggesting new name functionality with a list of 100 cities" />
+    <option name="LAST_COMMIT_MESSAGE" value="Implement suggesting new name functionality with a list of 100 cities" />
   </component>
 </project>

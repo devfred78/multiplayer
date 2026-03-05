@@ -6,6 +6,7 @@ This Python module provides a simple and flexible framework for managing multipl
 
 *   **Local & Networked:** Use in a single process or in a client-server architecture.
 *   **Automatic Server Discovery:** Clients can automatically find running servers on the local network.
+*   **Game Name Suggestions:** Includes a utility function to suggest creative game names.
 *   **Multiple Games:** The server can manage multiple game sessions simultaneously.
 *   **Flexible Configuration:** Create games with an optional maximum number of players, turn-based or simultaneous play, and custom attributes.
 *   **Dynamic Attributes:** Add any custom key-value attributes to both `Game` and `Player` objects.
@@ -73,7 +74,7 @@ server.start()
 Clients can now automatically discover and connect to the server.
 
 ```python
-from multiplayer import GameClient, Player
+from multiplayer import GameClient, Player, suggest_game_name
 
 # 1. Discover servers on the network
 print("Searching for servers...")
@@ -88,11 +89,15 @@ else:
     # 2. Connect to the first discovered server
     client = GameClient(host=host, port=port)
 
-    # 3. Create a new game on the server
-    game = client.create_game(turn_based=True, name="My Networked Game")
-    print(f"Created game with ID: {game.game_id}")
+    # 3. Suggest a name for the game
+    game_name = suggest_game_name()
+    print(f"Suggested name: {game_name}")
 
-    # 4. Interact with the game through the proxy
+    # 4. Create a new game on the server
+    game = client.create_game(turn_based=True, name=game_name)
+    print(f"Created game '{game_name}' with ID: {game.game_id}")
+
+    # 5. Interact with the game through the proxy
     game.add_player(Player("Charlie", level=5))
     game.start()
 

@@ -6,7 +6,7 @@ This Python module provides a simple and flexible framework for managing multipl
 
 *   **Local & Networked:** Use in a single process or in a client-server architecture.
 *   **Automatic Server Discovery:** Clients can automatically find running servers on the local network.
-*   **Name Suggestions:** Includes utility functions to suggest creative names for games and players from various categories.
+*   **Extensible Name Suggestions:** Includes a utility function to suggest creative names for games and players from various built-in or custom categories.
 *   **Multiple Games:** The server can manage multiple game sessions simultaneously.
 *   **Flexible Configuration:** Create games with an optional maximum number of players, turn-based or simultaneous play, and custom attributes.
 *   **Dynamic Attributes:** Add any custom key-value attributes to both `Game` and `Player` objects.
@@ -26,29 +26,40 @@ pip install multiplayer-0.1.0-py3-none-any.whl
 
 ### Name Suggestions
 
-The module can suggest names for games and players, either randomly or from a specific category.
+The module can suggest names for games and players, either randomly or from a specific category. You can also register your own custom categories.
 
+#### Basic Usage
 ```python
 from multiplayer import suggest_game_name, suggest_player_name, get_available_categories
 
-# Suggest a random game name from any game-related category
+# Suggest a random game name from any built-in game-related category
 random_game_name = suggest_game_name()
 print(f"Random game name: {random_game_name}")
-
-# Suggest a random player name from any player-related category
-random_player_name = suggest_player_name()
-print(f"Random player name: {random_player_name}")
-
-# --- OR ---
 
 # Suggest a name from a specific category
 print(f"Game categories: {get_available_categories('game')}")
 specific_game_name = suggest_game_name("cities")
 print(f"Specific game name: {specific_game_name}")
+```
 
-print(f"Player categories: {get_available_categories('player')}")
-specific_player_name = suggest_player_name("roman_gods")
-print(f"Specific player name: {specific_player_name}")
+#### Advanced Usage: Custom Categories
+You can register your own categories from a list or a file path.
+
+```python
+from multiplayer import register_name_category, suggest_player_name
+
+# Register a custom category from a list
+my_heroes = ["Aragorn", "Gandalf", "Legolas"]
+register_name_category("my_heroes", my_heroes, "player")
+
+# Register a custom category from a file (one name per line)
+# with open("my_locations.txt", "w") as f:
+#     f.write("The Shire\nRivendell\n")
+# register_name_category("my_locations", "my_locations.txt", "game")
+
+# Use the new custom category
+new_player_name = suggest_player_name("my_heroes")
+print(f"Custom player name: {new_player_name}")
 ```
 
 ### Local Usage

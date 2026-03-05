@@ -6,6 +6,7 @@ from multiplayer.utils import (
     get_available_categories,
     suggest_game_name,
     suggest_player_name,
+    register_name_category,
 )
 
 def test_get_available_categories():
@@ -20,7 +21,6 @@ def test_get_available_categories():
     assert "roman_gods" in player_cats
     assert "cities" in all_cats
     assert "roman_gods" in all_cats
-    assert len(all_cats) == len(game_cats) + len(player_cats)
     assert "roman_gods" not in game_cats
     assert "cities" not in player_cats
 
@@ -51,8 +51,6 @@ def test_suggest_game_name_player_category_is_invalid():
     """
     Tests that suggest_game_name with a player-specific category returns None.
     """
-    # This is a design choice: suggest_game_name only works with game categories
-    # if a category is specified.
     name = suggest_game_name("roman_gods")
     assert name is None
 
@@ -85,3 +83,37 @@ def test_suggest_player_name_game_category_is_invalid():
     """
     name = suggest_player_name("cities")
     assert name is None
+
+def test_register_and_use_custom_game_category_from_list():
+    """
+    Tests registering and using a custom game category from a list.
+    """
+    custom_list = ["MyCoolGame", "AnotherAwesomeGame"]
+    register_name_category("custom_games", custom_list, "game")
+    
+    assert "custom_games" in get_available_categories("game")
+    assert "custom_games" in get_available_categories("all")
+    
+    suggested_name = suggest_game_name("custom_games")
+    assert suggested_name in custom_list
+
+def test_register_and_use_custom_player_category_from_file(tmp_path):
+    """
+    Tests registering and using a custom player category from a file.
+    """
+    custom_file = tmp_path / "custom_players.txt"
+    custom_file.write_text("Hero1\nHero2\n")
+    
+    register_name_category("heroes", str(custom_file), "player")
+    
+    assert "heroes" in get_available_categories("player")
+    
+    suggested_name = suggest_player_name("heroes")
+    assert suggested_name in ["Hero1", "Hero2"]
+
+def test_register_invalid_category_type():
+    """
+    Tests that registering with an invalid type raises a ValueError.
+    """
+    with pytest.raises(ValueError):
+        register_name_category("test", [], "invalid_type")

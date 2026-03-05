@@ -4,8 +4,10 @@ This module provides utility functions for the multiplayer package.
 import csv
 import random
 from importlib import resources
+from pathlib import Path
 
-_GAME_CATEGORIES = {
+# --- Built-in Categories ---
+_BUILTIN_GAME_CATEGORIES = {
     "cities": "data/cities.csv",
     "countries": "data/countries.csv",
     "rivers": "data/rivers.csv",
@@ -13,7 +15,7 @@ _GAME_CATEGORIES = {
     "planets_moons": "data/planets_moons.csv",
 }
 
-_PLAYER_CATEGORIES = {
+_BUILTIN_PLAYER_CATEGORIES = {
     "roman_gods": "data/roman_gods.csv",
     "greek_gods": "data/greek_gods.csv",
     "egyptian_gods": "data/egyptian_gods.csv",
@@ -21,9 +23,30 @@ _PLAYER_CATEGORIES = {
     "european_queens": "data/european_queens.csv",
 }
 
+# --- Custom Categories (user-defined) ---
+_CUSTOM_GAME_CATEGORIES = {}
+_CUSTOM_PLAYER_CATEGORIES = {}
+
+def register_name_category(category_name, data, category_type):
+    """
+    Registers a new custom category for name suggestions.
+
+    Args:
+        category_name (str): The name for the new category.
+        data (list or str or Path): A list of strings, or a path to a CSV/text file.
+                                    The file should have one name per line.
+        category_type (str): "game" or "player".
+    """
+    if category_type == "game":
+        _CUSTOM_GAME_CATEGORIES[category_name] = data
+    elif category_type == "player":
+        _CUSTOM_PLAYER_CATEGORIES[category_name] = data
+    else:
+        raise ValueError("category_type must be 'game' or 'player'")
+
 def get_available_categories(category_type="all"):
     """
-    Returns a list of available categories for name suggestions.
+    Returns a list of available categories, including custom ones.
 
     Args:
         category_type (str): "all", "game", or "player".
@@ -32,28 +55,45 @@ def get_available_categories(category_type="all"):
         A list of strings representing the available categories.
     """
     if category_type == "game":
-        return list(_GAME_CATEGORIES.keys())
+        return list(_BUILTIN_GAME_CATEGORIES.keys()) + list(_CUSTOM_GAME_CATEGORIES.keys())
     if category_type == "player":
-        return list(_PLAYER_CATEGORIES.keys())
-    return list({**_GAME_CATEGORIES, **_PLAYER_CATEGORIES}.keys())
+        return list(_BUILTIN_PLAYER_CATEGORIES.keys()) + list(_CUSTOM_PLAYER_CATEGORIES.keys())
+    return list({**_BUILTIN_GAME_CATEGORIES, **_BUILTIN_PLAYER_CATEGORIES, **_CUSTOM_GAME_CATEGORIES, **_CUSTOM_PLAYER_CATEGORIES}.keys())
 
-def _suggest_from_category(category, valid_categories):
-    """Internal helper to suggest a name from a specific category."""
-    if category not in valid_categories:
-        return None
+def _get_names_from_source(source):
+    """Internal helper to load names from a list, a file path, or a package resource."""
+    if isinstance(source, list):
+        return source
     
-    file_path = valid_categories[category]
-    
+    # Try as a file path first
+    path = Path(source)
+    if path.is_file():
+        with open(path, 'r', encoding='utf-8') as f:
+            # Simple line-based reading for .txt or .csv
+            return [line.strip() for line in f if line.strip()]
+
+    # Fallback to package resource
     try:
-        with resources.files('multiplayer').joinpath(file_path).open('r', encoding='utf-8') as f:
+        with resources.files('multiplayer').joinpath(source).open('r', encoding='utf-8') as f:
             reader = csv.reader(f)
-            next(reader)  # Skip the header row
-            items = [row[0] for row in reader]
-            if not items:
-                return None
-            return random.choice(items)
-    except (FileNotFoundError, IndexError):
+            next(reader)  # Assume header
+            return [row[0] for row in reader]
+    except (FileNotFoundError, IsADirectoryError, TypeError):
         return None
+
+def _suggest_from_category(category, valid_builtin_cats, valid_custom_cats):
+    """Internal helper to suggest a name from a specific category."""
+    if category in valid_custom_cats:
+        source = valid_custom_cats[category]
+    elif category in valid_builtin_cats:
+        source = valid_builtin_cats[category]
+    else:
+        return None
+        
+    names = _get_names_from_source(source)
+    if not names:
+        return None
+    return random.choice(names)
 
 def suggest_game_name(category=None):
     """
@@ -69,10 +109,13 @@ def suggest_game_name(category=None):
         A string containing a random name, or None on failure.
     """
     if category:
-        return _suggest_from_category(category, _GAME_CATEGORIES)
+        return _suggest_from_category(category, _BUILTIN_GAME_CATEGORIES, _CUSTOM_GAME_CATEGORIES)
     
-    random_category = random.choice(list(_GAME_CATEGORIES.keys()))
-    return _suggest_from_category(random_category, _GAME_CATEGORIES)
+    all_game_cats = {**_BUILTIN_GAME_CATEGORIES, **_CUSTOM_GAME_CATEGORIES}
+    if not all_game_cats:
+        return None
+    random_category = random.choice(list(all_game_cats.keys()))
+    return _suggest_from_category(random_category, _BUILTIN_GAME_CATEGORIES, _CUSTOM_GAME_CATEGORIES)
 
 def suggest_player_name(category=None):
     """
@@ -88,7 +131,10 @@ def suggest_player_name(category=None):
         A string containing a random name, or None on failure.
     """
     if category:
-        return _suggest_from_category(category, _PLAYER_CATEGORIES)
+        return _suggest_from_category(category, _BUILTIN_PLAYER_CATEGORIES, _CUSTOM_PLAYER_CATEGORIES)
     
-    random_category = random.choice(list(_PLAYER_CATEGORIES.keys()))
-    return _suggest_from_category(random_category, _PLAYER_CATEGORIES)
+    all_player_cats = {**_BUILTIN_PLAYER_CATEGORIES, **_CUSTOM_PLAYER_CATEGORIES}
+    if not all_player_cats:
+        return None
+    random_category = random.choice(list(all_player_cats.keys()))
+    return _suggest_from_category(random_category, _BUILTIN_PLAYER_CATEGORIES, _CUSTOM_PLAYER_CATEGORIES)

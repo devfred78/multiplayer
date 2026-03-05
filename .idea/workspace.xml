@@ -4,9 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Fix errors appearing when testing.">
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/uv.lock" beforeDir="false" afterPath="$PROJECT_DIR$/uv.lock" afterDir="false" />
+    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Start developing 0.4.0.dev2 version.">
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/multiplayer/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/multiplayer/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -201,7 +203,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772743624616</updated>
     </task>
-    <option name="localTasksCounter" value="15" />
+    <task id="LOCAL-00015" summary="Start developing 0.4.0.dev2 version.">
+      <option name="closed" value="true" />
+      <created>1772743998142</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1772743998142</updated>
+    </task>
+    <option name="localTasksCounter" value="16" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -222,6 +232,7 @@
     <MESSAGE value="Add several new categories and make the category optional." />
     <MESSAGE value="Unit tests implementation." />
     <MESSAGE value="Fix errors appearing when testing." />
-    <option name="LAST_COMMIT_MESSAGE" value="Fix errors appearing when testing." />
+    <MESSAGE value="Start developing 0.4.0.dev2 version." />
+    <option name="LAST_COMMIT_MESSAGE" value="Start developing 0.4.0.dev2 version." />
   </component>
 </project>

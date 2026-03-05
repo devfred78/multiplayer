@@ -4,7 +4,12 @@ This package provides classes for managing a multiplayer game, both locally and 
 from .game import Game, Player, GameState
 from .server import GameServer
 from .client import GameClient, RemoteGame
-from .utils import suggest_game_name, suggest_player_name, get_available_categories
+from .utils import (
+    suggest_game_name,
+    suggest_player_name,
+    get_available_categories,
+    register_name_category,
+)
 from .exceptions import (
     MultiplayerError,
     GameLogicError,

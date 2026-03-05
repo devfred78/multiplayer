@@ -4,9 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Starting version 0.3.0.dev1">
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/multiplayer/client.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/client.py" afterDir="false" />
+    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Unit tests implementation">
       <change beforePath="$PROJECT_DIR$/multiplayer/server.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/server.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -88,7 +86,7 @@
       <updated>1772482606393</updated>
       <workItem from="1772482607439" duration="3629000" />
       <workItem from="1772561849068" duration="2960000" />
-      <workItem from="1772736491885" duration="512000" />
+      <workItem from="1772736491885" duration="1012000" />
     </task>
     <task id="LOCAL-00001" summary="Initial commit">
       <option name="closed" value="true" />
@@ -130,7 +128,23 @@
       <option name="project" value="LOCAL" />
       <updated>1772736802673</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="Finding server on LAN implementation">
+      <option name="closed" value="true" />
+      <created>1772737052374</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1772737052374</updated>
+    </task>
+    <task id="LOCAL-00007" summary="Unit tests implementation">
+      <option name="closed" value="true" />
+      <created>1772737253734</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1772737253734</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -142,6 +156,8 @@
     <MESSAGE value="Add the elements needed to build the package." />
     <MESSAGE value="Version identification v0.2.0" />
     <MESSAGE value="Starting version 0.3.0.dev1" />
-    <option name="LAST_COMMIT_MESSAGE" value="Starting version 0.3.0.dev1" />
+    <MESSAGE value="Finding server on LAN implementation" />
+    <MESSAGE value="Unit tests implementation" />
+    <option name="LAST_COMMIT_MESSAGE" value="Unit tests implementation" />
   </component>
 </project>

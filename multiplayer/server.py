@@ -16,6 +16,98 @@ DISCOVERY_PORT = 5007
 DISCOVERY_MESSAGE = b'multiplayer_game_discovery_request'
 RESPONSE_MESSAGE_FORMAT = b'!15sH' # 15-char IP, unsigned short port
 
+def _run_server_process(host, port):
+    """The main server loop that listens for and handles connections."""
+    games = {}
+    games_lock = threading.Lock()
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((host, port))
+        s.listen()
+
+        while True:
+            conn, addr = s.accept()
+            thread = threading.Thread(target=_handle_client, args=(conn, addr, games, games_lock))
+            thread.start()
+
+def _handle_client(conn, addr, games, lock):
+    """Handles a single client connection."""
+    print(f"Connected by {addr}")
+    try:
+        with conn:
+            data = conn.recv(1024)
+            if not data:
+                return
+
+            try:
+                command = json.loads(data.decode('utf-8'))
+                action = command.get('action')
+                params = command.get('params', {})
+
+                with lock:
+                    response = _execute_command(games, action, params)
+
+                conn.sendall(json.dumps(response).encode('utf-8'))
+            except (json.JSONDecodeError, TypeError) as e:
+                error_response = {'status': 'error', 'type': 'ServerError', 'message': str(e)}
+                conn.sendall(json.dumps(error_response).encode('utf-8'))
+    finally:
+        print(f"Disconnected from {addr}")
+
+def _execute_command(games, action, params):
+    """Executes a command on the game objects and returns a response."""
+    try:
+        if action == 'create_game':
+            game_id = str(uuid.uuid4())
+            games[game_id] = Game(**params)
+            result = {'status': 'success', 'data': {'game_id': game_id}}
+        elif action == 'list_games':
+            game_list = {gid: g.attributes for gid, g in games.items()}
+            result = {'status': 'success', 'data': game_list}
+        else:
+            game_id = params.get('game_id')
+            if not game_id or game_id not in games:
+                return {'status': 'error', 'type': 'GameNotFoundError', 'message': 'Game not found'}
+
+            game = games[game_id]
+
+            if action == 'add_player':
+                player_data = params['player']
+                player = Player(player_data['name'], **player_data.get('attributes', {}))
+                game.add_player(player)
+                result = {'status': 'success'}
+            elif action == 'start':
+                game.start()
+                result = {'status': 'success'}
+            elif action == 'pause':
+                game.pause()
+                result = {'status': 'success'}
+            elif action == 'resume':
+                game.resume()
+                result = {'status': 'success'}
+            elif action == 'stop':
+                game.stop()
+                result = {'status': 'success'}
+            elif action == 'next_turn':
+                game.next_turn()
+                result = {'status': 'success'}
+            elif action == 'get_current_player':
+                player = game.current_player
+                if player:
+                    result = {'status': 'success', 'data': {'name': player.name, 'attributes': player.attributes}}
+                else:
+                    result = {'status': 'success', 'data': None}
+            elif action == 'get_game_state':
+                result = {'status': 'success', 'data': game.state.value}
+            else:
+                result = {'status': 'error', 'type': 'ServerError', 'message': 'Unknown action'}
+    except (GameLogicError, PlayerLimitReachedError) as e:
+        result = {'status': 'error', 'type': type(e).__name__, 'message': str(e)}
+    except Exception as e:
+        result = {'status': 'error', 'type': 'ServerError', 'message': str(e)}
+
+    return result
+
 class GameServer:
     """
     Manages multiple Game instances and handles network requests from clients.
@@ -33,7 +125,7 @@ class GameServer:
             print("Server is already running.")
             return
 
-        self._server_process = Process(target=self._run_server)
+        self._server_process = Process(target=_run_server_process, args=(self.host, self.port))
         self._server_process.start()
         
         self._stop_discovery.clear()
@@ -72,9 +164,6 @@ class GameServer:
                 data, addr = sock.recvfrom(1024)
                 if data == DISCOVERY_MESSAGE:
                     print(f"Discovery request from {addr}, sending response...")
-                    # The IP address to respond with should be the server's actual LAN IP.
-                    # '0.0.0.0' is for listening, not for responding.
-                    # A simple way to get a non-loopback IP.
                     response_ip = self._get_lan_ip()
                     response_port = self.port
                     message = struct.pack(RESPONSE_MESSAGE_FORMAT, response_ip.encode('utf-8'), response_port)
@@ -86,7 +175,6 @@ class GameServer:
         """Finds the local IP address of the machine."""
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
-            # Doesn't have to be reachable
             s.connect(('10.255.255.255', 1))
             IP = s.getsockname()[0]
         except Exception:
@@ -94,95 +182,3 @@ class GameServer:
         finally:
             s.close()
         return IP
-
-    def _run_server(self):
-        """The main server loop that listens for and handles connections."""
-        games = {}
-        games_lock = threading.Lock()
-        
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind((self.host, self.port))
-            s.listen()
-            
-            while True:
-                conn, addr = s.accept()
-                thread = threading.Thread(target=self._handle_client, args=(conn, addr, games, games_lock))
-                thread.start()
-
-    def _handle_client(self, conn, addr, games, lock):
-        """Handles a single client connection."""
-        print(f"Connected by {addr}")
-        try:
-            with conn:
-                data = conn.recv(1024)
-                if not data:
-                    return
-                
-                try:
-                    command = json.loads(data.decode('utf-8'))
-                    action = command.get('action')
-                    params = command.get('params', {})
-                    
-                    with lock:
-                        response = self._execute_command(games, action, params)
-                    
-                    conn.sendall(json.dumps(response).encode('utf-8'))
-                except (json.JSONDecodeError, TypeError) as e:
-                    error_response = {'status': 'error', 'type': 'ServerError', 'message': str(e)}
-                    conn.sendall(json.dumps(error_response).encode('utf-8'))
-        finally:
-            print(f"Disconnected from {addr}")
-
-    def _execute_command(self, games, action, params):
-        """Executes a command on the game objects and returns a response."""
-        try:
-            if action == 'create_game':
-                game_id = str(uuid.uuid4())
-                games[game_id] = Game(**params)
-                result = {'status': 'success', 'data': {'game_id': game_id}}
-            elif action == 'list_games':
-                game_list = {gid: g.attributes for gid, g in games.items()}
-                result = {'status': 'success', 'data': game_list}
-            else:
-                game_id = params.get('game_id')
-                if not game_id or game_id not in games:
-                    return {'status': 'error', 'type': 'GameNotFoundError', 'message': 'Game not found'}
-                
-                game = games[game_id]
-                
-                if action == 'add_player':
-                    player_data = params['player']
-                    player = Player(player_data['name'], **player_data.get('attributes', {}))
-                    game.add_player(player)
-                    result = {'status': 'success'}
-                elif action == 'start':
-                    game.start()
-                    result = {'status': 'success'}
-                elif action == 'pause':
-                    game.pause()
-                    result = {'status': 'success'}
-                elif action == 'resume':
-                    game.resume()
-                    result = {'status': 'success'}
-                elif action == 'stop':
-                    game.stop()
-                    result = {'status': 'success'}
-                elif action == 'next_turn':
-                    game.next_turn()
-                    result = {'status': 'success'}
-                elif action == 'get_current_player':
-                    player = game.current_player
-                    if player:
-                        result = {'status': 'success', 'data': {'name': player.name, 'attributes': player.attributes}}
-                    else:
-                        result = {'status': 'success', 'data': None}
-                elif action == 'get_game_state':
-                    result = {'status': 'success', 'data': game.state.value}
-                else:
-                    result = {'status': 'error', 'type': 'ServerError', 'message': 'Unknown action'}
-        except (GameLogicError, PlayerLimitReachedError) as e:
-            result = {'status': 'error', 'type': type(e).__name__, 'message': str(e)}
-        except Exception as e:
-            result = {'status': 'error', 'type': 'ServerError', 'message': str(e)}
-            
-        return result

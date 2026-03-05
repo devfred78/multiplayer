@@ -9,6 +9,7 @@ from .utils import (
     suggest_player_name,
     get_available_categories,
     register_name_category,
+    unregister_name_category,
 )
 from .exceptions import (
     MultiplayerError,

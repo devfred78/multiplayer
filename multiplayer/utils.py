@@ -44,6 +44,24 @@ def register_name_category(category_name, data, category_type):
     else:
         raise ValueError("category_type must be 'game' or 'player'")
 
+def unregister_name_category(category_name):
+    """
+    Unregisters a custom category. Built-in categories cannot be removed.
+
+    Args:
+        category_name (str): The name of the custom category to remove.
+
+    Returns:
+        bool: True if the category was found and removed, False otherwise.
+    """
+    if category_name in _CUSTOM_GAME_CATEGORIES:
+        del _CUSTOM_GAME_CATEGORIES[category_name]
+        return True
+    if category_name in _CUSTOM_PLAYER_CATEGORIES:
+        del _CUSTOM_PLAYER_CATEGORIES[category_name]
+        return True
+    return False
+
 def get_available_categories(category_type="all"):
     """
     Returns a list of available categories, including custom ones.

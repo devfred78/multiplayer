@@ -26,7 +26,7 @@ pip install multiplayer-0.1.0-py3-none-any.whl
 
 ### Name Suggestions
 
-The module can suggest names for games and players, either randomly or from a specific category. You can also register your own custom categories.
+The module can suggest names for games and players, either randomly or from a specific category. You can also register and unregister your own custom categories.
 
 #### Basic Usage
 ```python
@@ -43,23 +43,22 @@ print(f"Specific game name: {specific_game_name}")
 ```
 
 #### Advanced Usage: Custom Categories
-You can register your own categories from a list or a file path.
+You can register your own categories from a list or a file path, and unregister them when no longer needed.
 
 ```python
-from multiplayer import register_name_category, suggest_player_name
+from multiplayer import register_name_category, unregister_name_category, suggest_player_name
 
 # Register a custom category from a list
 my_heroes = ["Aragorn", "Gandalf", "Legolas"]
 register_name_category("my_heroes", my_heroes, "player")
 
-# Register a custom category from a file (one name per line)
-# with open("my_locations.txt", "w") as f:
-#     f.write("The Shire\nRivendell\n")
-# register_name_category("my_locations", "my_locations.txt", "game")
-
 # Use the new custom category
 new_player_name = suggest_player_name("my_heroes")
 print(f"Custom player name: {new_player_name}")
+
+# Unregister the category
+was_removed = unregister_name_category("my_heroes")
+print(f"Category 'my_heroes' was removed: {was_removed}")
 ```
 
 ### Local Usage

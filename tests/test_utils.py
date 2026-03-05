@@ -7,7 +7,19 @@ from multiplayer.utils import (
     suggest_game_name,
     suggest_player_name,
     register_name_category,
+    unregister_name_category,
 )
+
+# Fixture to ensure custom categories are cleaned up after each test
+@pytest.fixture(autouse=True)
+def cleanup_custom_categories():
+    """Cleans up any registered custom categories after a test."""
+    yield
+    # This code runs after each test
+    all_custom = get_available_categories("all")
+    for cat in all_custom:
+        unregister_name_category(cat)
+
 
 def test_get_available_categories():
     """
@@ -117,3 +129,30 @@ def test_register_invalid_category_type():
     """
     with pytest.raises(ValueError):
         register_name_category("test", [], "invalid_type")
+
+def test_unregister_custom_category():
+    """
+    Tests that a custom category can be unregistered.
+    """
+    register_name_category("temp_cat", ["a", "b"], "game")
+    assert "temp_cat" in get_available_categories("game")
+    
+    result = unregister_name_category("temp_cat")
+    assert result is True
+    assert "temp_cat" not in get_available_categories("game")
+
+def test_unregister_non_existent_category():
+    """
+    Tests that unregistering a non-existent category returns False.
+    """
+    result = unregister_name_category("non_existent")
+    assert result is False
+
+def test_unregister_builtin_category_is_not_allowed():
+    """
+    Tests that built-in categories cannot be unregistered.
+    """
+    assert "cities" in get_available_categories("game")
+    result = unregister_name_category("cities")
+    assert result is False
+    assert "cities" in get_available_categories("game")

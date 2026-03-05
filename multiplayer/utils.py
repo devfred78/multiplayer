@@ -37,13 +37,12 @@ def get_available_categories(category_type="all"):
         return list(_PLAYER_CATEGORIES.keys())
     return list({**_GAME_CATEGORIES, **_PLAYER_CATEGORIES}.keys())
 
-def _suggest_from_category(category):
+def _suggest_from_category(category, valid_categories):
     """Internal helper to suggest a name from a specific category."""
-    all_categories = {**_GAME_CATEGORIES, **_PLAYER_CATEGORIES}
-    if category not in all_categories:
+    if category not in valid_categories:
         return None
     
-    file_path = all_categories[category]
+    file_path = valid_categories[category]
     
     try:
         with resources.files('multiplayer').joinpath(file_path).open('r', encoding='utf-8') as f:
@@ -70,10 +69,10 @@ def suggest_game_name(category=None):
         A string containing a random name, or None on failure.
     """
     if category:
-        return _suggest_from_category(category)
+        return _suggest_from_category(category, _GAME_CATEGORIES)
     
     random_category = random.choice(list(_GAME_CATEGORIES.keys()))
-    return _suggest_from_category(random_category)
+    return _suggest_from_category(random_category, _GAME_CATEGORIES)
 
 def suggest_player_name(category=None):
     """
@@ -89,7 +88,7 @@ def suggest_player_name(category=None):
         A string containing a random name, or None on failure.
     """
     if category:
-        return _suggest_from_category(category)
+        return _suggest_from_category(category, _PLAYER_CATEGORIES)
     
     random_category = random.choice(list(_PLAYER_CATEGORIES.keys()))
-    return _suggest_from_category(random_category)
+    return _suggest_from_category(random_category, _PLAYER_CATEGORIES)

@@ -4,18 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Suggest new name for players using a list of 100 roman gods">
-      <change afterPath="$PROJECT_DIR$/multiplayer/data/countries.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/multiplayer/data/egyptian_gods.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/multiplayer/data/european_kings.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/multiplayer/data/european_queens.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/multiplayer/data/greek_gods.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/multiplayer/data/planets_moons.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/multiplayer/data/rivers.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/multiplayer/data/seas_oceans.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/multiplayer/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/__init__.py" afterDir="false" />
+    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Unit tests implementation.">
       <change beforePath="$PROJECT_DIR$/multiplayer/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -187,7 +176,23 @@
       <option name="project" value="LOCAL" />
       <updated>1772740273760</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="Add several new categories and make the category optional.">
+      <option name="closed" value="true" />
+      <created>1772743194292</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1772743194292</updated>
+    </task>
+    <task id="LOCAL-00013" summary="Unit tests implementation.">
+      <option name="closed" value="true" />
+      <created>1772743385229</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1772743385229</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -205,6 +210,8 @@
     <MESSAGE value="Start developing 0.4.0.dev1" />
     <MESSAGE value="Implement suggesting new name functionality with a list of 100 cities" />
     <MESSAGE value="Suggest new name for players using a list of 100 roman gods" />
-    <option name="LAST_COMMIT_MESSAGE" value="Suggest new name for players using a list of 100 roman gods" />
+    <MESSAGE value="Add several new categories and make the category optional." />
+    <MESSAGE value="Unit tests implementation." />
+    <option name="LAST_COMMIT_MESSAGE" value="Unit tests implementation." />
   </component>
 </project>

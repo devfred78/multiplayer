@@ -5,12 +5,12 @@ This Python module provides a simple and flexible framework for managing multipl
 ## Features
 
 *   **Local & Networked:** Use in a single process or in a client-server architecture.
+*   **Automatic Server Discovery:** Clients can automatically find running servers on the local network.
 *   **Multiple Games:** The server can manage multiple game sessions simultaneously.
 *   **Flexible Configuration:** Create games with an optional maximum number of players, turn-based or simultaneous play, and custom attributes.
 *   **Dynamic Attributes:** Add any custom key-value attributes to both `Game` and `Player` objects.
 *   **Complete Game Lifecycle:** Manage the game's flow with `start()`, `pause()`, `resume()`, and `stop()` methods.
 *   **Robust Error Handling:** A clear set of custom exceptions for both game logic and network issues.
-*   **Automatic Cleanup:** Players are automatically removed from a game when they disconnect from the server.
 
 ## Installation
 
@@ -20,8 +20,6 @@ To install the module, download the `.whl` file from the release page and run th
 pip install multiplayer-0.1.0-py3-none-any.whl
 ```
 *Replace `multiplayer-0.1.0-py3-none-any.whl` with the actual name of the downloaded file.*
-
-Replace `multiplayer-0.1.0-py3-none-any.whl` with the actual name of the downloaded file.
 
 ## Usage
 
@@ -56,12 +54,13 @@ For games running on different machines, you can use the client-server architect
 
 #### Server Setup
 
-First, start the `GameServer` on your server machine. It will run in the background and manage all game sessions.
+First, start the `GameServer` on your server machine. It will run in the background, manage all game sessions, and be discoverable on the local network.
 
 ```python
 from multiplayer import GameServer
 
 # Start the server (it will run in a separate process)
+# Using host='0.0.0.0' makes it accessible from other machines on the network.
 server = GameServer(host='0.0.0.0', port=12345)
 server.start()
 
@@ -71,37 +70,39 @@ server.start()
 
 #### Client Usage
 
-Clients can then connect to the server, create new games, or join existing ones.
+Clients can now automatically discover and connect to the server.
 
 ```python
 from multiplayer import GameClient, Player
 
-# 1. Connect to the server
-client = GameClient(host='<server-ip-address>', port=12345)
+# 1. Discover servers on the network
+print("Searching for servers...")
+servers = GameClient.discover_servers()
 
-# 2. Create a new game on the server
-# This returns a RemoteGame proxy object.
-game = client.create_game(turn_based=True, name="My Networked Game")
-print(f"Created game with ID: {game.game_id}")
+if not servers:
+    print("No servers found.")
+else:
+    host, port = servers[0]
+    print(f"Found server at {host}:{port}")
 
-# 3. (Optional) List available games on the server
-available_games = client.list_games()
-print("Available games on server:", available_games)
+    # 2. Connect to the first discovered server
+    client = GameClient(host=host, port=port)
 
-# 4. Interact with the game through the proxy
-game.add_player(Player("Charlie", level=5))
-game.start()
+    # 3. Create a new game on the server
+    game = client.create_game(turn_based=True, name="My Networked Game")
+    print(f"Created game with ID: {game.game_id}")
 
-# The game logic runs on the server
-current_player = game.current_player
-print(f"Current player is: {current_player.name}")
+    # 4. Interact with the game through the proxy
+    game.add_player(Player("Charlie", level=5))
+    game.start()
+
+    current_player = game.current_player
+    print(f"Current player is: {current_player.name}")
 ```
 
 ## Error Handling
 
-The module provides a set of custom exceptions to handle specific errors gracefully. This is especially useful in the client-server model.
-
-You can import the exceptions directly from the `multiplayer` package:
+The module provides a set of custom exceptions to handle specific errors gracefully.
 
 ```python
 from multiplayer import GameClient, Player
@@ -112,9 +113,14 @@ from multiplayer.exceptions import (
     GameNotFoundError
 )
 
-client = GameClient(host='127.0.0.1', port=12345)
-
 try:
+    # Discover and connect to a server
+    servers = GameClient.discover_servers(timeout=1)
+    if not servers:
+        raise ConnectionError("No servers found on the network.")
+
+    client = GameClient(*servers[0])
+
     # Try to create a game with a limit of 1 player
     game = client.create_game(max_players=1)
 
@@ -131,7 +137,7 @@ except GameLogicError as e:
 except GameNotFoundError as e:
     print(f"The requested game was not found on the server: {e}")
 except ConnectionError as e:
-    print(f"Could not connect to the game server: {e}")
+    print(f"A connection or discovery error occurred: {e}")
 ```
 
 ## Running Tests

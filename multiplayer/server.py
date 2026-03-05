@@ -5,37 +5,95 @@ import socket
 import json
 import threading
 import uuid
+import struct
 from multiprocessing import Process
 from .game import Game, Player
 from .exceptions import GameLogicError, PlayerLimitReachedError
+
+# Constants for network discovery
+MULTICAST_GROUP = '224.1.1.1'
+DISCOVERY_PORT = 5007
+DISCOVERY_MESSAGE = b'multiplayer_game_discovery_request'
+RESPONSE_MESSAGE_FORMAT = b'!15sH' # 15-char IP, unsigned short port
 
 class GameServer:
     """
     Manages multiple Game instances and handles network requests from clients.
     """
-    def __init__(self, host='127.0.0.1', port=65432):
+    def __init__(self, host='0.0.0.0', port=65432):
         self.host = host
         self.port = port
         self._server_process = None
+        self._discovery_thread = None
+        self._stop_discovery = threading.Event()
 
     def start(self):
-        """Starts the game server in a separate process."""
+        """Starts the game server and discovery service in separate processes/threads."""
         if self._server_process and self._server_process.is_alive():
             print("Server is already running.")
             return
 
         self._server_process = Process(target=self._run_server)
         self._server_process.start()
+        
+        self._stop_discovery.clear()
+        self._discovery_thread = threading.Thread(target=self._run_discovery_service)
+        self._discovery_thread.start()
+        
         print(f"Server started on {self.host}:{self.port} with PID {self._server_process.pid}")
+        print("Network discovery service started.")
 
     def stop(self):
-        """Stops the game server process."""
+        """Stops the game server and discovery service."""
         if self._server_process and self._server_process.is_alive():
             self._server_process.terminate()
             self._server_process.join()
             print("Server stopped.")
         else:
             print("Server is not running.")
+            
+        if self._discovery_thread and self._discovery_thread.is_alive():
+            self._stop_discovery.set()
+            self._discovery_thread.join()
+            print("Network discovery service stopped.")
+
+    def _run_discovery_service(self):
+        """Listens for multicast discovery messages and responds."""
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind(('', DISCOVERY_PORT))
+        
+        mreq = struct.pack("4sl", socket.inet_aton(MULTICAST_GROUP), socket.INADDR_ANY)
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+        sock.settimeout(1.0)
+
+        while not self._stop_discovery.is_set():
+            try:
+                data, addr = sock.recvfrom(1024)
+                if data == DISCOVERY_MESSAGE:
+                    print(f"Discovery request from {addr}, sending response...")
+                    # The IP address to respond with should be the server's actual LAN IP.
+                    # '0.0.0.0' is for listening, not for responding.
+                    # A simple way to get a non-loopback IP.
+                    response_ip = self._get_lan_ip()
+                    response_port = self.port
+                    message = struct.pack(RESPONSE_MESSAGE_FORMAT, response_ip.encode('utf-8'), response_port)
+                    sock.sendto(message, addr)
+            except socket.timeout:
+                continue
+
+    def _get_lan_ip(self):
+        """Finds the local IP address of the machine."""
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            # Doesn't have to be reachable
+            s.connect(('10.255.255.255', 1))
+            IP = s.getsockname()[0]
+        except Exception:
+            IP = '127.0.0.1'
+        finally:
+            s.close()
+        return IP
 
     def _run_server(self):
         """The main server loop that listens for and handles connections."""

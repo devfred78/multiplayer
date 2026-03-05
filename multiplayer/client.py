@@ -3,8 +3,16 @@ This module provides the client-side implementation for networked multiplayer ga
 """
 import socket
 import json
+import struct
+import time
 from .game import Player
 from . import exceptions
+
+# Constants for network discovery
+MULTICAST_GROUP = '224.1.1.1'
+DISCOVERY_PORT = 5007
+DISCOVERY_MESSAGE = b'multiplayer_game_discovery_request'
+RESPONSE_MESSAGE_FORMAT = b'!15sH' # 15-char IP, unsigned short port
 
 class GameClient:
     """
@@ -13,6 +21,38 @@ class GameClient:
     def __init__(self, host='127.0.0.1', port=65432):
         self.host = host
         self.port = port
+
+    @staticmethod
+    def discover_servers(timeout=2):
+        """
+        Discovers game servers on the local network using UDP multicast.
+
+        Args:
+            timeout (int): The number of seconds to listen for responses.
+
+        Returns:
+            A list of (host, port) tuples for discovered servers.
+        """
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        sock.settimeout(timeout)
+
+        # Send the discovery message to the multicast group
+        sock.sendto(DISCOVERY_MESSAGE, (MULTICAST_GROUP, DISCOVERY_PORT))
+
+        servers = []
+        end_time = time.time() + timeout
+
+        while time.time() < end_time:
+            try:
+                data, _ = sock.recvfrom(1024)
+                ip_bytes, port = struct.unpack(RESPONSE_MESSAGE_FORMAT, data)
+                host = ip_bytes.decode('utf-8').strip('\x00')
+                servers.append((host, port))
+            except socket.timeout:
+                break
+
+        # Remove duplicates
+        return list(set(servers))
 
     def _send_command(self, action, params=None):
         """Sends a command to the server and returns the response."""

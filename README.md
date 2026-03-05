@@ -2,6 +2,8 @@
 
 This Python module provides a simple and flexible framework for managing multiplayer games, both locally and over a network.
 
+For a detailed technical description of all classes and functions, see the [API Reference](REFERENCE.md).
+
 ## Features
 
 *   **Local & Networked:** Use in a single process or in a client-server architecture.

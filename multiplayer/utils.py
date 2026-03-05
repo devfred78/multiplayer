@@ -5,46 +5,91 @@ import csv
 import random
 from importlib import resources
 
-def suggest_game_name():
-    """
-    Suggests a random game name from a list of major world cities.
+_GAME_CATEGORIES = {
+    "cities": "data/cities.csv",
+    "countries": "data/countries.csv",
+    "rivers": "data/rivers.csv",
+    "seas_oceans": "data/seas_oceans.csv",
+    "planets_moons": "data/planets_moons.csv",
+}
 
-    This function reads from a data file included with the package.
+_PLAYER_CATEGORIES = {
+    "roman_gods": "data/roman_gods.csv",
+    "greek_gods": "data/greek_gods.csv",
+    "egyptian_gods": "data/egyptian_gods.csv",
+    "european_kings": "data/european_kings.csv",
+    "european_queens": "data/european_queens.csv",
+}
+
+def get_available_categories(category_type="all"):
+    """
+    Returns a list of available categories for name suggestions.
+
+    Args:
+        category_type (str): "all", "game", or "player".
 
     Returns:
-        A string containing a city name, or None if the data cannot be loaded.
+        A list of strings representing the available categories.
     """
+    if category_type == "game":
+        return list(_GAME_CATEGORIES.keys())
+    if category_type == "player":
+        return list(_PLAYER_CATEGORIES.keys())
+    return list({**_GAME_CATEGORIES, **_PLAYER_CATEGORIES}.keys())
+
+def _suggest_from_category(category):
+    """Internal helper to suggest a name from a specific category."""
+    all_categories = {**_GAME_CATEGORIES, **_PLAYER_CATEGORIES}
+    if category not in all_categories:
+        return None
+    
+    file_path = all_categories[category]
+    
     try:
-        # Safely access the data file packaged with the module
-        with resources.files('multiplayer').joinpath('data/cities.csv').open('r', encoding='utf-8') as f:
+        with resources.files('multiplayer').joinpath(file_path).open('r', encoding='utf-8') as f:
             reader = csv.reader(f)
             next(reader)  # Skip the header row
-            cities = [row[0] for row in reader]
-            if not cities:
+            items = [row[0] for row in reader]
+            if not items:
                 return None
-            return random.choice(cities)
+            return random.choice(items)
     except (FileNotFoundError, IndexError):
-        # Fallback in case the file is missing or empty
         return None
 
-def suggest_player_name():
+def suggest_game_name(category=None):
     """
-    Suggests a random player name from a list of Roman gods.
+    Suggests a random game name.
 
-    This function reads from a data file included with the package.
+    If a category is provided, a name is chosen from that category.
+    If no category is provided, a random game-related category is chosen first.
+
+    Args:
+        category (str, optional): A category from get_available_categories("game").
 
     Returns:
-        A string containing a god's name, or None if the data cannot be loaded.
+        A string containing a random name, or None on failure.
     """
-    try:
-        # Safely access the data file packaged with the module
-        with resources.files('multiplayer').joinpath('data/roman_gods.csv').open('r', encoding='utf-8') as f:
-            reader = csv.reader(f)
-            next(reader)  # Skip the header row
-            gods = [row[0] for row in reader]
-            if not gods:
-                return None
-            return random.choice(gods)
-    except (FileNotFoundError, IndexError):
-        # Fallback in case the file is missing or empty
-        return None
+    if category:
+        return _suggest_from_category(category)
+    
+    random_category = random.choice(list(_GAME_CATEGORIES.keys()))
+    return _suggest_from_category(random_category)
+
+def suggest_player_name(category=None):
+    """
+    Suggests a random player name.
+
+    If a category is provided, a name is chosen from that category.
+    If no category is provided, a random player-related category is chosen first.
+
+    Args:
+        category (str, optional): A category from get_available_categories("player").
+
+    Returns:
+        A string containing a random name, or None on failure.
+    """
+    if category:
+        return _suggest_from_category(category)
+    
+    random_category = random.choice(list(_PLAYER_CATEGORIES.keys()))
+    return _suggest_from_category(random_category)

@@ -6,7 +6,7 @@ This Python module provides a simple and flexible framework for managing multipl
 
 *   **Local & Networked:** Use in a single process or in a client-server architecture.
 *   **Automatic Server Discovery:** Clients can automatically find running servers on the local network.
-*   **Name Suggestions:** Includes utility functions to suggest creative names for games and players.
+*   **Name Suggestions:** Includes utility functions to suggest creative names for games and players from various categories.
 *   **Multiple Games:** The server can manage multiple game sessions simultaneously.
 *   **Flexible Configuration:** Create games with an optional maximum number of players, turn-based or simultaneous play, and custom attributes.
 *   **Dynamic Attributes:** Add any custom key-value attributes to both `Game` and `Player` objects.
@@ -24,88 +24,84 @@ pip install multiplayer-0.1.0-py3-none-any.whl
 
 ## Usage
 
-You can use this module in two ways: locally for a single-process application, or in a client-server architecture for networked games.
+### Name Suggestions
 
-### 1. Local Usage
+The module can suggest names for games and players, either randomly or from a specific category.
+
+```python
+from multiplayer import suggest_game_name, suggest_player_name, get_available_categories
+
+# Suggest a random game name from any game-related category
+random_game_name = suggest_game_name()
+print(f"Random game name: {random_game_name}")
+
+# Suggest a random player name from any player-related category
+random_player_name = suggest_player_name()
+print(f"Random player name: {random_player_name}")
+
+# --- OR ---
+
+# Suggest a name from a specific category
+print(f"Game categories: {get_available_categories('game')}")
+specific_game_name = suggest_game_name("cities")
+print(f"Specific game name: {specific_game_name}")
+
+print(f"Player categories: {get_available_categories('player')}")
+specific_player_name = suggest_player_name("roman_gods")
+print(f"Specific player name: {specific_player_name}")
+```
+
+### Local Usage
 
 For simple, single-process applications, you can use the `Game` class directly.
 
 ```python
-from multiplayer import Game, Player, suggest_player_name
+from multiplayer import Game, Player, suggest_game_name, suggest_player_name
 
-# Create a new turn-based game
-game = Game(max_players=4, turn_based=True, name="My Local Game")
+# Create a new turn-based game with a random name
+game = Game(max_players=4, turn_based=True, name=suggest_game_name())
 
-# Add players with suggested names
+# Add players with random names
 game.add_player(Player(suggest_player_name(), score=100))
-game.add_player(Player(suggest_player_name(), score=50))
+game.add_player(Player(suggest_player_name("egyptian_gods"), score=50)) # From a specific category
 
 # Start the game
 game.start()
-
-# Access game state and players directly
-print(f"Current player: {game.current_player.name}")
-game.next_turn()
-print(f"Next player: {game.current_player.name}")
 ```
 
-### 2. Networked Usage (Client-Server)
+### Networked Usage (Client-Server)
 
 For games running on different machines, you can use the client-server architecture.
 
 #### Server Setup
-
-First, start the `GameServer` on your server machine. It will run in the background, manage all game sessions, and be discoverable on the local network.
-
 ```python
 from multiplayer import GameServer
 
-# Start the server (it will run in a separate process)
-# Using host='0.0.0.0' makes it accessible from other machines on the network.
 server = GameServer(host='0.0.0.0', port=12345)
 server.start()
-
-# The server is now listening for client connections.
-# You can stop it later with server.stop()
 ```
 
 #### Client Usage
-
-Clients can now automatically discover and connect to the server.
-
 ```python
 from multiplayer import GameClient, Player, suggest_game_name, suggest_player_name
 
 # 1. Discover servers on the network
-print("Searching for servers...")
 servers = GameClient.discover_servers()
-
 if not servers:
     print("No servers found.")
 else:
     host, port = servers[0]
-    print(f"Found server at {host}:{port}")
-
-    # 2. Connect to the first discovered server
     client = GameClient(host=host, port=port)
 
-    # 3. Suggest a name for the game
-    game_name = suggest_game_name()
-    print(f"Suggested name: {game_name}")
+    # 2. Create a new game with a suggested name
+    game = client.create_game(turn_based=True, name=suggest_game_name())
 
-    # 4. Create a new game on the server
-    game = client.create_game(turn_based=True, name=game_name)
-    print(f"Created game '{game_name}' with ID: {game.game_id}")
-
-    # 5. Interact with the game through the proxy
+    # 3. Add a player with a suggested name
     player_name = suggest_player_name()
     game.add_player(Player(player_name, level=5))
-    print(f"Player '{player_name}' joined the game.")
 
+    print(f"Player '{player_name}' joined game '{game.attributes['name']}'")
     game.start()
-
-    current_player = game.current_player
-    print(f"Current player is: {current_player.name}")
 ```
 
 ## Error Handling
@@ -122,21 +118,14 @@ from multiplayer.exceptions import (
 )
 
 try:
-    # Discover and connect to a server
     servers = GameClient.discover_servers(timeout=1)
     if not servers:
         raise ConnectionError("No servers found on the network.")
 
     client = GameClient(*servers[0])
-
-    # Try to create a game with a limit of 1 player
     game = client.create_game(max_players=1)
-
     game.add_player(Player("Alice"))
-    print("Alice joined the game.")
-
-    # This next line is expected to fail
-    game.add_player(Player("Bob"))
+    game.add_player(Player("Bob")) # This line is expected to fail
 
 except PlayerLimitReachedError as e:
     print(f"As expected, the game is full: {e}")

@@ -16,14 +16,25 @@ TEST_PORT = 65433
 @pytest.fixture(scope="module")
 def game_server():
     """Fixture to start and stop the game server for the test module."""
-    server = GameServer(port=TEST_PORT)
+    server = GameServer(host='0.0.0.0', port=TEST_PORT)
     server.start()
     # Give the server a moment to start up
-    time.sleep(0.1)
+    time.sleep(0.2)
     yield
     server.stop()
     # Give the server a moment to shut down
-    time.sleep(0.1)
+    time.sleep(0.2)
+
+def test_server_discovery(game_server):
+    """
+    Tests that the server discovery mechanism works.
+    """
+    discovered_servers = GameClient.discover_servers(timeout=1)
+    assert len(discovered_servers) > 0
+    
+    # Check if our test server is in the list of discovered servers
+    found = any(port == TEST_PORT for _, port in discovered_servers)
+    assert found, f"Test server on port {TEST_PORT} not found in discovered list: {discovered_servers}"
 
 def test_server_connection(game_server):
     """

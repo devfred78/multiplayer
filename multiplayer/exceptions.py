@@ -29,3 +29,7 @@ class ConnectionError(NetworkError):
 class ServerError(NetworkError):
     """Raised when the server reports a generic internal error."""
     pass
+
+class AuthenticationError(NetworkError):
+    """Raised for password authentication failures."""
+    pass

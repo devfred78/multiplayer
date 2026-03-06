@@ -18,9 +18,10 @@ class GameClient:
     """
     A client for connecting to a GameServer.
     """
-    def __init__(self, host='127.0.0.1', port=65432):
+    def __init__(self, host='127.0.0.1', port=65432, password=None):
         self.host = host
         self.port = port
+        self.password = password
 
     @staticmethod
     def discover_servers(timeout=2):
@@ -59,7 +60,11 @@ class GameClient:
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect((self.host, self.port))
-                command = {'action': action, 'params': params or {}}
+                command = {
+                    'action': action,
+                    'params': params or {},
+                    'password': self.password,
+                }
                 s.sendall(json.dumps(command).encode('utf-8'))
                 
                 response_data = s.recv(1024)
@@ -83,7 +88,7 @@ class GameClient:
     def create_game(self, **game_options):
         """Requests the server to create a new game and returns a proxy to it."""
         data = self._send_command('create_game', game_options)
-        return RemoteGame(data['game_id'], self.host, self.port)
+        return RemoteGame(data['game_id'], self.host, self.port, self.password)
 
     def list_games(self):
         """Retrieves a list of available games from the server."""
@@ -93,11 +98,11 @@ class RemoteGame:
     """
     A proxy for a Game object on a remote server.
     """
-    def __init__(self, game_id, host='127.0.0.1', port=65432):
+    def __init__(self, game_id, host='127.0.0.1', port=65432, password=None):
         self.game_id = game_id
         self.host = host
         self.port = port
-        self._client = GameClient(host, port)
+        self._client = GameClient(host, port, password)
 
     def _send_command(self, action, params=None):
         """Sends a command to the server for a specific game and returns the response."""

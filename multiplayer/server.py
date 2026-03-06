@@ -8,7 +8,7 @@ import uuid
 import struct
 from multiprocessing import Process
 from .game import Game, Player
-from .exceptions import GameLogicError, PlayerLimitReachedError
+from .exceptions import GameLogicError, PlayerLimitReachedError, AuthenticationError
 
 # Constants for network discovery
 MULTICAST_GROUP = '224.1.1.1'
@@ -16,21 +16,21 @@ DISCOVERY_PORT = 5007
 DISCOVERY_MESSAGE = b'multiplayer_game_discovery_request'
 RESPONSE_MESSAGE_FORMAT = b'!15sH' # 15-char IP, unsigned short port
 
-def _run_server_process(host, port):
+def _run_server_process(host, port, password):
     """The main server loop that listens for and handles connections."""
     games = {}
     games_lock = threading.Lock()
-
+    
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((host, port))
         s.listen()
-
+        
         while True:
             conn, addr = s.accept()
-            thread = threading.Thread(target=_handle_client, args=(conn, addr, games, games_lock))
+            thread = threading.Thread(target=_handle_client, args=(conn, addr, games, games_lock, password))
             thread.start()
 
-def _handle_client(conn, addr, games, lock):
+def _handle_client(conn, addr, games, lock, server_password):
     """Handles a single client connection."""
     print(f"Connected by {addr}")
     try:
@@ -38,18 +38,24 @@ def _handle_client(conn, addr, games, lock):
             data = conn.recv(1024)
             if not data:
                 return
-
+            
             try:
                 command = json.loads(data.decode('utf-8'))
+                
+                # Password check
+                client_password = command.get('password')
+                if server_password is not None and client_password != server_password:
+                    raise AuthenticationError("Invalid password")
+
                 action = command.get('action')
                 params = command.get('params', {})
-
+                
                 with lock:
                     response = _execute_command(games, action, params)
-
+                
                 conn.sendall(json.dumps(response).encode('utf-8'))
-            except (json.JSONDecodeError, TypeError) as e:
-                error_response = {'status': 'error', 'type': 'ServerError', 'message': str(e)}
+            except (json.JSONDecodeError, TypeError, AuthenticationError) as e:
+                error_response = {'status': 'error', 'type': type(e).__name__, 'message': str(e)}
                 conn.sendall(json.dumps(error_response).encode('utf-8'))
     finally:
         print(f"Disconnected from {addr}")
@@ -68,9 +74,9 @@ def _execute_command(games, action, params):
             game_id = params.get('game_id')
             if not game_id or game_id not in games:
                 return {'status': 'error', 'type': 'GameNotFoundError', 'message': 'Game not found'}
-
+            
             game = games[game_id]
-
+            
             if action == 'add_player':
                 player_data = params['player']
                 player = Player(player_data['name'], **player_data.get('attributes', {}))
@@ -105,16 +111,17 @@ def _execute_command(games, action, params):
         result = {'status': 'error', 'type': type(e).__name__, 'message': str(e)}
     except Exception as e:
         result = {'status': 'error', 'type': 'ServerError', 'message': str(e)}
-
+        
     return result
 
 class GameServer:
     """
     Manages multiple Game instances and handles network requests from clients.
     """
-    def __init__(self, host='0.0.0.0', port=65432):
+    def __init__(self, host='0.0.0.0', port=65432, password=None):
         self.host = host
         self.port = port
+        self.password = password
         self._server_process = None
         self._discovery_thread = None
         self._stop_discovery = threading.Event()
@@ -125,7 +132,7 @@ class GameServer:
             print("Server is already running.")
             return
 
-        self._server_process = Process(target=_run_server_process, args=(self.host, self.port))
+        self._server_process = Process(target=_run_server_process, args=(self.host, self.port, self.password))
         self._server_process.start()
         
         self._stop_discovery.clear()

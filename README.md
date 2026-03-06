@@ -7,12 +7,11 @@ For a detailed technical description of all classes and functions, see the [API 
 ## Features
 
 *   **Local & Networked:** Use in a single process or in a client-server architecture.
+*   **Password-Protected Servers:** Secure your game server with a simple password.
 *   **Automatic Server Discovery:** Clients can automatically find running servers on the local network.
 *   **Extensible Name Suggestions:** Includes a utility function to suggest creative names for games and players from various built-in or custom categories.
 *   **Multiple Games:** The server can manage multiple game sessions simultaneously.
 *   **Flexible Configuration:** Create games with an optional maximum number of players, turn-based or simultaneous play, and custom attributes.
-*   **Dynamic Attributes:** Add any custom key-value attributes to both `Game` and `Player` objects.
-*   **Complete Game Lifecycle:** Manage the game's flow with `start()`, `pause()`, `resume()`, and `stop()` methods.
 *   **Robust Error Handling:** A clear set of custom exceptions for both game logic and network issues.
 
 ## Installation
@@ -28,39 +27,14 @@ pip install multiplayer-0.1.0-py3-none-any.whl
 
 ### Name Suggestions
 
-The module can suggest names for games and players, either randomly or from a specific category. You can also register and unregister your own custom categories.
-
-#### Basic Usage
-```python
-from multiplayer import suggest_game_name, suggest_player_name, get_available_categories
-
-# Suggest a random game name from any built-in game-related category
-random_game_name = suggest_game_name()
-print(f"Random game name: {random_game_name}")
-
-# Suggest a name from a specific category
-print(f"Game categories: {get_available_categories('game')}")
-specific_game_name = suggest_game_name("cities")
-print(f"Specific game name: {specific_game_name}")
-```
-
-#### Advanced Usage: Custom Categories
-You can register your own categories from a list or a file path, and unregister them when no longer needed.
+The module can suggest names for games and players. See the [API Reference](REFERENCE.md) for advanced usage.
 
 ```python
-from multiplayer import register_name_category, unregister_name_category, suggest_player_name
+from multiplayer import suggest_game_name, suggest_player_name
 
-# Register a custom category from a list
-my_heroes = ["Aragorn", "Gandalf", "Legolas"]
-register_name_category("my_heroes", my_heroes, "player")
-
-# Use the new custom category
-new_player_name = suggest_player_name("my_heroes")
-print(f"Custom player name: {new_player_name}")
-
-# Unregister the category
-was_removed = unregister_name_category("my_heroes")
-print(f"Category 'my_heroes' was removed: {was_removed}")
+# Suggest a random game name and player name
+game_name = suggest_game_name()
+player_name = suggest_player_name()
 ```
 
 ### Local Usage
@@ -68,16 +42,10 @@ print(f"Category 'my_heroes' was removed: {was_removed}")
 For simple, single-process applications, you can use the `Game` class directly.
 
 ```python
-from multiplayer import Game, Player, suggest_game_name, suggest_player_name
+from multiplayer import Game, Player, suggest_game_name
 
-# Create a new turn-based game with a random name
 game = Game(max_players=4, turn_based=True, name=suggest_game_name())
-
-# Add players with random names
-game.add_player(Player(suggest_player_name(), score=100))
-game.add_player(Player(suggest_player_name("egyptian_gods"), score=50)) # From a specific category
-
-# Start the game
+game.add_player(Player("Alice", score=100))
 game.start()
 ```
 
@@ -86,16 +54,21 @@ game.start()
 For games running on different machines, you can use the client-server architecture.
 
 #### Server Setup
+You can start a server with or without a password.
+
 ```python
 from multiplayer import GameServer
 
-server = GameServer(host='0.0.0.0', port=12345)
+# Start a password-protected server
+server = GameServer(host='0.0.0.0', port=12345, password="my_secret_password")
 server.start()
 ```
 
 #### Client Usage
+Clients must provide the correct password to connect.
+
 ```python
-from multiplayer import GameClient, Player, suggest_game_name, suggest_player_name
+from multiplayer import GameClient, Player, suggest_game_name
 
 # 1. Discover servers on the network
 servers = GameClient.discover_servers()
@@ -103,48 +76,37 @@ if not servers:
     print("No servers found.")
 else:
     host, port = servers[0]
-    client = GameClient(host=host, port=port)
 
-    # 2. Create a new game with a suggested name
+    # 2. Connect to the server with the password
+    client = GameClient(host=host, port=port, password="my_secret_password")
+
+    # 3. Create a new game
     game = client.create_game(turn_based=True, name=suggest_game_name())
 
-    # 3. Add a player with a suggested name
-    player_name = suggest_player_name()
-    game.add_player(Player(player_name, level=5))
-
-    print(f"Player '{player_name}' joined game '{game.attributes['name']}'")
+    # 4. Add a player and start
+    game.add_player(Player("Charlie", level=5))
     game.start()
 ```
 
 ## Error Handling
 
-The module provides a set of custom exceptions to handle specific errors gracefully.
+The module provides a set of custom exceptions, including `AuthenticationError`.
 
 ```python
-from multiplayer import GameClient, Player
-from multiplayer.exceptions import (
-    ConnectionError,
-    GameLogicError,
-    PlayerLimitReachedError,
-    GameNotFoundError
-)
+from multiplayer import GameClient
+from multiplayer.exceptions import ConnectionError, AuthenticationError
 
 try:
     servers = GameClient.discover_servers(timeout=1)
     if not servers:
-        raise ConnectionError("No servers found on the network.")
+        raise ConnectionError("No servers found.")
 
-    client = GameClient(*servers[0])
-    game = client.create_game(max_players=1)
-    game.add_player(Player("Alice"))
-    game.add_player(Player("Bob")) # This line is expected to fail
+    # Try to connect with the wrong password
+    client = GameClient(*servers[0], password="wrong_password")
+    client.list_games()
 
-except PlayerLimitReachedError as e:
-    print(f"As expected, the game is full: {e}")
-except GameLogicError as e:
-    print(f"A game logic error occurred: {e}")
-except GameNotFoundError as e:
-    print(f"The requested game was not found on the server: {e}")
+except AuthenticationError as e:
+    print(f"Authentication failed as expected: {e}")
 except ConnectionError as e:
     print(f"A connection or discovery error occurred: {e}")
 ```

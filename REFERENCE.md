@@ -53,11 +53,12 @@ An enumeration for the state of the game.
 
 These classes manage the client-server architecture.
 
-### `GameServer(host='0.0.0.0', port=65432)`
+### `GameServer(host='0.0.0.0', port=65432, password=None)`
 Manages game sessions and handles network requests.
 
 *   **`host`** (`str`): The host address to bind to. Use `'0.0.0.0'` to make it accessible on the local network.
 *   **`port`** (`int`): The TCP port to listen on for game commands.
+*   **`password`** (`str`, optional): A password to protect the server. If set, clients must provide it to connect.
 
 #### Methods
 *   `start()`: Starts the server in a background process.
@@ -65,11 +66,12 @@ Manages game sessions and handles network requests.
 
 ---
 
-### `GameClient(host='127.0.0.1', port=65432)`
+### `GameClient(host='127.0.0.1', port=65432, password=None)`
 The main entry point for a client to connect to a `GameServer`.
 
 *   **`host`** (`str`): The IP address of the server.
 *   **`port`** (`int`): The TCP port of the server.
+*   **`password`** (`str`, optional): The password for the server.
 
 #### Methods
 *   `discover_servers(timeout=2)` (static method): Scans the local network for running `GameServer` instances. Returns a list of `(host, port)` tuples.
@@ -125,3 +127,4 @@ Suggests a random name for a player. If `category` is omitted, a random player-r
 *   **`NetworkError`**: Base exception for network-related issues.
 *   **`ConnectionError`**: Raised when a client fails to connect to the server.
 *   **`ServerError`**: Raised for generic errors reported by the server.
+*   **`AuthenticationError`**: Raised for password authentication failures.

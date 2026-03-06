@@ -19,4 +19,5 @@ from .exceptions import (
     NetworkError,
     ConnectionError,
     ServerError,
+    AuthenticationError,
 )

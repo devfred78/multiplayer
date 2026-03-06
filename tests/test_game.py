@@ -3,7 +3,7 @@ Unit tests for the local multiplayer game module.
 """
 import pytest
 from multiplayer import Game, Player, GameState
-from multiplayer.exceptions import GameLogicError, PlayerLimitReachedError
+from multiplayer.exceptions import GameLogicError, PlayerLimitReachedError, AuthenticationError
 
 def test_create_game():
     """
@@ -15,6 +15,51 @@ def test_create_game():
     assert not game.players
     assert game.state == GameState.PENDING
     assert not game.attributes
+    assert game.password is None
+
+def test_create_game_with_password():
+    """
+    Tests that a game can be created with a password.
+    """
+    game = Game(password="secret")
+    assert game.password == "secret"
+
+def test_add_player_to_password_protected_game_success():
+    """
+    Tests that a player can join a password-protected game with the correct password.
+    """
+    game = Game(password="secret")
+    player = Player("Alice")
+    game.add_player(player, password="secret")
+    assert len(game.players) == 1
+    assert game.players[0] == player
+
+def test_add_player_to_password_protected_game_no_password():
+    """
+    Tests that joining a password-protected game without a password fails.
+    """
+    game = Game(password="secret")
+    player = Player("Alice")
+    with pytest.raises(AuthenticationError, match="Invalid password for this game"):
+        game.add_player(player)
+
+def test_add_player_to_password_protected_game_wrong_password():
+    """
+    Tests that joining a password-protected game with the wrong password fails.
+    """
+    game = Game(password="secret")
+    player = Player("Alice")
+    with pytest.raises(AuthenticationError, match="Invalid password for this game"):
+        game.add_player(player, password="wrong_secret")
+
+def test_add_player_to_public_game_with_unnecessary_password():
+    """
+    Tests that providing a password to a public game still allows the player to join.
+    """
+    game = Game()
+    player = Player("Alice")
+    game.add_player(player, password="any_password")
+    assert len(game.players) == 1
 
 def test_create_game_with_options():
     """

@@ -43,6 +43,7 @@ class Game:
         self.players = []
         self.state = GameState.PENDING
         self.current_player_index = 0
+        self.custom_state = {}
 
     def add_player(self, player, password=None):
         """

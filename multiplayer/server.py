@@ -16,9 +16,17 @@ from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
+import enum
 
-from .game import Game, Player
+from .game import Game, Player, GameState
 from .exceptions import GameLogicError, PlayerLimitReachedError, AuthenticationError
+
+# Custom JSON Encoder to handle enums
+class EnumEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, enum.Enum):
+            return obj.value
+        return super().default(obj)
 
 # Constants for network discovery
 MULTICAST_GROUP = '224.1.1.1'
@@ -100,10 +108,10 @@ def _handle_client(conn, addr, games, lock, server_password):
                 params = command.get('params', {})
                 with lock:
                     response = _execute_command(games, action, params)
-                conn.sendall(json.dumps(response).encode('utf-8'))
+                conn.sendall(json.dumps(response, cls=EnumEncoder).encode('utf-8'))
             except (json.JSONDecodeError, TypeError, AuthenticationError) as e:
                 error_response = {'status': 'error', 'type': type(e).__name__, 'message': str(e)}
-                conn.sendall(json.dumps(error_response).encode('utf-8'))
+                conn.sendall(json.dumps(error_response, cls=EnumEncoder).encode('utf-8'))
     finally:
         print(f"Disconnected from {addr}")
 
@@ -150,7 +158,7 @@ def _execute_command(games, action, params):
                 else:
                     result = {'status': 'success', 'data': None}
             elif action == 'get_game_state':
-                result = {'status': 'success', 'data': game.state.value}
+                result = {'status': 'success', 'data': game.state}
             else:
                 result = {'status': 'error', 'type': 'ServerError', 'message': 'Unknown action'}
     except (GameLogicError, PlayerLimitReachedError, AuthenticationError) as e:

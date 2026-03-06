@@ -173,3 +173,7 @@ class RemoteGame:
     def state(self):
         """Gets the state of the remote game."""
         return self._send_command('get_game_state')
+
+    def set_state(self, state):
+        """Sets the state of the remote game."""
+        return self._send_command('set_game_state', {'state': state})

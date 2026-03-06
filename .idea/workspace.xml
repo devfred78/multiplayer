@@ -5,12 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Starting version 0.5.1.dev1">
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/REFERENCE.md" beforeDir="false" afterPath="$PROJECT_DIR$/REFERENCE.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/multiplayer/client.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/client.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/multiplayer/game.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/game.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/multiplayer/server.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/server.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_network.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_network.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/uv.lock" beforeDir="false" afterPath="$PROJECT_DIR$/uv.lock" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -21,7 +17,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="main" />
+        <entry key="$PROJECT_DIR$" value="PasswordForGame" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -63,7 +59,7 @@
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "ai.playground.ignore.import.keys.banner.in.settings": "true",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "PasswordForGame",
+    "git-widget-placeholder": "main",
     "junie.onboarding.icon.badge.shown": "true",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
@@ -299,6 +295,17 @@
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Initial commit" />

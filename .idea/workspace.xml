@@ -4,13 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Starting version 0.5.0.dev1">
+    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Starting version 0.5.0.dev2">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/REFERENCE.md" beforeDir="false" afterPath="$PROJECT_DIR$/REFERENCE.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/multiplayer/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/multiplayer/client.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/client.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/multiplayer/exceptions.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/exceptions.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/multiplayer/server.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/server.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tests/test_network.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_network.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -93,7 +93,7 @@
       <workItem from="1772482607439" duration="3629000" />
       <workItem from="1772561849068" duration="2960000" />
       <workItem from="1772736491885" duration="1012000" />
-      <workItem from="1772825897802" duration="1084000" />
+      <workItem from="1772825897802" duration="2461000" />
     </task>
     <task id="LOCAL-00001" summary="Initial commit">
       <option name="closed" value="true" />
@@ -247,7 +247,23 @@
       <option name="project" value="LOCAL" />
       <updated>1772826068363</updated>
     </task>
-    <option name="localTasksCounter" value="20" />
+    <task id="LOCAL-00020" summary="Possibility to set a password for the server">
+      <option name="closed" value="true" />
+      <created>1772827310194</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1772827310194</updated>
+    </task>
+    <task id="LOCAL-00021" summary="Starting version 0.5.0.dev2">
+      <option name="closed" value="true" />
+      <created>1772827984274</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1772827984274</updated>
+    </task>
+    <option name="localTasksCounter" value="22" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -273,6 +289,8 @@
     <MESSAGE value="Adding a reference file for the module's public API documentation." />
     <MESSAGE value="Finalize version 0.4.0" />
     <MESSAGE value="Starting version 0.5.0.dev1" />
-    <option name="LAST_COMMIT_MESSAGE" value="Starting version 0.5.0.dev1" />
+    <MESSAGE value="Possibility to set a password for the server" />
+    <MESSAGE value="Starting version 0.5.0.dev2" />
+    <option name="LAST_COMMIT_MESSAGE" value="Starting version 0.5.0.dev2" />
   </component>
 </project>

@@ -53,12 +53,13 @@ An enumeration for the state of the game.
 
 These classes manage the client-server architecture.
 
-### `GameServer(host='0.0.0.0', port=65432, password=None)`
+### `GameServer(host='0.0.0.0', port=65432, password=None, use_tls=False)`
 Manages game sessions and handles network requests.
 
 *   **`host`** (`str`): The host address to bind to. Use `'0.0.0.0'` to make it accessible on the local network.
 *   **`port`** (`int`): The TCP port to listen on for game commands.
-*   **`password`** (`str`, optional): A password to protect the server. If set, clients must provide it to connect.
+*   **`password`** (`str`, optional): A password to protect the server.
+*   **`use_tls`** (`bool`, optional): If `True`, enables TLS v1.3 encryption for all communications. Defaults to `False`.
 
 #### Methods
 *   `start()`: Starts the server in a background process.
@@ -66,12 +67,13 @@ Manages game sessions and handles network requests.
 
 ---
 
-### `GameClient(host='127.0.0.1', port=65432, password=None)`
+### `GameClient(host='127.0.0.1', port=65432, password=None, use_tls=False)`
 The main entry point for a client to connect to a `GameServer`.
 
 *   **`host`** (`str`): The IP address of the server.
 *   **`port`** (`int`): The TCP port of the server.
 *   **`password`** (`str`, optional): The password for the server.
+*   **`use_tls`** (`bool`, optional): If `True`, the client will connect using TLS. Defaults to `False`.
 
 #### Methods
 *   `discover_servers(timeout=2)` (static method): Scans the local network for running `GameServer` instances. Returns a list of `(host, port)` tuples.

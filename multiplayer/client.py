@@ -79,14 +79,19 @@ class GameClient:
                 conn.sendall(json.dumps(command).encode('utf-8'))
                 
                 response_data = conn.recv(1024)
+                if not response_data:
+                    raise exceptions.ConnectionError("Server closed the connection without a response (possible TLS mismatch).")
+                
                 response = json.loads(response_data.decode('utf-8'))
                 
                 if response.get('status') == 'error':
                     self._handle_error(response)
                 
                 return response.get('data')
-        except socket.error as e:
+        except (socket.error, ssl.SSLError) as e:
             raise exceptions.ConnectionError(f"Failed to connect to server: {e}")
+        except json.JSONDecodeError:
+            raise exceptions.ConnectionError("Failed to decode server response (possible TLS mismatch).")
 
     def _handle_error(self, response):
         """Raises the appropriate client-side exception based on the server's response."""

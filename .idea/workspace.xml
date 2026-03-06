@@ -4,14 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Starting version 0.5.0.dev2">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/REFERENCE.md" beforeDir="false" afterPath="$PROJECT_DIR$/REFERENCE.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/multiplayer/client.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/client.py" afterDir="false" />
+    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Correction of the error revealed by unit tests">
       <change beforePath="$PROJECT_DIR$/multiplayer/server.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/server.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_network.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_network.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -93,7 +87,7 @@
       <workItem from="1772482607439" duration="3629000" />
       <workItem from="1772561849068" duration="2960000" />
       <workItem from="1772736491885" duration="1012000" />
-      <workItem from="1772825897802" duration="2461000" />
+      <workItem from="1772825897802" duration="2976000" />
     </task>
     <task id="LOCAL-00001" summary="Initial commit">
       <option name="closed" value="true" />
@@ -263,7 +257,23 @@
       <option name="project" value="LOCAL" />
       <updated>1772827984274</updated>
     </task>
-    <option name="localTasksCounter" value="22" />
+    <task id="LOCAL-00022" summary="Implementation of TLSv1.3 encryption">
+      <option name="closed" value="true" />
+      <created>1772828692135</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1772828692135</updated>
+    </task>
+    <task id="LOCAL-00023" summary="Correction of the error revealed by unit tests">
+      <option name="closed" value="true" />
+      <created>1772828956223</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1772828956223</updated>
+    </task>
+    <option name="localTasksCounter" value="24" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -291,6 +301,8 @@
     <MESSAGE value="Starting version 0.5.0.dev1" />
     <MESSAGE value="Possibility to set a password for the server" />
     <MESSAGE value="Starting version 0.5.0.dev2" />
-    <option name="LAST_COMMIT_MESSAGE" value="Starting version 0.5.0.dev2" />
+    <MESSAGE value="Implementation of TLSv1.3 encryption" />
+    <MESSAGE value="Correction of the error revealed by unit tests" />
+    <option name="LAST_COMMIT_MESSAGE" value="Correction of the error revealed by unit tests" />
   </component>
 </project>

@@ -10,7 +10,7 @@ import ssl
 import tempfile
 import os
 from multiprocessing import Process
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from cryptography import x509
 from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import hashes
@@ -47,9 +47,9 @@ def _generate_self_signed_cert():
     ).serial_number(
         x509.random_serial_number()
     ).not_valid_before(
-        datetime.utcnow()
+        datetime.now(timezone.utc)
     ).not_valid_after(
-        datetime.utcnow() + timedelta(days=1)
+        datetime.now(timezone.utc) + timedelta(days=1)
     ).add_extension(
         x509.SubjectAlternativeName([x509.DNSName(u"localhost")]),
         critical=False,

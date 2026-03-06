@@ -6,15 +6,16 @@ This document provides a detailed reference for the public API of the `multiplay
 
 These classes are used for managing game logic, whether locally or on the server.
 
-### `Game(max_players=None, turn_based=False, **kwargs)`
+### `Game(max_players=None, turn_based=False, password=None, **kwargs)`
 Represents a single game session.
 
 *   **`max_players`** (`int`, optional): The maximum number of players that can join. Defaults to `None` (unlimited).
 *   **`turn_based`** (`bool`, optional): `True` if the game is turn-based, `False` for simultaneous play. Defaults to `False`.
+*   **`password`** (`str`, optional): A password to protect this specific game.
 *   **`**kwargs`**: Custom attributes for the game (e.g., `name="My Game"`).
 
 #### Methods
-*   `add_player(player)`: Adds a `Player` object to the game.
+*   `add_player(player, password=None)`: Adds a `Player` object to the game. The `password` is required if the game is password-protected.
 *   `remove_player(player_name)`: Removes a player from the game by their name.
 *   `start()`: Starts the game.
 *   `pause()`: Pauses the game.
@@ -58,7 +59,7 @@ Manages game sessions and handles network requests.
 
 *   **`host`** (`str`): The host address to bind to. Use `'0.0.0.0'` to make it accessible on the local network.
 *   **`port`** (`int`): The TCP port to listen on for game commands.
-*   **`password`** (`str`, optional): A password to protect the server.
+*   **`password`** (`str`, optional): A global password to protect the server.
 *   **`use_tls`** (`bool`, optional): If `True`, enables TLS v1.3 encryption for all communications. Defaults to `False`.
 
 #### Methods
@@ -72,20 +73,24 @@ The main entry point for a client to connect to a `GameServer`.
 
 *   **`host`** (`str`): The IP address of the server.
 *   **`port`** (`int`): The TCP port of the server.
-*   **`password`** (`str`, optional): The password for the server.
+*   **`password`** (`str`, optional): The global password for the server.
 *   **`use_tls`** (`bool`, optional): If `True`, the client will connect using TLS. Defaults to `False`.
 
 #### Methods
 *   `discover_servers(timeout=2)` (static method): Scans the local network for running `GameServer` instances. Returns a list of `(host, port)` tuples.
-*   `create_game(**game_options)`: Requests the server to create a new game. Returns a `RemoteGame` proxy object.
+*   `create_game(**game_options)`: Requests the server to create a new game. Returns a `RemoteGame` proxy object. Can include a `password` for the game.
 *   `list_games()`: Returns a dictionary of all active games on the server.
 
 ---
 
 ### `RemoteGame`
-A proxy object representing a game running on the server. It has the same methods and properties as the local `Game` class, but all calls are transparently sent over the network.
+A proxy object representing a game running on the server.
 
 *You typically do not create this object directly, but get it from `client.create_game()`.*
+
+#### Methods
+*   `add_player(player, password=None)`: Adds a `Player` to the remote game. The `password` is required if the game is password-protected.
+*   (Other methods are the same as the local `Game` class.)
 
 ## Utility Functions
 
@@ -113,20 +118,20 @@ Returns a list of available name suggestion categories.
 ---
 
 #### `suggest_game_name(category=None)`
-Suggests a random name for a game. If `category` is omitted, a random game-related category is chosen.
+Suggests a random name for a game.
 
 ---
 
 #### `suggest_player_name(category=None)`
-Suggests a random name for a player. If `category` is omitted, a random player-related category is chosen.
+Suggests a random name for a player.
 
 ## Exceptions
 
 *   **`MultiplayerError`**: Base exception for all module-specific errors.
-*   **`GameLogicError`**: For errors in game rules (e.g., pausing a game that is not in progress).
+*   **`GameLogicError`**: For errors in game rules.
 *   **`PlayerLimitReachedError`**: Raised when adding a player to a full game.
 *   **`GameNotFoundError`**: Raised when a client requests a game `id` that does not exist on the server.
 *   **`NetworkError`**: Base exception for network-related issues.
 *   **`ConnectionError`**: Raised when a client fails to connect to the server.
 *   **`ServerError`**: Raised for generic errors reported by the server.
-*   **`AuthenticationError`**: Raised for password authentication failures.
+*   **`AuthenticationError`**: Raised for both server and game password authentication failures.

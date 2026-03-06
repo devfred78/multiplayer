@@ -29,15 +29,9 @@ RESPONSE_MESSAGE_FORMAT = b'!15sH' # 15-char IP, unsigned short port
 def _generate_self_signed_cert():
     """Generates a temporary self-signed certificate and key."""
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-
     subject = issuer = x509.Name([
-        x509.NameAttribute(NameOID.COUNTRY_NAME, u"US"),
-        x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, u"California"),
-        x509.NameAttribute(NameOID.LOCALITY_NAME, u"San Francisco"),
-        x509.NameAttribute(NameOID.ORGANIZATION_NAME, u"Multiplayer Inc"),
         x509.NameAttribute(NameOID.COMMON_NAME, u"multiplayer.games"),
     ])
-
     cert = x509.CertificateBuilder().subject_name(
         subject
     ).issuer_name(
@@ -54,37 +48,30 @@ def _generate_self_signed_cert():
         x509.SubjectAlternativeName([x509.DNSName(u"localhost")]),
         critical=False,
     ).sign(key, hashes.SHA256())
-
     key_file = tempfile.NamedTemporaryFile(delete=False)
     cert_file = tempfile.NamedTemporaryFile(delete=False)
-
     key_file.write(key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.TraditionalOpenSSL,
         encryption_algorithm=serialization.NoEncryption(),
     ))
     cert_file.write(cert.public_bytes(serialization.Encoding.PEM))
-
     key_file.close()
     cert_file.close()
-
     return cert_file.name, key_file.name
 
 def _run_server_process(host, port, password, use_tls, certfile, keyfile):
     """The main server loop that listens for and handles connections."""
     games = {}
     games_lock = threading.Lock()
-    
     context = None
     if use_tls:
         context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         context.minimum_version = ssl.TLSVersion.TLSv1_3
         context.load_cert_chain(certfile=certfile, keyfile=keyfile)
-
     bindsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     bindsocket.bind((host, port))
     bindsocket.listen()
-
     try:
         while True:
             newsocket, fromaddr = bindsocket.accept()
@@ -104,20 +91,15 @@ def _handle_client(conn, addr, games, lock, server_password):
             data = conn.recv(1024)
             if not data:
                 return
-            
             try:
                 command = json.loads(data.decode('utf-8'))
-                
                 client_password = command.get('password')
                 if server_password is not None and client_password != server_password:
-                    raise AuthenticationError("Invalid password")
-
+                    raise AuthenticationError("Invalid server password")
                 action = command.get('action')
                 params = command.get('params', {})
-                
                 with lock:
                     response = _execute_command(games, action, params)
-                
                 conn.sendall(json.dumps(response).encode('utf-8'))
             except (json.JSONDecodeError, TypeError, AuthenticationError) as e:
                 error_response = {'status': 'error', 'type': type(e).__name__, 'message': str(e)}
@@ -127,7 +109,6 @@ def _handle_client(conn, addr, games, lock, server_password):
 
 def _execute_command(games, action, params):
     """Executes a command on the game objects and returns a response."""
-    # This function remains the same
     try:
         if action == 'create_game':
             game_id = str(uuid.uuid4())
@@ -140,13 +121,12 @@ def _execute_command(games, action, params):
             game_id = params.get('game_id')
             if not game_id or game_id not in games:
                 return {'status': 'error', 'type': 'GameNotFoundError', 'message': 'Game not found'}
-            
             game = games[game_id]
-            
             if action == 'add_player':
                 player_data = params['player']
                 player = Player(player_data['name'], **player_data.get('attributes', {}))
-                game.add_player(player)
+                game_password = params.get('game_password')
+                game.add_player(player, password=game_password)
                 result = {'status': 'success'}
             elif action == 'start':
                 game.start()
@@ -173,11 +153,10 @@ def _execute_command(games, action, params):
                 result = {'status': 'success', 'data': game.state.value}
             else:
                 result = {'status': 'error', 'type': 'ServerError', 'message': 'Unknown action'}
-    except (GameLogicError, PlayerLimitReachedError) as e:
+    except (GameLogicError, PlayerLimitReachedError, AuthenticationError) as e:
         result = {'status': 'error', 'type': type(e).__name__, 'message': str(e)}
     except Exception as e:
         result = {'status': 'error', 'type': 'ServerError', 'message': str(e)}
-        
     return result
 
 class GameServer:
@@ -198,18 +177,14 @@ class GameServer:
         if self._server_process and self._server_process.is_alive():
             print("Server is already running.")
             return
-
         certfile, keyfile = (None, None)
         if self.use_tls:
             certfile, keyfile = _generate_self_signed_cert()
-
         self._server_process = Process(target=_run_server_process, args=(self.host, self.port, self.password, self.use_tls, certfile, keyfile))
         self._server_process.start()
-        
         self._stop_discovery.clear()
         self._discovery_thread = threading.Thread(target=self._run_discovery_service)
         self._discovery_thread.start()
-        
         print(f"Server started on {self.host}:{self.port} with PID {self._server_process.pid}")
         if self.use_tls:
             print("TLS encryption is enabled.")
@@ -223,7 +198,6 @@ class GameServer:
             print("Server stopped.")
         else:
             print("Server is not running.")
-            
         if self._discovery_thread and self._discovery_thread.is_alive():
             self._stop_discovery.set()
             self._discovery_thread.join()
@@ -231,15 +205,12 @@ class GameServer:
 
     def _run_discovery_service(self):
         """Listens for multicast discovery messages and responds."""
-        # This function remains the same
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind(('', DISCOVERY_PORT))
-        
         mreq = struct.pack("4sl", socket.inet_aton(MULTICAST_GROUP), socket.INADDR_ANY)
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
         sock.settimeout(1.0)
-
         while not self._stop_discovery.is_set():
             try:
                 data, addr = sock.recvfrom(1024)
@@ -254,7 +225,6 @@ class GameServer:
 
     def _get_lan_ip(self):
         """Finds the local IP address of the machine."""
-        # This function remains the same
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
             s.connect(('10.255.255.255', 1))

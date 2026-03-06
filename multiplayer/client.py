@@ -127,9 +127,18 @@ class RemoteGame:
             full_params.update(params)
         return self._client._send_command(action, full_params)
 
-    def add_player(self, player):
-        """Adds a player to the remote game."""
-        params = {'player': {'name': player.name, 'attributes': player.attributes}}
+    def add_player(self, player, password=None):
+        """
+        Adds a player to the remote game.
+
+        Args:
+            player (Player): The player to add.
+            password (str, optional): The password for this specific game.
+        """
+        params = {
+            'player': {'name': player.name, 'attributes': player.attributes},
+            'game_password': password,
+        }
         self._send_command('add_player', params)
 
     def start(self):

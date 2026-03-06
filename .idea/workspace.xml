@@ -4,8 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Finalizes version 0.5.0">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Starting version 0.5.1.dev1">
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/REFERENCE.md" beforeDir="false" afterPath="$PROJECT_DIR$/REFERENCE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/multiplayer/client.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/client.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/multiplayer/game.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/game.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/multiplayer/server.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/server.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_network.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_network.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -281,7 +286,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772829785563</updated>
     </task>
-    <option name="localTasksCounter" value="25" />
+    <task id="LOCAL-00025" summary="Starting version 0.5.1.dev1">
+      <option name="closed" value="true" />
+      <created>1772832068940</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1772832068940</updated>
+    </task>
+    <option name="localTasksCounter" value="26" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -312,6 +325,7 @@
     <MESSAGE value="Implementation of TLSv1.3 encryption" />
     <MESSAGE value="Correction of the error revealed by unit tests" />
     <MESSAGE value="Finalizes version 0.5.0" />
-    <option name="LAST_COMMIT_MESSAGE" value="Finalizes version 0.5.0" />
+    <MESSAGE value="Starting version 0.5.1.dev1" />
+    <option name="LAST_COMMIT_MESSAGE" value="Starting version 0.5.1.dev1" />
   </component>
 </project>

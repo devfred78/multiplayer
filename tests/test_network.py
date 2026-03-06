@@ -13,7 +13,8 @@ from multiplayer.exceptions import (
 
 # Use different ports for testing to avoid conflicts
 TEST_PORT = 65433
-TEST_PASSWORD = "test_password"
+TEST_SERVER_PASSWORD = "test_server_password"
+TEST_GAME_PASSWORD = "test_game_password"
 
 @pytest.fixture(scope="module")
 def game_server():
@@ -28,7 +29,7 @@ def game_server():
 @pytest.fixture(scope="module")
 def secure_game_server():
     """Fixture to start and stop a server with a password."""
-    server = GameServer(host='0.0.0.0', port=TEST_PORT + 1, password=TEST_PASSWORD)
+    server = GameServer(host='0.0.0.0', port=TEST_PORT + 1, password=TEST_SERVER_PASSWORD)
     server.start()
     time.sleep(0.2)
     yield
@@ -97,7 +98,7 @@ def test_connection_error():
 
 def test_secure_server_connection_success(secure_game_server):
     """Tests connection to a password-protected server with the correct password."""
-    client = GameClient(port=TEST_PORT + 1, password=TEST_PASSWORD)
+    client = GameClient(port=TEST_PORT + 1, password=TEST_SERVER_PASSWORD)
     assert client.list_games() == {}
 
 def test_secure_server_connection_failure(secure_game_server):
@@ -116,3 +117,17 @@ def test_tls_server_connection_failure_mismatch(tls_game_server):
     client = GameClient(port=TEST_PORT + 2, use_tls=False)
     with pytest.raises(ConnectionError):
         client.list_games()
+
+def test_game_password_success(game_server):
+    """Tests joining a password-protected game with the correct password."""
+    client = GameClient(port=TEST_PORT)
+    game = client.create_game(password=TEST_GAME_PASSWORD)
+    game.add_player(Player("Alice"), password=TEST_GAME_PASSWORD)
+    # No error should be raised
+
+def test_game_password_failure(game_server):
+    """Tests that joining a password-protected game with the wrong password fails."""
+    client = GameClient(port=TEST_PORT)
+    game = client.create_game(password=TEST_GAME_PASSWORD)
+    with pytest.raises(AuthenticationError, match="Invalid password for this game"):
+        game.add_player(Player("Alice"), password="wrong_game_password")

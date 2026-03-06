@@ -3,7 +3,7 @@ This module provides classes for managing a multiplayer game.
 """
 
 import enum
-from .exceptions import GameLogicError, PlayerLimitReachedError
+from .exceptions import GameLogicError, PlayerLimitReachedError, AuthenticationError
 
 class GameState(enum.Enum):
     """
@@ -32,26 +32,32 @@ class Game:
     Args:
         max_players (int, optional): The maximum number of players allowed in the game. Defaults to None.
         turn_based (bool, optional): Whether the game is turn-based or simultaneous. Defaults to False.
+        password (str, optional): A password to protect this specific game.
         **kwargs: Additional attributes for the game.
     """
-    def __init__(self, max_players=None, turn_based=False, **kwargs):
+    def __init__(self, max_players=None, turn_based=False, password=None, **kwargs):
         self.max_players = max_players
         self.turn_based = turn_based
+        self.password = password
         self.attributes = kwargs
         self.players = []
         self.state = GameState.PENDING
         self.current_player_index = 0
 
-    def add_player(self, player):
+    def add_player(self, player, password=None):
         """
         Adds a player to the game.
 
         Args:
             player (Player): The player to add.
+            password (str, optional): The password required to join the game.
 
         Raises:
+            AuthenticationError: If the provided password does not match the game's password.
             PlayerLimitReachedError: If the maximum number of players has been reached.
         """
+        if self.password is not None and self.password != password:
+            raise AuthenticationError("Invalid password for this game")
         if self.max_players is not None and len(self.players) >= self.max_players:
             raise PlayerLimitReachedError("Maximum number of players reached")
         self.players.append(player)

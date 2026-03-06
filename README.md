@@ -7,7 +7,7 @@ For a detailed technical description of all classes and functions, see the [API 
 ## Features
 
 *   **Local & Networked:** Use in a single process or in a client-server architecture.
-*   **Secure Communications:** Supports password protection and TLS v1.3 encryption for all network traffic.
+*   **Multi-Layered Security:** Supports both server-wide passwords and per-game passwords, with optional TLS v1.3 encryption.
 *   **Automatic Server Discovery:** Clients can automatically find running servers on the local network.
 *   **Extensible Name Suggestions:** Includes a utility function to suggest creative names for games and players.
 *   **Multiple Games:** The server can manage multiple game sessions simultaneously.
@@ -26,81 +26,77 @@ pip install multiplayer-0.1.0-py3-none-any.whl
 
 ### Local Usage
 
-For simple, single-process applications, you can use the `Game` class directly.
+You can use the `Game` class directly, including with a password for local validation.
 
 ```python
 from multiplayer import Game, Player, suggest_game_name
 
-game = Game(max_players=4, turn_based=True, name=suggest_game_name())
-game.add_player(Player("Alice", score=100))
+game = Game(password="local_game_pass")
+game.add_player(Player("Alice"), password="local_game_pass")
 game.start()
 ```
 
 ### Networked Usage (Client-Server)
 
-For games running on different machines, you can use the client-server architecture with optional security.
-
 #### Server Setup
-You can start a server with a password and/or TLS encryption.
+You can start a server with a global password and/or TLS encryption.
 
 ```python
 from multiplayer import GameServer
 
-# Start a secure server with a password and TLS encryption
+# Start a secure server
 server = GameServer(
     host='0.0.0.0',
     port=12345,
-    password="my_secret_password",
+    password="my_server_password",
     use_tls=True
 )
 server.start()
 ```
 
 #### Client Usage
-Clients must use the same security settings as the server.
+Clients can create public or private (password-protected) games.
 
 ```python
 from multiplayer import GameClient, Player, suggest_game_name
 
-# 1. Discover servers on the network
+# 1. Discover and connect to the server
 servers = GameClient.discover_servers()
 if not servers:
     print("No servers found.")
 else:
     host, port = servers[0]
-
-    # 2. Connect to the server with the correct password and TLS enabled
     client = GameClient(
         host=host,
         port=port,
-        password="my_secret_password",
+        password="my_server_password",
         use_tls=True
     )
 
-    # 3. Create a new game
-    game = client.create_game(turn_based=True, name=suggest_game_name())
+    # 2. Create a private game with its own password
+    private_game = client.create_game(
+        name=suggest_game_name(),
+        password="my_game_password"
+    )
 
-    # 4. Add a player and start
-    game.add_player(Player("Charlie", level=5))
-    game.start()
+    # 3. A player joins the private game by providing the correct game password
+    private_game.add_player(Player("Charlie"), password="my_game_password")
+    private_game.start()
 ```
 
 ## Error Handling
 
-The module provides a set of custom exceptions, including `AuthenticationError`.
+The module provides a set of custom exceptions, including `AuthenticationError` for both server and game passwords.
 
 ```python
 from multiplayer import GameClient
 from multiplayer.exceptions import ConnectionError, AuthenticationError
 
 try:
-    servers = GameClient.discover_servers(timeout=1)
-    if not servers:
-        raise ConnectionError("No servers found.")
+    # ... connect to client ...
 
-    # Try to connect with the wrong password
-    client = GameClient(*servers[0], password="wrong_password", use_tls=True)
-    client.list_games()
+    # Try to join a game with the wrong password
+    game.add_player(Player("Eve"), password="wrong_game_password")
 
 except AuthenticationError as e:
     print(f"Authentication failed as expected: {e}")

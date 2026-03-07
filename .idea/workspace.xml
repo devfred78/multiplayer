@@ -4,7 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Finalize version 0.5.3" />
+    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Custom Game State feature integration in doc files.">
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -14,7 +16,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="PasswordForGame" />
+        <entry key="$PROJECT_DIR$" value="main" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -56,7 +58,7 @@
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "ai.playground.ignore.import.keys.banner.in.settings": "true",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "main",
+    "git-widget-placeholder": "documentation",
     "junie.onboarding.icon.badge.shown": "true",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
@@ -319,7 +321,23 @@
       <option name="project" value="LOCAL" />
       <updated>1772885464549</updated>
     </task>
-    <option name="localTasksCounter" value="30" />
+    <task id="LOCAL-00030" summary="Starting version 0.5.4.dev1">
+      <option name="closed" value="true" />
+      <created>1772885850932</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1772885850932</updated>
+    </task>
+    <task id="LOCAL-00031" summary="Custom Game State feature integration in doc files.">
+      <option name="closed" value="true" />
+      <created>1772886099582</created>
+      <option name="number" value="00031" />
+      <option name="presentableId" value="LOCAL-00031" />
+      <option name="project" value="LOCAL" />
+      <updated>1772886099582</updated>
+    </task>
+    <option name="localTasksCounter" value="32" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -337,8 +355,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Starting version 0.3.0.dev1" />
-    <MESSAGE value="Finding server on LAN implementation" />
     <MESSAGE value="Unit tests implementation" />
     <MESSAGE value="Finalize 0.3.0 version" />
     <MESSAGE value="Start developing 0.4.0.dev1" />
@@ -362,6 +378,8 @@
     <MESSAGE value="Ability to add a custom state to a part.&#10;Strengthening of the serialization of enum objects." />
     <MESSAGE value="Several fixes for strengthening the custom state feature." />
     <MESSAGE value="Finalize version 0.5.3" />
-    <option name="LAST_COMMIT_MESSAGE" value="Finalize version 0.5.3" />
+    <MESSAGE value="Starting version 0.5.4.dev1" />
+    <MESSAGE value="Custom Game State feature integration in doc files." />
+    <option name="LAST_COMMIT_MESSAGE" value="Custom Game State feature integration in doc files." />
   </component>
 </project>

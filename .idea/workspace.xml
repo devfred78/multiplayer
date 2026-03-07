@@ -4,17 +4,21 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Code of conduction addition">
-      <change afterPath="$PROJECT_DIR$/CODE_OF_CONDUCT.es.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/CONTRIBUTING.es.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/LICENSE.es.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/README.es.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/REFERENCE.es.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Spanish translation of documentation added.">
+      <change afterPath="$PROJECT_DIR$/CODE_OF_CONDUCT.fr.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/CONTRIBUTING.fr.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/LICENSE.fr.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/README.fr.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/REFERENCE.fr.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CODE_OF_CONDUCT.es.md" beforeDir="false" afterPath="$PROJECT_DIR$/CODE_OF_CONDUCT.es.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/CODE_OF_CONDUCT.md" beforeDir="false" afterPath="$PROJECT_DIR$/CODE_OF_CONDUCT.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CONTRIBUTING.es.md" beforeDir="false" afterPath="$PROJECT_DIR$/CONTRIBUTING.es.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/CONTRIBUTING.md" beforeDir="false" afterPath="$PROJECT_DIR$/CONTRIBUTING.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/LICENSE.es.md" beforeDir="false" afterPath="$PROJECT_DIR$/LICENSE.es.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/LICENSE.md" beforeDir="false" afterPath="$PROJECT_DIR$/LICENSE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.es.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.es.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/REFERENCE.es.md" beforeDir="false" afterPath="$PROJECT_DIR$/REFERENCE.es.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/REFERENCE.md" beforeDir="false" afterPath="$PROJECT_DIR$/REFERENCE.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -387,7 +391,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772889473787</updated>
     </task>
-    <option name="localTasksCounter" value="37" />
+    <task id="LOCAL-00037" summary="Spanish translation of documentation added.">
+      <option name="closed" value="true" />
+      <created>1772890380408</created>
+      <option name="number" value="00037" />
+      <option name="presentableId" value="LOCAL-00037" />
+      <option name="project" value="LOCAL" />
+      <updated>1772890380408</updated>
+    </task>
+    <option name="localTasksCounter" value="38" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -405,7 +417,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Add several new categories and make the category optional." />
     <MESSAGE value="Unit tests implementation." />
     <MESSAGE value="Fix errors appearing when testing." />
     <MESSAGE value="Start developing 0.4.0.dev2 version." />
@@ -430,6 +441,7 @@
     <MESSAGE value="Rename HOW TO CONTRIBUTE into CONTRIBUTING and add a link from README.md." />
     <MESSAGE value="fix several documentation minor issues" />
     <MESSAGE value="Code of conduction addition" />
-    <option name="LAST_COMMIT_MESSAGE" value="Code of conduction addition" />
+    <MESSAGE value="Spanish translation of documentation added." />
+    <option name="LAST_COMMIT_MESSAGE" value="Spanish translation of documentation added." />
   </component>
 </project>

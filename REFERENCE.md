@@ -1,4 +1,4 @@
-**English** | [Español](REFERENCE.es.md)
+**English** | [Español](REFERENCE.es.md) | [Français](REFERENCE.fr.md)
 
 # API Reference for the `multiplayer` Module
 

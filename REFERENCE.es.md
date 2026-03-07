@@ -1,4 +1,4 @@
-[English](REFERENCE.md) | **Español**
+[English](REFERENCE.md) | **Español** | [Français](REFERENCE.fr.md)
 
 # Referencia de la API para el Módulo `multiplayer`
 

@@ -1,4 +1,4 @@
-**English** | [Español](CODE_OF_CONDUCT.es.md)
+**English** | [Español](CODE_OF_CONDUCT.es.md) | [Français](CODE_OF_CONDUCT.fr.md)
 
 # Contributor Covenant Code of Conduct
 

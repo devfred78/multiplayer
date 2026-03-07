@@ -1,4 +1,4 @@
-[English](README.md) | **Español**
+[English](README.md) | **Español** | [Français](README.fr.md)
 
 # Gestor de Juegos Multijugador
 

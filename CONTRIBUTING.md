@@ -1,4 +1,4 @@
-**English** | [Español](CONTRIBUTING.es.md)
+**English** | [Español](CONTRIBUTING.es.md) | [Français](CONTRIBUTING.fr.md)
 
 # How to Contribute to Multiplayer
 
@@ -32,7 +32,7 @@ Ready to contribute code? Here’s how to set up `multiplayer` for local develop
 1.  **Fork the repository** on GitHub.
 2.  **Clone your fork** locally:
     ```sh
-    git clone https://github.com/devfred78/multiplayer.git
+    git clone https://github.com/your-username/multiplayer.git
     ```
 3.  **Set up your environment.** We recommend using a virtual environment:
     ```sh

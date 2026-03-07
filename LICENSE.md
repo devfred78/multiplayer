@@ -1,4 +1,4 @@
-**English** | [Español](LICENSE.es.md)
+**English** | [Español](LICENSE.es.md) | [Français](LICENSE.fr.md)
 
 # MIT License
 

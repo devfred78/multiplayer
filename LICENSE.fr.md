@@ -1,8 +1,8 @@
-[English](LICENSE.md) | **Español** | [Français](LICENSE.fr.md)
+[English](LICENSE.md) | [Español](LICENSE.es.md) | **Français**
 
-# Licencia MIT
+# Licence MIT
 
-Este es un documento legal y, para evitar ambigüedades, solo el texto original en inglés es legalmente vinculante. La traducción se proporciona únicamente para facilitar la comprensión.
+Ceci est un document légal et, pour éviter toute ambiguïté, seul le texte original en anglais est juridiquement contraignant. La traduction est fournie uniquement pour faciliter la compréhension.
 
 ---
 

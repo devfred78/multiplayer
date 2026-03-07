@@ -1,4 +1,4 @@
-[English](CODE_OF_CONDUCT.md) | **Español**
+[English](CODE_OF_CONDUCT.md) | **Español** | [Français](CODE_OF_CONDUCT.fr.md)
 
 # Código de Conducta del Pacto de Contribuyentes
 

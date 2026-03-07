@@ -108,18 +108,23 @@ wheels = [
 
 [[package]]
 name = "multiplayer"
-version = "0.5.4.dev1"
+version = "0.5.4"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },
+]
+
+[package.optional-dependencies]
+dev = [
     { name = "pytest" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "cryptography" },
-    { name = "pytest" },
+    { name = "pytest", marker = "extra == 'dev'" },
 ]
+provides-extras = ["dev"]
 
 [[package]]
 name = "packaging"

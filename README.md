@@ -15,11 +15,11 @@ For a detailed technical description of all classes and functions, see the [API 
 ## Features
 
 *   **Local & Networked:** Use in a single process or in a client-server architecture.
-*   **Custom Game State:** A flexible dictionary (`custom_state`) for synchronizing any game-specific data.
+*   **Combined Game State:** A flexible system for synchronizing both the core game status (e.g., `in_progress`) and any custom game data.
 *   **Multi-Layered Security:** Supports both server-wide passwords and per-game passwords, with optional TLS v1.3 encryption.
 *   **Automatic Server Discovery:** Clients can automatically find running servers on the local network.
 *   **Extensible Name Suggestions:** Includes a utility function to suggest creative names for games and players.
-*   **Multiple Games:** The server can manage multiple game sessions simultaneously.
+*   **Multiple Games:** The server can manage multiple game sessions simultaneously, and the game list is now filtered to hide finished games.
 *   **Robust Error Handling:** A clear set of custom exceptions for both game logic and network issues.
 
 ## Installation
@@ -33,21 +33,24 @@ pip install multiplayer-0.1.0-py3-none-any.whl
 
 ## Usage
 
-### Custom Game State
+### Game State Management
 
-A key feature is the ability to manage your own game state. The `custom_state` is a simple dictionary that you can read and write to, perfect for scores, positions, or any other data.
+A key feature is the ability to manage your own game state alongside the core game status.
 
 ```python
-# On one client
+# On one client, set a custom state
 game.set_state({
     "board": [["X", "O", ""], ["", "X", ""], ["O", "", ""]],
     "turn": "player2"
 })
 
-# On another client
-current_state = game.state
-print(current_state["turn"])
-# > "player2"
+# On another client, retrieve the combined state
+full_state = game.state
+print(f"Game status: {full_state['status']}")
+# > Game status: in_progress
+
+print(f"Current turn: {full_state['custom']['turn']}")
+# > Current turn: player2
 ```
 
 ### Local Usage

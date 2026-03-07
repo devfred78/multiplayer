@@ -59,12 +59,19 @@ def test_server_connection(game_server):
     assert client.list_games() == {}
 
 def test_create_and_list_games(game_server):
-    """Tests that a client can create a game and see it in the list."""
+    """Tests that a client can create, see, and then not see a game in the list."""
     client = GameClient(port=TEST_PORT)
     game = client.create_game(name="Test Game", turn_based=True)
     assert game.game_id is not None
+    
+    # Game should be in the list
     games_list = client.list_games()
     assert game.game_id in games_list
+    
+    # After stopping, it should not be in the list
+    game.stop()
+    games_list_after_stop = client.list_games()
+    assert game.game_id not in games_list_after_stop
 
 def test_game_proxy_interaction(game_server):
     """Tests that interactions with the RemoteGame proxy work as expected."""
@@ -72,11 +79,23 @@ def test_game_proxy_interaction(game_server):
     game = client.create_game(turn_based=True)
     game.add_player(Player("Alice", score=100))
     game.start()
+    
     current_player = game.current_player
     assert current_player.name == "Alice"
-    assert game.state == "in_progress"
+    
+    # Test the new state format
+    full_state = game.state
+    assert full_state['status'] == 'in_progress'
+    assert full_state['custom'] == {}
+    
+    # Test setting and getting custom state
+    game.set_state({"score": 50})
+    new_state = game.state
+    assert new_state['custom']['score'] == 50
+    
     game.stop()
-    assert game.state == "finished"
+    final_state = game.state
+    assert final_state['status'] == 'finished'
 
 def test_error_handling(game_server):
     """Tests that the server correctly reports errors to the client."""

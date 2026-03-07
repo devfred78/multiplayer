@@ -123,7 +123,7 @@ def _execute_command(games, action, params):
             games[game_id] = Game(**params)
             result = {'status': 'success', 'data': {'game_id': game_id}}
         elif action == 'list_games':
-            game_list = {gid: g.attributes for gid, g in games.items()}
+            game_list = {gid: g.attributes for gid, g in games.items() if g.state != GameState.FINISHED}
             result = {'status': 'success', 'data': game_list}
         else:
             game_id = params.get('game_id')
@@ -158,7 +158,7 @@ def _execute_command(games, action, params):
                 else:
                     result = {'status': 'success', 'data': None}
             elif action == 'get_game_state':
-                result = {'status': 'success', 'data': game.custom_state}
+                result = {'status': 'success', 'data': {'status': game.state, 'custom': game.custom_state}}
             elif action == 'set_game_state':
                 game.custom_state = params.get('state')
                 result = {'status': 'success'}

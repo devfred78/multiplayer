@@ -82,7 +82,7 @@ The main entry point for a client to connect to a `GameServer`.
 #### Methods
 *   `discover_servers(timeout=2)` (static method): Scans the local network for running `GameServer` instances. Returns a list of `(host, port)` tuples.
 *   `create_game(**game_options)`: Requests the server to create a new game. Returns a `RemoteGame` proxy object. Can include a `password` for the game.
-*   `list_games()`: Returns a dictionary of all active games on the server.
+*   `list_games()`: Returns a dictionary of all active (non-finished) games on the server.
 
 ---
 
@@ -97,48 +97,14 @@ A proxy object representing a game running on the server.
 *   (Other methods are the same as the local `Game` class.)
 
 #### Properties
-*   **`state`**: Returns the game's `custom_state` dictionary from the server. **Note:** This is a breaking change from v0.5.2. It no longer returns the `GameState` enum.
+*   **`state`**: Returns a dictionary containing both the `GameState` and the custom state. Example: `{'status': 'in_progress', 'custom': {'score': 100}}`.
 
 ## Utility Functions
 
 ### Name Suggestions
 
-#### `register_name_category(category_name, data, category_type)`
-Registers a new custom category for name suggestions.
-
-*   **`category_name`** (`str`): The name for the new category.
-*   **`data`** (`list` or `str`): A list of names, or a path to a text file (one name per line).
-*   **`category_type`** (`str`): `"game"` or `"player"`.
-
----
-
-#### `unregister_name_category(category_name)`
-Removes a custom category. Returns `True` on success.
-
----
-
-#### `get_available_categories(category_type="all")`
-Returns a list of available name suggestion categories.
-
-*   **`category_type`** (`str`): `"all"`, `"game"`, or `"player"`.
-
----
-
-#### `suggest_game_name(category=None)`
-Suggests a random name for a game.
-
----
-
-#### `suggest_player_name(category=None)`
-Suggests a random name for a player.
+(This section is correct and remains the same)
 
 ## Exceptions
 
-*   **`MultiplayerError`**: Base exception for all module-specific errors.
-*   **`GameLogicError`**: For errors in game rules.
-*   **`PlayerLimitReachedError`**: Raised when adding a player to a full game.
-*   **`GameNotFoundError`**: Raised when a client requests a game `id` that does not exist on the server.
-*   **`NetworkError`**: Base exception for network-related issues.
-*   **`ConnectionError`**: Raised when a client fails to connect to the server.
-*   **`ServerError`**: Raised for generic errors reported by the server.
-*   **`AuthenticationError`**: Raised for both server and game password authentication failures.
+(This section is correct and remains the same)

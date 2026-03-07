@@ -4,21 +4,27 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Spanish translation of documentation added.">
-      <change afterPath="$PROJECT_DIR$/CODE_OF_CONDUCT.fr.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/CONTRIBUTING.fr.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/LICENSE.fr.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/README.fr.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/REFERENCE.fr.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CODE_OF_CONDUCT.es.md" beforeDir="false" afterPath="$PROJECT_DIR$/CODE_OF_CONDUCT.es.md" afterDir="false" />
+    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="French translation of documentation added.">
+      <change afterPath="$PROJECT_DIR$/translation/CODE_OF_CONDUCT.es.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/translation/CODE_OF_CONDUCT.fr.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/translation/LICENSE.es.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/translation/LICENSE.fr.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/translation/REFERENCE.es.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/translation/REFERENCE.fr.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CODE_OF_CONDUCT.es.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/CODE_OF_CONDUCT.fr.md" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/CODE_OF_CONDUCT.md" beforeDir="false" afterPath="$PROJECT_DIR$/CODE_OF_CONDUCT.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CONTRIBUTING.es.md" beforeDir="false" afterPath="$PROJECT_DIR$/CONTRIBUTING.es.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CONTRIBUTING.es.md" beforeDir="false" afterPath="$PROJECT_DIR$/translation/CONTRIBUTING.es.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CONTRIBUTING.fr.md" beforeDir="false" afterPath="$PROJECT_DIR$/translation/CONTRIBUTING.fr.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/CONTRIBUTING.md" beforeDir="false" afterPath="$PROJECT_DIR$/CONTRIBUTING.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LICENSE.es.md" beforeDir="false" afterPath="$PROJECT_DIR$/LICENSE.es.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/LICENSE.es.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/LICENSE.fr.md" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/LICENSE.md" beforeDir="false" afterPath="$PROJECT_DIR$/LICENSE.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.es.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.es.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.es.md" beforeDir="false" afterPath="$PROJECT_DIR$/translation/README.es.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.fr.md" beforeDir="false" afterPath="$PROJECT_DIR$/translation/README.fr.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/REFERENCE.es.md" beforeDir="false" afterPath="$PROJECT_DIR$/REFERENCE.es.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/REFERENCE.es.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/REFERENCE.fr.md" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/REFERENCE.md" beforeDir="false" afterPath="$PROJECT_DIR$/REFERENCE.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -399,7 +405,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772890380408</updated>
     </task>
-    <option name="localTasksCounter" value="38" />
+    <task id="LOCAL-00038" summary="French translation of documentation added.">
+      <option name="closed" value="true" />
+      <created>1772890937334</created>
+      <option name="number" value="00038" />
+      <option name="presentableId" value="LOCAL-00038" />
+      <option name="project" value="LOCAL" />
+      <updated>1772890937334</updated>
+    </task>
+    <option name="localTasksCounter" value="39" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -417,7 +431,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Unit tests implementation." />
     <MESSAGE value="Fix errors appearing when testing." />
     <MESSAGE value="Start developing 0.4.0.dev2 version." />
     <MESSAGE value="Add a custom name category." />
@@ -442,6 +455,7 @@
     <MESSAGE value="fix several documentation minor issues" />
     <MESSAGE value="Code of conduction addition" />
     <MESSAGE value="Spanish translation of documentation added." />
-    <option name="LAST_COMMIT_MESSAGE" value="Spanish translation of documentation added." />
+    <MESSAGE value="French translation of documentation added." />
+    <option name="LAST_COMMIT_MESSAGE" value="French translation of documentation added." />
   </component>
 </project>

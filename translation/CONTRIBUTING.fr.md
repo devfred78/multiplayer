@@ -1,4 +1,4 @@
-[English](CONTRIBUTING.md) | [Español](CONTRIBUTING.es.md) | **Français**
+[English](../CONTRIBUTING.md) | [Español](CONTRIBUTING.es.md) | **Français**
 
 # Comment Contribuer à Multiplayer
 

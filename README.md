@@ -1,4 +1,4 @@
-**English** | [Español](README.es.md) | [Français](README.fr.md)
+**English** | [Español](translation/README.es.md) | [Français](translation/README.fr.md)
 
 # Multiplayer Game Manager
 

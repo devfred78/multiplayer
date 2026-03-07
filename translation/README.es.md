@@ -1,4 +1,4 @@
-[English](README.md) | **Español** | [Français](README.fr.md)
+[English](../README.md) | **Español** | [Français](README.fr.md)
 
 # Gestor de Juegos Multijugador
 
@@ -147,4 +147,4 @@ pytest
 
 ## Licencia
 
-Este proyecto está licenciado bajo la Licencia MIT - consulta el archivo [LICENSE.md](LICENSE.md) para más detalles.
+Este proyecto está licenciado bajo la Licencia MIT - consulta el archivo [LICENSE.md](../LICENSE.md) para más detalles.

@@ -1,4 +1,4 @@
-[English](CODE_OF_CONDUCT.md) | [Español](CODE_OF_CONDUCT.es.md) | **Français**
+[English](../CODE_OF_CONDUCT.md) | [Español](CODE_OF_CONDUCT.es.md) | **Français**
 
 # Code de Conduite du Pacte des Contributeurs
 

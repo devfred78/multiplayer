@@ -101,8 +101,42 @@ A proxy object representing a game running on the server.
 
 ### Name Suggestions
 
-(This section remains the same)
+#### `register_name_category(category_name, data, category_type)`
+Registers a new custom category for name suggestions.
+
+*   **`category_name`** (`str`): The name for the new category.
+*   **`data`** (`list` or `str`): A list of names, or a path to a text file (one name per line).
+*   **`category_type`** (`str`): `"game"` or `"player"`.
+
+---
+
+#### `unregister_name_category(category_name)`
+Removes a custom category. Returns `True` on success.
+
+---
+
+#### `get_available_categories(category_type="all")`
+Returns a list of available name suggestion categories.
+
+*   **`category_type`** (`str`): `"all"`, `"game"`, or `"player"`.
+
+---
+
+#### `suggest_game_name(category=None)`
+Suggests a random name for a game. If `category` is omitted, a random game-related category is chosen.
+
+---
+
+#### `suggest_player_name(category=None)`
+Suggests a random name for a player. If `category` is omitted, a random player-related category is chosen.
 
 ## Exceptions
 
-(This section remains the same)
+*   **`MultiplayerError`**: Base exception for all module-specific errors.
+*   **`GameLogicError`**: For errors in game rules.
+*   **`PlayerLimitReachedError`**: Raised when adding a player to a full game.
+*   **`GameNotFoundError`**: Raised when a client requests a game `id` that does not exist on the server.
+*   **`NetworkError`**: Base exception for network-related issues.
+*   **`ConnectionError`**: Raised when a client fails to connect to the server.
+*   **`ServerError`**: Raised for generic errors reported by the server.
+*   **`AuthenticationError`**: Raised for both server and game password authentication failures.

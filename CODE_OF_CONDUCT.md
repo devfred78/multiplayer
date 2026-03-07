@@ -1,3 +1,5 @@
+**English** | [Español](CODE_OF_CONDUCT.es.md)
+
 # Contributor Covenant Code of Conduct
 
 ## Our Pledge

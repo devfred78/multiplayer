@@ -1,12 +1,14 @@
-# Multiplayer Game Manager
+**English** | [Español](README.es.md)
 
-This Python module provides a simple and flexible framework for managing multiplayer games, both locally and over a network.
+# Multiplayer Game Manager
 
 > **A Note on this Project's Origin**
 >
 > This project is primarily the result of a series of experiments using Gemini Code Assist for code generation and error handling. Rather than using it on academic examples, it seemed more interesting to apply it to a project that could meet a real practical need.
 >
 > This, therefore, is the reason for `multiplayer`'s existence: you can dissect the code to see how Gemini (with my guidance) went about building it, or you can ignore all that and just use this library for your own needs!
+
+This Python module provides a simple and flexible framework for managing multiplayer games, both locally and over a network.
 
 For a detailed technical description of all classes and functions, see the [API Reference](REFERENCE.md).
 

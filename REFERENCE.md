@@ -1,3 +1,5 @@
+**English** | [Español](REFERENCE.es.md)
+
 # API Reference for the `multiplayer` Module
 
 This document provides a detailed reference for the public API of the `multiplayer` module.
@@ -123,12 +125,12 @@ Returns a list of available name suggestion categories.
 ---
 
 #### `suggest_game_name(category=None)`
-Suggests a random name for a game. If `category` is omitted, a random game-related category is chosen.
+Suggests a random name for a game.
 
 ---
 
 #### `suggest_player_name(category=None)`
-Suggests a random name for a player. If `category` is omitted, a random player-related category is chosen.
+Suggests a random name for a player.
 
 ## Exceptions
 

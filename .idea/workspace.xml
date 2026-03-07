@@ -4,10 +4,18 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="fix several documentation minor issues">
-      <change afterPath="$PROJECT_DIR$/CODE_OF_CONDUCT.md" afterDir="false" />
+    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Code of conduction addition">
+      <change afterPath="$PROJECT_DIR$/CODE_OF_CONDUCT.es.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/CONTRIBUTING.es.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/LICENSE.es.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/README.es.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/REFERENCE.es.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CODE_OF_CONDUCT.md" beforeDir="false" afterPath="$PROJECT_DIR$/CODE_OF_CONDUCT.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/CONTRIBUTING.md" beforeDir="false" afterPath="$PROJECT_DIR$/CONTRIBUTING.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/LICENSE.md" beforeDir="false" afterPath="$PROJECT_DIR$/LICENSE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/REFERENCE.md" beforeDir="false" afterPath="$PROJECT_DIR$/REFERENCE.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -371,7 +379,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772888677379</updated>
     </task>
-    <option name="localTasksCounter" value="36" />
+    <task id="LOCAL-00036" summary="Code of conduction addition">
+      <option name="closed" value="true" />
+      <created>1772889473787</created>
+      <option name="number" value="00036" />
+      <option name="presentableId" value="LOCAL-00036" />
+      <option name="project" value="LOCAL" />
+      <updated>1772889473787</updated>
+    </task>
+    <option name="localTasksCounter" value="37" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -389,7 +405,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Suggest new name for players using a list of 100 roman gods" />
     <MESSAGE value="Add several new categories and make the category optional." />
     <MESSAGE value="Unit tests implementation." />
     <MESSAGE value="Fix errors appearing when testing." />
@@ -414,6 +429,7 @@
     <MESSAGE value="Add a note on how to contribute" />
     <MESSAGE value="Rename HOW TO CONTRIBUTE into CONTRIBUTING and add a link from README.md." />
     <MESSAGE value="fix several documentation minor issues" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix several documentation minor issues" />
+    <MESSAGE value="Code of conduction addition" />
+    <option name="LAST_COMMIT_MESSAGE" value="Code of conduction addition" />
   </component>
 </project>

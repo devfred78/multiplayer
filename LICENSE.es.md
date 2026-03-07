@@ -1,6 +1,12 @@
-**English** | [Español](LICENSE.es.md)
+[English](LICENSE.md) | **Español**
 
-# MIT License
+# Licencia MIT
+
+Este es un documento legal y, para evitar ambigüedades, solo el texto original en inglés es legalmente vinculante. La traducción se proporciona únicamente para facilitar la comprensión.
+
+---
+
+MIT License
 
 Copyright (c) 2026 devfred78
 

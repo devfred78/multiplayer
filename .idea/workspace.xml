@@ -4,8 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Finalize version 0.5.4">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Fix issue on LICENSE files">
+      <change beforePath="$PROJECT_DIR$/translation/LICENSE.es.md" beforeDir="false" afterPath="$PROJECT_DIR$/translation/LICENSE.es.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/translation/LICENSE.fr.md" beforeDir="false" afterPath="$PROJECT_DIR$/translation/LICENSE.fr.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -401,7 +402,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772892020693</updated>
     </task>
-    <option name="localTasksCounter" value="40" />
+    <task id="LOCAL-00040" summary="Fix issue on LICENSE files">
+      <option name="closed" value="true" />
+      <created>1772892603448</created>
+      <option name="number" value="00040" />
+      <option name="presentableId" value="LOCAL-00040" />
+      <option name="project" value="LOCAL" />
+      <updated>1772892603448</updated>
+    </task>
+    <option name="localTasksCounter" value="41" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -419,7 +428,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Start developing 0.4.0.dev2 version." />
     <MESSAGE value="Add a custom name category." />
     <MESSAGE value="Adding a reference file for the module's public API documentation." />
     <MESSAGE value="Finalize version 0.4.0" />
@@ -444,6 +452,7 @@
     <MESSAGE value="Spanish translation of documentation added." />
     <MESSAGE value="French translation of documentation added." />
     <MESSAGE value="Finalize version 0.5.4" />
-    <option name="LAST_COMMIT_MESSAGE" value="Finalize version 0.5.4" />
+    <MESSAGE value="Fix issue on LICENSE files" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fix issue on LICENSE files" />
   </component>
 </project>

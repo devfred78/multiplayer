@@ -2,6 +2,8 @@
 
 We're thrilled that you're interested in contributing to the `multiplayer` project! Your help is greatly appreciated. By contributing, you can help make this library even better.
 
+Please note that this project is released with a [Contributor Code of Conduct](CODE_OF_CONDUCT.md). By participating in this project you agree to abide by its terms.
+
 ## Table of Contents
 * [Reporting Bugs](#reporting-bugs)
 * [Suggesting Enhancements](#suggesting-enhancements)
@@ -39,7 +41,6 @@ Ready to contribute code? Here’s how to set up `multiplayer` for local develop
 4.  **Install the dependencies**, including the development and testing tools:
     ```sh
     pip install -e .[dev]
-    # Note: We will need to define the [dev] extra in pyproject.toml
     ```
 5.  **Create a new branch** for your changes:
     ```sh

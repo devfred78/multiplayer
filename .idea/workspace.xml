@@ -4,9 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Rename HOW TO CONTRIBUTE into CONTRIBUTING and add a link from README.md.">
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/REFERENCE.md" beforeDir="false" afterPath="$PROJECT_DIR$/REFERENCE.md" afterDir="false" />
+    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="fix several documentation minor issues">
+      <change afterPath="$PROJECT_DIR$/CODE_OF_CONDUCT.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CONTRIBUTING.md" beforeDir="false" afterPath="$PROJECT_DIR$/CONTRIBUTING.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -362,7 +363,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772888359465</updated>
     </task>
-    <option name="localTasksCounter" value="35" />
+    <task id="LOCAL-00035" summary="fix several documentation minor issues">
+      <option name="closed" value="true" />
+      <created>1772888677379</created>
+      <option name="number" value="00035" />
+      <option name="presentableId" value="LOCAL-00035" />
+      <option name="project" value="LOCAL" />
+      <updated>1772888677379</updated>
+    </task>
+    <option name="localTasksCounter" value="36" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -380,7 +389,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Implement suggesting new name functionality with a list of 100 cities" />
     <MESSAGE value="Suggest new name for players using a list of 100 roman gods" />
     <MESSAGE value="Add several new categories and make the category optional." />
     <MESSAGE value="Unit tests implementation." />
@@ -405,6 +413,7 @@
     <MESSAGE value="Add a note on the project's origin." />
     <MESSAGE value="Add a note on how to contribute" />
     <MESSAGE value="Rename HOW TO CONTRIBUTE into CONTRIBUTING and add a link from README.md." />
-    <option name="LAST_COMMIT_MESSAGE" value="Rename HOW TO CONTRIBUTE into CONTRIBUTING and add a link from README.md." />
+    <MESSAGE value="fix several documentation minor issues" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix several documentation minor issues" />
   </component>
 </project>

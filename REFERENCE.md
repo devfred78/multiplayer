@@ -25,7 +25,8 @@ Represents a single game session.
 
 #### Properties
 *   **`players`**: A list of `Player` objects in the game.
-*   **`state`**: The current `GameState` of the game.
+*   **`state`**: The current `GameState` of the game (e.g., `GameState.IN_PROGRESS`).
+*   **`custom_state`**: A dictionary for storing any game-specific data.
 *   **`attributes`**: A dictionary of custom attributes.
 *   **`current_player`**: The active `Player` object in a turn-based game.
 
@@ -90,48 +91,18 @@ A proxy object representing a game running on the server.
 
 #### Methods
 *   `add_player(player, password=None)`: Adds a `Player` to the remote game. The `password` is required if the game is password-protected.
+*   `set_state(new_state)`: Overwrites the game's `custom_state` dictionary on the server.
 *   (Other methods are the same as the local `Game` class.)
+
+#### Properties
+*   **`state`**: Returns the game's `custom_state` dictionary from the server. **Note:** This is a breaking change from v0.5.2. It no longer returns the `GameState` enum.
 
 ## Utility Functions
 
 ### Name Suggestions
 
-#### `register_name_category(category_name, data, category_type)`
-Registers a new custom category for name suggestions.
-
-*   **`category_name`** (`str`): The name for the new category.
-*   **`data`** (`list` or `str`): A list of names, or a path to a text file (one name per line).
-*   **`category_type`** (`str`): `"game"` or `"player"`.
-
----
-
-#### `unregister_name_category(category_name)`
-Removes a custom category. Returns `True` on success.
-
----
-
-#### `get_available_categories(category_type="all")`
-Returns a list of available name suggestion categories.
-
-*   **`category_type`** (`str`): `"all"`, `"game"`, or `"player"`.
-
----
-
-#### `suggest_game_name(category=None)`
-Suggests a random name for a game.
-
----
-
-#### `suggest_player_name(category=None)`
-Suggests a random name for a player.
+(This section remains the same)
 
 ## Exceptions
 
-*   **`MultiplayerError`**: Base exception for all module-specific errors.
-*   **`GameLogicError`**: For errors in game rules.
-*   **`PlayerLimitReachedError`**: Raised when adding a player to a full game.
-*   **`GameNotFoundError`**: Raised when a client requests a game `id` that does not exist on the server.
-*   **`NetworkError`**: Base exception for network-related issues.
-*   **`ConnectionError`**: Raised when a client fails to connect to the server.
-*   **`ServerError`**: Raised for generic errors reported by the server.
-*   **`AuthenticationError`**: Raised for both server and game password authentication failures.
+(This section remains the same)

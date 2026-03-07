@@ -7,6 +7,7 @@ For a detailed technical description of all classes and functions, see the [API 
 ## Features
 
 *   **Local & Networked:** Use in a single process or in a client-server architecture.
+*   **Custom Game State:** A flexible dictionary (`custom_state`) for synchronizing any game-specific data.
 *   **Multi-Layered Security:** Supports both server-wide passwords and per-game passwords, with optional TLS v1.3 encryption.
 *   **Automatic Server Discovery:** Clients can automatically find running servers on the local network.
 *   **Extensible Name Suggestions:** Includes a utility function to suggest creative names for games and players.
@@ -24,6 +25,23 @@ pip install multiplayer-0.1.0-py3-none-any.whl
 
 ## Usage
 
+### Custom Game State
+
+A key feature is the ability to manage your own game state. The `custom_state` is a simple dictionary that you can read and write to, perfect for scores, positions, or any other data.
+
+```python
+# On one client
+game.set_state({
+    "board": [["X", "O", ""], ["", "X", ""], ["O", "", ""]],
+    "turn": "player2"
+})
+
+# On another client
+current_state = game.state
+print(current_state["turn"])
+# > "player2"
+```
+
 ### Local Usage
 
 You can use the `Game` class directly, including with a password for local validation.
@@ -39,8 +57,6 @@ game.start()
 ### Networked Usage (Client-Server)
 
 #### Server Setup
-You can start a server with a global password and/or TLS encryption.
-
 ```python
 from multiplayer import GameServer
 
@@ -55,8 +71,6 @@ server.start()
 ```
 
 #### Client Usage
-Clients can create public or private (password-protected) games.
-
 ```python
 from multiplayer import GameClient, Player, suggest_game_name
 
@@ -73,14 +87,15 @@ else:
         use_tls=True
     )
 
-    # 2. Create a private game with its own password
+    # 2. Create a private game
     private_game = client.create_game(
         name=suggest_game_name(),
         password="my_game_password"
     )
 
-    # 3. A player joins the private game by providing the correct game password
+    # 3. A player joins and sets the initial state
     private_game.add_player(Player("Charlie"), password="my_game_password")
+    private_game.set_state({"score": 0})
     private_game.start()
 ```
 

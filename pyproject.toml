@@ -1,6 +1,6 @@
 [project]
 name = "multiplayer"
-version = "0.5.2"
+version = "0.5.3"
 description = "Library that allows you to manage multiple players, locally, on a network, or on the Internet."
 license-files = ["LICENSE.md"]
 author = "devfred78"

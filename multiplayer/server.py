@@ -158,7 +158,10 @@ def _execute_command(games, action, params):
                 else:
                     result = {'status': 'success', 'data': None}
             elif action == 'get_game_state':
-                result = {'status': 'success', 'data': game.state}
+                result = {'status': 'success', 'data': game.custom_state}
+            elif action == 'set_game_state':
+                game.custom_state = params.get('state')
+                result = {'status': 'success'}
             else:
                 result = {'status': 'error', 'type': 'ServerError', 'message': 'Unknown action'}
     except (GameLogicError, PlayerLimitReachedError, AuthenticationError) as e:

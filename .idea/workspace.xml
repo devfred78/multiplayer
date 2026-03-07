@@ -4,14 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Finalize version 0.5.1">
+    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Ability to add a custom state to a part.&#10;Strengthening of the serialization of enum objects.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/multiplayer/client.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/client.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/multiplayer/game.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/game.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/multiplayer/server.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/server.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_game.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_game.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/uv.lock" beforeDir="false" afterPath="$PROJECT_DIR$/uv.lock" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -303,7 +298,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772832712596</updated>
     </task>
-    <option name="localTasksCounter" value="27" />
+    <task id="LOCAL-00027" summary="Ability to add a custom state to a part.&#10;Strengthening of the serialization of enum objects.">
+      <option name="closed" value="true" />
+      <created>1772837863080</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1772837863080</updated>
+    </task>
+    <option name="localTasksCounter" value="28" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -321,7 +324,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Add MIT License" />
     <MESSAGE value="Add the elements needed to build the package." />
     <MESSAGE value="Version identification v0.2.0" />
     <MESSAGE value="Starting version 0.3.0.dev1" />
@@ -346,6 +348,7 @@
     <MESSAGE value="Finalizes version 0.5.0" />
     <MESSAGE value="Starting version 0.5.1.dev1" />
     <MESSAGE value="Finalize version 0.5.1" />
-    <option name="LAST_COMMIT_MESSAGE" value="Finalize version 0.5.1" />
+    <MESSAGE value="Ability to add a custom state to a part.&#10;Strengthening of the serialization of enum objects." />
+    <option name="LAST_COMMIT_MESSAGE" value="Ability to add a custom state to a part.&#10;Strengthening of the serialization of enum objects." />
   </component>
 </project>

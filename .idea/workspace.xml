@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Finalize version 0.5.5" />
+    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Fix issue in Utility Functions section." />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -423,7 +423,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772909199019</updated>
     </task>
-    <option name="localTasksCounter" value="43" />
+    <task id="LOCAL-00043" summary="Fix issue in Utility Functions section.">
+      <option name="closed" value="true" />
+      <created>1772909826931</created>
+      <option name="number" value="00043" />
+      <option name="presentableId" value="LOCAL-00043" />
+      <option name="project" value="LOCAL" />
+      <updated>1772909826931</updated>
+    </task>
+    <option name="localTasksCounter" value="44" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -441,7 +449,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Finalize version 0.4.0" />
     <MESSAGE value="Starting version 0.5.0.dev1" />
     <MESSAGE value="Possibility to set a password for the server" />
     <MESSAGE value="Starting version 0.5.0.dev2" />
@@ -466,6 +473,7 @@
     <MESSAGE value="Fix issue on LICENSE files" />
     <MESSAGE value="Improve translation on foreign LICENSE files" />
     <MESSAGE value="Finalize version 0.5.5" />
-    <option name="LAST_COMMIT_MESSAGE" value="Finalize version 0.5.5" />
+    <MESSAGE value="Fix issue in Utility Functions section." />
+    <option name="LAST_COMMIT_MESSAGE" value="Fix issue in Utility Functions section." />
   </component>
 </project>

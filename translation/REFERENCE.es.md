@@ -8,6 +8,7 @@ Este documento proporciona una referencia detallada de la API pública del módu
 
 ### `Game(max_players=None, turn_based=False, password=None, **kwargs)`
 Representa una única sesión de juego.
+
 *   **`max_players`** (`int`, opcional): El número máximo de jugadores.
 *   **`turn_based`** (`bool`, opcional): `True` si el juego es por turnos.
 *   **`password`** (`str`, opcional): Una contraseña para proteger esta partida.
@@ -21,6 +22,7 @@ Representa una única sesión de juego.
 
 ### `Player(name, **kwargs)`
 Representa a un jugador.
+
 *   **`name`** (`str`): El nombre del jugador.
 *   **`**kwargs`**: Atributos personalizados para el jugador.
 
@@ -33,6 +35,7 @@ Representa a un jugador.
 
 ### `GameServer(host='0.0.0.0', port=65432, password=None, use_tls=False)`
 Gestiona las sesiones de juego y las peticiones de red.
+
 *   **`password`** (`str`, opcional): Una contraseña global para proteger el servidor.
 *   **`use_tls`** (`bool`, opcional): Si es `True`, habilita el cifrado TLS v1.3.
 
@@ -40,6 +43,7 @@ Gestiona las sesiones de juego y las peticiones de red.
 
 ### `GameClient(host='127.0.0.1', port=65432, password=None, use_tls=False)`
 El punto de entrada principal para que un cliente se conecte a un `GameServer`.
+
 *   **`password`** (`str`, opcional): La contraseña global del servidor.
 *   **`use_tls`** (`bool`, opcional): Si es `True`, el cliente se conectará usando TLS.
 
@@ -66,6 +70,7 @@ Un objeto proxy que representa una partida en el servidor.
 
 #### `register_name_category(category_name, data, category_type)`
 Registra una nueva categoría personalizada.
+
 *   **`category_name`** (`str`): El nombre de la nueva categoría.
 *   **`data`** (`list` o `str`): Una lista de nombres, o la ruta a un archivo de texto.
 *   **`category_type`** (`str`): `"game"` o `"player"`.
@@ -79,6 +84,7 @@ Elimina una categoría personalizada. Devuelve `True` si tiene éxito.
 
 #### `get_available_categories(category_type="all")`
 Devuelve una lista de categorías de nombres disponibles.
+
 *   **`category_type`** (`str`): `"all"`, `"game"`, o `"player"`.
 
 ---

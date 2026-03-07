@@ -8,19 +8,33 @@ Ce document fournit une référence détaillée de l'API publique du module `mul
 
 ### `Game(max_players=None, turn_based=False, password=None, **kwargs)`
 Représente une session de jeu unique.
+
 *   **`max_players`** (`int`, optionnel) : Le nombre maximum de joueurs.
 *   **`turn_based`** (`bool`, optionnel) : `True` si le jeu est au tour par tour.
 *   **`password`** (`str`, optionnel) : Un mot de passe pour protéger cette partie.
 *   **`**kwargs`** : Attributs personnalisés pour la partie.
 
+#### Méthodes
+*   `add_player(player, password=None)` : Ajoute un objet `Player` à la partie.
+*   `remove_player(player_name)` : Retire un joueur de la partie par son nom.
+*   `start()` : Démarre la partie.
+*   `pause()` : Met la partie en pause.
+*   `resume()` : Reprend une partie en pause.
+*   `stop()` : Termine la partie.
+*   `next_turn()` : Passe au joueur suivant.
+
 #### Propriétés
-*   **`state`**: Le `GameState` actuel de la partie (ex: `GameState.IN_PROGRESS`).
-*   **`custom_state`**: Un dictionnaire pour stocker des données spécifiques au jeu.
+*   **`players`**: Une liste d'objets `Player`.
+*   **`state`**: Le `GameState` actuel de la partie.
+*   **`custom_state`**: Un dictionnaire pour les données spécifiques au jeu.
+*   **`attributes`**: Un dictionnaire d'attributs personnalisés.
+*   **`current_player`**: L'objet `Player` actif.
 
 ---
 
 ### `Player(name, **kwargs)`
 Représente un joueur.
+
 *   **`name`** (`str`) : Le nom du joueur.
 *   **`**kwargs`** : Attributs personnalisés pour le joueur.
 
@@ -33,20 +47,26 @@ Représente un joueur.
 
 ### `GameServer(host='0.0.0.0', port=65432, password=None, use_tls=False)`
 Gère les sessions de jeu et les requêtes réseau.
+
 *   **`password`** (`str`, optionnel) : Un mot de passe global pour protéger le serveur.
 *   **`use_tls`** (`bool`, optionnel) : Si `True`, active le chiffrement TLS v1.3.
+
+#### Méthodes
+*   `start()`: Démarre le serveur.
+*   `stop()`: Arrête le serveur.
 
 ---
 
 ### `GameClient(host='127.0.0.1', port=65432, password=None, use_tls=False)`
 Le point d'entrée pour qu'un client se connecte à un `GameServer`.
+
 *   **`password`** (`str`, optionnel) : Le mot de passe global du serveur.
 *   **`use_tls`** (`bool`, optionnel) : Si `True`, le client se connectera en utilisant TLS.
 
 #### Méthodes
 *   `discover_servers(timeout=2)` (méthode statique) : Scanne le réseau local à la recherche d'instances de `GameServer`.
 *   `create_game(**game_options)` : Demande au serveur de créer une nouvelle partie. Retourne un objet proxy `RemoteGame`.
-*   `list_games()` : Retourne un dictionnaire de toutes les parties actives (non terminées) sur le serveur.
+*   `list_games()` : Retourne un dictionnaire de toutes les parties actives (non terminées).
 
 ---
 
@@ -66,6 +86,7 @@ Un objet proxy représentant une partie exécutée sur le serveur.
 
 #### `register_name_category(category_name, data, category_type)`
 Enregistre une nouvelle catégorie personnalisée.
+
 *   **`category_name`** (`str`) : Le nom de la nouvelle catégorie.
 *   **`data`** (`list` ou `str`) : Une liste de noms, ou le chemin vers un fichier texte.
 *   **`category_type`** (`str`) : `"game"` ou `"player"`.
@@ -79,6 +100,7 @@ Supprime une catégorie personnalisée. Retourne `True` en cas de succès.
 
 #### `get_available_categories(category_type="all")`
 Retourne une liste des catégories de suggestion de noms disponibles.
+
 *   **`category_type`** (`str`) : `"all"`, `"game"`, ou `"player"`.
 
 ---

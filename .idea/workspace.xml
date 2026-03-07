@@ -4,10 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Ability to add a custom state to a part.&#10;Strengthening of the serialization of enum objects.">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/multiplayer/server.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/server.py" afterDir="false" />
-    </list>
+    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Finalize version 0.5.3" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -306,7 +303,23 @@
       <option name="project" value="LOCAL" />
       <updated>1772837863080</updated>
     </task>
-    <option name="localTasksCounter" value="28" />
+    <task id="LOCAL-00028" summary="Several fixes for strengthening the custom state feature.">
+      <option name="closed" value="true" />
+      <created>1772885376114</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1772885376114</updated>
+    </task>
+    <task id="LOCAL-00029" summary="Finalize version 0.5.3">
+      <option name="closed" value="true" />
+      <created>1772885464549</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1772885464549</updated>
+    </task>
+    <option name="localTasksCounter" value="30" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -324,8 +337,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Add the elements needed to build the package." />
-    <MESSAGE value="Version identification v0.2.0" />
     <MESSAGE value="Starting version 0.3.0.dev1" />
     <MESSAGE value="Finding server on LAN implementation" />
     <MESSAGE value="Unit tests implementation" />
@@ -349,6 +360,8 @@
     <MESSAGE value="Starting version 0.5.1.dev1" />
     <MESSAGE value="Finalize version 0.5.1" />
     <MESSAGE value="Ability to add a custom state to a part.&#10;Strengthening of the serialization of enum objects." />
-    <option name="LAST_COMMIT_MESSAGE" value="Ability to add a custom state to a part.&#10;Strengthening of the serialization of enum objects." />
+    <MESSAGE value="Several fixes for strengthening the custom state feature." />
+    <MESSAGE value="Finalize version 0.5.3" />
+    <option name="LAST_COMMIT_MESSAGE" value="Finalize version 0.5.3" />
   </component>
 </project>

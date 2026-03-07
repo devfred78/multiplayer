@@ -108,7 +108,7 @@ wheels = [
 
 [[package]]
 name = "multiplayer"
-version = "0.5.3"
+version = "0.5.4.dev1"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },

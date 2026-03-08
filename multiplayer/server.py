@@ -9,7 +9,7 @@ import struct
 import ssl
 import tempfile
 import os
-from multiprocessing import Process
+from multiprocessing import Process, Event
 from datetime import datetime, timedelta, timezone
 from cryptography import x509
 from cryptography.x509.oid import NameOID
@@ -37,147 +37,146 @@ RESPONSE_MESSAGE_FORMAT = b'!15sH' # 15-char IP, unsigned short port
 def _generate_self_signed_cert_data():
     """Generates a self-signed certificate and key, returning their content."""
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    subject = issuer = x509.Name([
-        x509.NameAttribute(NameOID.COMMON_NAME, u"multiplayer.games"),
-    ])
-    cert = x509.CertificateBuilder().subject_name(
-        subject
-    ).issuer_name(
-        issuer
-    ).public_key(
-        key.public_key()
-    ).serial_number(
-        x509.random_serial_number()
-    ).not_valid_before(
-        datetime.now(timezone.utc)
-    ).not_valid_after(
-        datetime.now(timezone.utc) + timedelta(days=1)
-    ).add_extension(
-        x509.SubjectAlternativeName([x509.DNSName(u"localhost")]),
-        critical=False,
-    ).sign(key, hashes.SHA256())
-
-    key_data = key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.TraditionalOpenSSL,
-        encryption_algorithm=serialization.NoEncryption(),
-    )
+    subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, u"multiplayer.games")])
+    cert = x509.CertificateBuilder().subject_name(subject).issuer_name(issuer).public_key(key.public_key()).serial_number(x509.random_serial_number()).not_valid_before(datetime.now(timezone.utc)).not_valid_after(datetime.now(timezone.utc) + timedelta(days=1)).add_extension(x509.SubjectAlternativeName([x509.DNSName(u"localhost")]), critical=False).sign(key, hashes.SHA256())
+    key_data = key.private_bytes(encoding=serialization.Encoding.PEM, format=serialization.PrivateFormat.TraditionalOpenSSL, encryption_algorithm=serialization.NoEncryption())
     cert_data = cert.public_bytes(serialization.Encoding.PEM)
-    
     return cert_data, key_data
 
-def _run_server_process(host, port, password, use_tls, cert_data, key_data):
+def _run_discovery_service(tcp_port, stop_event):
+    """Listens for multicast discovery messages and responds."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(('', DISCOVERY_PORT))
+    mreq = struct.pack("4sl", socket.inet_aton(MULTICAST_GROUP), socket.INADDR_ANY)
+    sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+    sock.settimeout(1.0)
+    
+    def get_lan_ip():
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try: s.connect(('10.255.255.255', 1)); IP = s.getsockname()[0]
+        except Exception: IP = '127.0.0.1'
+        finally: s.close()
+        return IP
+
+    while not stop_event.is_set():
+        try:
+            data, addr = sock.recvfrom(1024)
+            if data == DISCOVERY_MESSAGE:
+                response_ip = get_lan_ip()
+                message = struct.pack(RESPONSE_MESSAGE_FORMAT, response_ip.encode('utf-8'), tcp_port)
+                sock.sendto(message, addr)
+        except socket.timeout:
+            continue
+    print("Network discovery service stopped.")
+
+def _run_tcp_server(host, port, password, use_tls, cert_data, key_data, stop_event):
     """The main server loop that listens for and handles connections."""
     games = {}
     games_lock = threading.Lock()
-    
-    certfile, keyfile = None, None
     context = None
+    certfile, keyfile = None, None
     if use_tls:
         with tempfile.NamedTemporaryFile(delete=False) as cert_file_obj:
-            certfile = cert_file_obj.name
-            cert_file_obj.write(cert_data)
-        
+            certfile = cert_file_obj.name; cert_file_obj.write(cert_data)
         with tempfile.NamedTemporaryFile(delete=False) as key_file_obj:
-            keyfile = key_file_obj.name
-            key_file_obj.write(key_data)
-
+            keyfile = key_file_obj.name; key_file_obj.write(key_data)
         context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         context.minimum_version = ssl.TLSVersion.TLSv1_3
         context.load_cert_chain(certfile=certfile, keyfile=keyfile)
 
-    bindsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    bindsocket.bind((host, port))
-    bindsocket.listen()
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((host, port))
+    server_socket.listen()
+    server_socket.settimeout(1.0)
+
     try:
-        while True:
-            newsocket, fromaddr = bindsocket.accept()
-            conn = context.wrap_socket(newsocket, server_side=True) if use_tls else newsocket
-            thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, games_lock, password))
-            thread.start()
+        while not stop_event.is_set():
+            try:
+                newsocket, fromaddr = server_socket.accept()
+                conn = context.wrap_socket(newsocket, server_side=True) if use_tls else newsocket
+                thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, games_lock, password))
+                thread.start()
+            except socket.timeout:
+                continue
     finally:
+        server_socket.close()
         if use_tls:
-            os.remove(certfile)
-            os.remove(keyfile)
+            os.remove(certfile); os.remove(keyfile)
+        print("TCP server stopped.")
 
 def _handle_client(conn, addr, games, lock, server_password):
     """Handles a single client connection."""
-    print(f"Connected by {addr}")
     try:
         with conn:
             data = conn.recv(1024)
-            if not data:
-                return
+            if not data: return
             try:
                 command = json.loads(data.decode('utf-8'))
-                client_password = command.get('password')
-                if server_password is not None and client_password != server_password:
+                if server_password is not None and command.get('password') != server_password:
                     raise AuthenticationError("Invalid server password")
-                action = command.get('action')
-                params = command.get('params', {})
-                with lock:
-                    response = _execute_command(games, action, params)
+                response = _execute_command(games, command.get('action'), command.get('params', {}))
                 conn.sendall(json.dumps(response, cls=EnumEncoder).encode('utf-8'))
             except (json.JSONDecodeError, TypeError, AuthenticationError) as e:
                 error_response = {'status': 'error', 'type': type(e).__name__, 'message': str(e)}
                 conn.sendall(json.dumps(error_response, cls=EnumEncoder).encode('utf-8'))
-    finally:
-        print(f"Disconnected from {addr}")
+    except Exception as e:
+        print(f"Error handling client {addr}: {e}")
 
 def _execute_command(games, action, params):
     """Executes a command on the game objects and returns a response."""
     try:
         if action == 'create_game':
-            game_id = str(uuid.uuid4())
-            games[game_id] = Game(**params)
-            result = {'status': 'success', 'data': {'game_id': game_id}}
+            game_id = str(uuid.uuid4()); games[game_id] = Game(**params)
+            return {'status': 'success', 'data': {'game_id': game_id}}
         elif action == 'list_games':
-            game_list = {gid: g.attributes for gid, g in games.items() if g.state != GameState.FINISHED}
-            result = {'status': 'success', 'data': game_list}
+            return {'status': 'success', 'data': {gid: g.attributes for gid, g in games.items() if g.state != GameState.FINISHED}}
+        
+        game_id = params.get('game_id')
+        if not game_id or game_id not in games:
+            return {'status': 'error', 'type': 'GameNotFoundError', 'message': 'Game not found'}
+        game = games[game_id]
+
+        if action == 'add_player':
+            player = Player(params['player']['name'], **params['player'].get('attributes', {}))
+            game.add_player(player, password=params.get('game_password'))
+        elif action == 'start': game.start()
+        elif action == 'pause': game.pause()
+        elif action == 'resume': game.resume()
+        elif action == 'stop': game.stop()
+        elif action == 'next_turn': game.next_turn()
+        elif action == 'get_current_player':
+            player = game.current_player
+            return {'status': 'success', 'data': {'name': player.name, 'attributes': player.attributes} if player else None}
+        elif action == 'get_game_state':
+            return {'status': 'success', 'data': {'status': game.state, 'custom': game.custom_state}}
+        elif action == 'set_game_state':
+            game.custom_state = params.get('state')
         else:
-            game_id = params.get('game_id')
-            if not game_id or game_id not in games:
-                return {'status': 'error', 'type': 'GameNotFoundError', 'message': 'Game not found'}
-            game = games[game_id]
-            if action == 'add_player':
-                player_data = params['player']
-                player = Player(player_data['name'], **player_data.get('attributes', {}))
-                game_password = params.get('game_password')
-                game.add_player(player, password=game_password)
-                result = {'status': 'success'}
-            elif action == 'start':
-                game.start()
-                result = {'status': 'success'}
-            elif action == 'pause':
-                game.pause()
-                result = {'status': 'success'}
-            elif action == 'resume':
-                game.resume()
-                result = {'status': 'success'}
-            elif action == 'stop':
-                game.stop()
-                result = {'status': 'success'}
-            elif action == 'next_turn':
-                game.next_turn()
-                result = {'status': 'success'}
-            elif action == 'get_current_player':
-                player = game.current_player
-                if player:
-                    result = {'status': 'success', 'data': {'name': player.name, 'attributes': player.attributes}}
-                else:
-                    result = {'status': 'success', 'data': None}
-            elif action == 'get_game_state':
-                result = {'status': 'success', 'data': {'status': game.state, 'custom': game.custom_state}}
-            elif action == 'set_game_state':
-                game.custom_state = params.get('state')
-                result = {'status': 'success'}
-            else:
-                result = {'status': 'error', 'type': 'ServerError', 'message': 'Unknown action'}
+            return {'status': 'error', 'type': 'ServerError', 'message': 'Unknown action'}
+        return {'status': 'success'}
     except (GameLogicError, PlayerLimitReachedError, AuthenticationError) as e:
-        result = {'status': 'error', 'type': type(e).__name__, 'message': str(e)}
+        return {'status': 'error', 'type': type(e).__name__, 'message': str(e)}
     except Exception as e:
-        result = {'status': 'error', 'type': 'ServerError', 'message': str(e)}
-    return result
+        return {'status': 'error', 'type': 'ServerError', 'message': str(e)}
+
+def _server_main_loop(host, port, password, use_tls, cert_data, key_data, stop_event, start_event):
+    """The main function for the server process, running both services."""
+    discovery_thread = threading.Thread(target=_run_discovery_service, args=(port, stop_event))
+    tcp_thread = threading.Thread(target=_run_tcp_server, args=(host, port, password, use_tls, cert_data, key_data, stop_event))
+    
+    discovery_thread.start()
+    tcp_thread.start()
+    
+    start_event.set() # Signal that the server is ready
+    
+    print(f"Server process started with PID {os.getpid()}")
+    if use_tls: print("TLS encryption is enabled.")
+    print("Network discovery service started.")
+    
+    discovery_thread.join()
+    tcp_thread.join()
+    print("Server process shutting down.")
 
 class GameServer:
     """
@@ -189,72 +188,39 @@ class GameServer:
         self.password = password
         self.use_tls = use_tls
         self._server_process = None
-        self._discovery_thread = None
-        self._stop_discovery = threading.Event()
+        self._stop_event = None
 
     def start(self):
-        """Starts the game server and discovery service in separate processes/threads."""
+        """Starts the game server and discovery service in a separate process."""
         if self._server_process and self._server_process.is_alive():
             print("Server is already running.")
             return
         
+        self._stop_event = Event()
+        start_event = Event()
         cert_data, key_data = (None, None)
         if self.use_tls:
             cert_data, key_data = _generate_self_signed_cert_data()
 
-        self._server_process = Process(target=_run_server_process, args=(self.host, self.port, self.password, self.use_tls, cert_data, key_data))
+        self._server_process = Process(target=_server_main_loop, args=(self.host, self.port, self.password, self.use_tls, cert_data, key_data, self._stop_event, start_event))
         self._server_process.start()
         
-        self._stop_discovery.clear()
-        self._discovery_thread = threading.Thread(target=self._run_discovery_service)
-        self._discovery_thread.start()
+        # Wait for the server process to signal that it's ready
+        start_event.wait(timeout=5)
+        if not self._server_process.is_alive():
+             raise RuntimeError("Server process failed to start.")
 
-        print(f"Server started on {self.host}:{self.port} with PID {self._server_process.pid}")
-        if self.use_tls:
-            print("TLS encryption is enabled.")
-        print("Network discovery service started.")
+        print(f"Main process: Server process launched with PID {self._server_process.pid}")
 
     def stop(self):
         """Stops the game server and discovery service."""
         if self._server_process and self._server_process.is_alive():
-            self._server_process.terminate()
-            self._server_process.join()
+            print("Stopping server process...")
+            self._stop_event.set()
+            self._server_process.join(timeout=5)
+            if self._server_process.is_alive():
+                print("Server process did not stop gracefully, terminating.")
+                self._server_process.terminate()
             print("Server stopped.")
         else:
             print("Server is not running.")
-        if self._discovery_thread and self._discovery_thread.is_alive():
-            self._stop_discovery.set()
-            self._discovery_thread.join()
-            print("Network discovery service stopped.")
-
-    def _run_discovery_service(self):
-        """Listens for multicast discovery messages and responds."""
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind(('', DISCOVERY_PORT))
-        mreq = struct.pack("4sl", socket.inet_aton(MULTICAST_GROUP), socket.INADDR_ANY)
-        sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
-        sock.settimeout(1.0)
-        while not self._stop_discovery.is_set():
-            try:
-                data, addr = sock.recvfrom(1024)
-                if data == DISCOVERY_MESSAGE:
-                    print(f"Discovery request from {addr}, sending response...")
-                    response_ip = self._get_lan_ip()
-                    response_port = self.port
-                    message = struct.pack(RESPONSE_MESSAGE_FORMAT, response_ip.encode('utf-8'), response_port)
-                    sock.sendto(message, addr)
-            except socket.timeout:
-                continue
-
-    def _get_lan_ip(self):
-        """Finds the local IP address of the machine."""
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            s.connect(('10.255.255.255', 1))
-            IP = s.getsockname()[0]
-        except Exception:
-            IP = '127.0.0.1'
-        finally:
-            s.close()
-        return IP

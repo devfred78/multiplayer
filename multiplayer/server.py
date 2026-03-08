@@ -9,7 +9,8 @@ import struct
 import ssl
 import tempfile
 import os
-from multiprocessing import Process, Event
+from multiprocessing import Process, Event, Queue
+from queue import Empty
 from datetime import datetime, timedelta, timezone
 from cryptography import x509
 from cryptography.x509.oid import NameOID
@@ -45,52 +46,62 @@ def _generate_self_signed_cert_data():
 
 def _run_discovery_service(tcp_port, stop_event):
     """Listens for multicast discovery messages and responds."""
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.bind(('', DISCOVERY_PORT))
-    mreq = struct.pack("4sl", socket.inet_aton(MULTICAST_GROUP), socket.INADDR_ANY)
-    sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
-    sock.settimeout(1.0)
-    
-    def get_lan_ip():
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try: s.connect(('10.255.255.255', 1)); IP = s.getsockname()[0]
-        except Exception: IP = '127.0.0.1'
-        finally: s.close()
-        return IP
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind(('', DISCOVERY_PORT))
+        mreq = struct.pack("4sl", socket.inet_aton(MULTICAST_GROUP), socket.INADDR_ANY)
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+        sock.settimeout(1.0)
+        
+        def get_lan_ip():
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try: s.connect(('10.255.255.255', 1)); IP = s.getsockname()[0]
+            except Exception: IP = '127.0.0.1'
+            finally: s.close()
+            return IP
 
-    while not stop_event.is_set():
-        try:
-            data, addr = sock.recvfrom(1024)
-            if data == DISCOVERY_MESSAGE:
-                response_ip = get_lan_ip()
-                message = struct.pack(RESPONSE_MESSAGE_FORMAT, response_ip.encode('utf-8'), tcp_port)
-                sock.sendto(message, addr)
-        except socket.timeout:
-            continue
+        while not stop_event.is_set():
+            try:
+                data, addr = sock.recvfrom(1024)
+                if data == DISCOVERY_MESSAGE:
+                    response_ip = get_lan_ip()
+                    message = struct.pack(RESPONSE_MESSAGE_FORMAT, response_ip.encode('utf-8'), tcp_port)
+                    sock.sendto(message, addr)
+            except socket.timeout:
+                continue
+    except Exception as e:
+        print(f"Discovery service error: {e}")
     print("Network discovery service stopped.")
 
-def _run_tcp_server(host, port, password, use_tls, cert_data, key_data, stop_event):
+def _run_tcp_server(host, port, password, use_tls, cert_data, key_data, stop_event, status_queue):
     """The main server loop that listens for and handles connections."""
     games = {}
     games_lock = threading.Lock()
     context = None
     certfile, keyfile = None, None
-    if use_tls:
-        with tempfile.NamedTemporaryFile(delete=False) as cert_file_obj:
-            certfile = cert_file_obj.name; cert_file_obj.write(cert_data)
-        with tempfile.NamedTemporaryFile(delete=False) as key_file_obj:
-            keyfile = key_file_obj.name; key_file_obj.write(key_data)
-        context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        context.minimum_version = ssl.TLSVersion.TLSv1_3
-        context.load_cert_chain(certfile=certfile, keyfile=keyfile)
-
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind((host, port))
-    server_socket.listen()
-    server_socket.settimeout(1.0)
+    server_socket = None
 
     try:
+        if use_tls:
+            with tempfile.NamedTemporaryFile(delete=False) as cert_file_obj:
+                certfile = cert_file_obj.name; cert_file_obj.write(cert_data)
+            with tempfile.NamedTemporaryFile(delete=False) as key_file_obj:
+                keyfile = key_file_obj.name; key_file_obj.write(key_data)
+            context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+            context.minimum_version = ssl.TLSVersion.TLSv1_3
+            context.load_cert_chain(certfile=certfile, keyfile=keyfile)
+
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # Allow immediate reuse of the port to avoid WinError 10013/10048 after quick restarts
+        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server_socket.bind((host, port))
+        server_socket.listen()
+        server_socket.settimeout(1.0)
+        
+        # Signal successful bind
+        status_queue.put("READY")
+
         while not stop_event.is_set():
             try:
                 newsocket, fromaddr = server_socket.accept()
@@ -99,10 +110,14 @@ def _run_tcp_server(host, port, password, use_tls, cert_data, key_data, stop_eve
                 thread.start()
             except socket.timeout:
                 continue
+    except Exception as e:
+        status_queue.put(str(e))
     finally:
-        server_socket.close()
+        if server_socket:
+            server_socket.close()
         if use_tls:
-            os.remove(certfile); os.remove(keyfile)
+            if certfile and os.path.exists(certfile): os.remove(certfile)
+            if keyfile and os.path.exists(keyfile): os.remove(keyfile)
         print("TCP server stopped.")
 
 def _handle_client(conn, addr, games, lock, server_password):
@@ -160,21 +175,49 @@ def _execute_command(games, action, params):
     except Exception as e:
         return {'status': 'error', 'type': 'ServerError', 'message': str(e)}
 
-def _server_main_loop(host, port, password, use_tls, cert_data, key_data, stop_event, start_event):
+def _server_main_loop(host, port, password, use_tls, cert_data, key_data, stop_event, status_queue):
     """The main function for the server process, running both services."""
-    discovery_thread = threading.Thread(target=_run_discovery_service, args=(port, stop_event))
-    tcp_thread = threading.Thread(target=_run_tcp_server, args=(host, port, password, use_tls, cert_data, key_data, stop_event))
-    
-    discovery_thread.start()
+    # We pass status_queue to tcp_server to report bind errors
+    tcp_thread = threading.Thread(target=_run_tcp_server, args=(host, port, password, use_tls, cert_data, key_data, stop_event, status_queue))
     tcp_thread.start()
     
-    start_event.set() # Signal that the server is ready
+    # Wait for TCP server to initialize (bind port)
+    # It will put "READY" or an error message in the queue
+    status = status_queue.get()
     
-    print(f"Server process started with PID {os.getpid()}")
-    if use_tls: print("TLS encryption is enabled.")
-    print("Network discovery service started.")
-    
-    discovery_thread.join()
+    if status != "READY":
+        # If TCP server failed, we don't start discovery and we exit
+        print(f"Server process failed to bind: {status}")
+        # We put the status back so the parent process can read it too if needed, 
+        # but actually the parent reads from the same queue.
+        # Since queue is consumed, we should put it back or let parent read it directly?
+        # Better: Parent reads it. We just peek or wait? 
+        # Actually, if we are here, we are in the child process. The parent is waiting on the queue too.
+        # If multiple consumers wait on a queue, only one gets it.
+        # So we should NOT consume it here if the parent waits for it.
+        # BUT, we need to know if we should start discovery.
+        
+        # Alternative: Parent waits for queue. Child puts in queue.
+        # Child threads run.
+        # Let's change logic: _run_tcp_server puts in queue.
+        # Parent reads queue.
+        # If READY, parent is happy.
+        # Child needs to know too? No, child just runs threads.
+        # If _run_tcp_server fails, it returns/exits.
+        # So we should start discovery only if TCP server is running?
+        # Let's just start both. If TCP fails, it will exit, and we can stop discovery.
+        pass
+    else:
+        # If READY, we start discovery
+        print(f"Server process started with PID {os.getpid()}")
+        if use_tls: print("TLS encryption is enabled.")
+        
+        discovery_thread = threading.Thread(target=_run_discovery_service, args=(port, stop_event))
+        discovery_thread.start()
+        print("Network discovery service started.")
+        
+        discovery_thread.join()
+
     tcp_thread.join()
     print("Server process shutting down.")
 
@@ -197,18 +240,26 @@ class GameServer:
             return
         
         self._stop_event = Event()
-        start_event = Event()
+        status_queue = Queue() # Queue for communicating startup status
+        
         cert_data, key_data = (None, None)
         if self.use_tls:
             cert_data, key_data = _generate_self_signed_cert_data()
 
-        self._server_process = Process(target=_server_main_loop, args=(self.host, self.port, self.password, self.use_tls, cert_data, key_data, self._stop_event, start_event))
+        self._server_process = Process(target=_server_main_loop, args=(self.host, self.port, self.password, self.use_tls, cert_data, key_data, self._stop_event, status_queue))
         self._server_process.start()
         
-        # Wait for the server process to signal that it's ready
-        start_event.wait(timeout=5)
-        if not self._server_process.is_alive():
-             raise RuntimeError("Server process failed to start.")
+        # Wait for the server process to signal that it's ready or failed
+        try:
+            status = status_queue.get(timeout=5)
+            if status != "READY":
+                self._server_process.terminate()
+                self._server_process.join()
+                raise RuntimeError(f"Server failed to start: {status}")
+        except Empty:
+             self._server_process.terminate()
+             self._server_process.join()
+             raise RuntimeError("Server timed out during startup (check firewall).")
 
         print(f"Main process: Server process launched with PID {self._server_process.pid}")
 

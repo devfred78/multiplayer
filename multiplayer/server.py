@@ -34,8 +34,8 @@ DISCOVERY_PORT = 5007
 DISCOVERY_MESSAGE = b'multiplayer_game_discovery_request'
 RESPONSE_MESSAGE_FORMAT = b'!15sH' # 15-char IP, unsigned short port
 
-def _generate_self_signed_cert():
-    """Generates a temporary self-signed certificate and key."""
+def _generate_self_signed_cert_data():
+    """Generates a self-signed certificate and key, returning their content."""
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     subject = issuer = x509.Name([
         x509.NameAttribute(NameOID.COMMON_NAME, u"multiplayer.games"),
@@ -56,27 +56,36 @@ def _generate_self_signed_cert():
         x509.SubjectAlternativeName([x509.DNSName(u"localhost")]),
         critical=False,
     ).sign(key, hashes.SHA256())
-    key_file = tempfile.NamedTemporaryFile(delete=False)
-    cert_file = tempfile.NamedTemporaryFile(delete=False)
-    key_file.write(key.private_bytes(
+
+    key_data = key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.TraditionalOpenSSL,
         encryption_algorithm=serialization.NoEncryption(),
-    ))
-    cert_file.write(cert.public_bytes(serialization.Encoding.PEM))
-    key_file.close()
-    cert_file.close()
-    return cert_file.name, key_file.name
+    )
+    cert_data = cert.public_bytes(serialization.Encoding.PEM)
+    
+    return cert_data, key_data
 
-def _run_server_process(host, port, password, use_tls, certfile, keyfile):
+def _run_server_process(host, port, password, use_tls, cert_data, key_data):
     """The main server loop that listens for and handles connections."""
     games = {}
     games_lock = threading.Lock()
+    
+    certfile, keyfile = None, None
     context = None
     if use_tls:
+        with tempfile.NamedTemporaryFile(delete=False) as cert_file_obj:
+            certfile = cert_file_obj.name
+            cert_file_obj.write(cert_data)
+        
+        with tempfile.NamedTemporaryFile(delete=False) as key_file_obj:
+            keyfile = key_file_obj.name
+            key_file_obj.write(key_data)
+
         context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         context.minimum_version = ssl.TLSVersion.TLSv1_3
         context.load_cert_chain(certfile=certfile, keyfile=keyfile)
+
     bindsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     bindsocket.bind((host, port))
     bindsocket.listen()
@@ -188,14 +197,18 @@ class GameServer:
         if self._server_process and self._server_process.is_alive():
             print("Server is already running.")
             return
-        certfile, keyfile = (None, None)
+        
+        cert_data, key_data = (None, None)
         if self.use_tls:
-            certfile, keyfile = _generate_self_signed_cert()
-        self._server_process = Process(target=_run_server_process, args=(self.host, self.port, self.password, self.use_tls, certfile, keyfile))
+            cert_data, key_data = _generate_self_signed_cert_data()
+
+        self._server_process = Process(target=_run_server_process, args=(self.host, self.port, self.password, self.use_tls, cert_data, key_data))
         self._server_process.start()
+        
         self._stop_discovery.clear()
         self._discovery_thread = threading.Thread(target=self._run_discovery_service)
         self._discovery_thread.start()
+
         print(f"Server started on {self.host}:{self.port} with PID {self._server_process.pid}")
         if self.use_tls:
             print("TLS encryption is enabled.")

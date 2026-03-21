@@ -4,8 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Strengthening network discovery">
+    <list default="true" id="6d47e1e8-acba-4374-8c14-8239987e6200" name="Changes" comment="Stabilization when encountering an OS permission issue when creating a server.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/multiplayer/client.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/client.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/multiplayer/server.py" beforeDir="false" afterPath="$PROJECT_DIR$/multiplayer/server.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -73,7 +74,6 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-PY-253.31033.139" />
         <option value="bundled-python-sdk-2653e85de345-6d6dccd035ac-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.31033.139" />
       </set>
     </attachedChunks>
@@ -89,7 +89,8 @@
       <workItem from="1772561849068" duration="2960000" />
       <workItem from="1772736491885" duration="1012000" />
       <workItem from="1772825897802" duration="2976000" />
-      <workItem from="1772985394693" duration="1390000" />
+      <workItem from="1772985394693" duration="2525000" />
+      <workItem from="1773268565547" duration="14000" />
     </task>
     <task id="LOCAL-00001" summary="Initial commit">
       <option name="closed" value="true" />
@@ -467,7 +468,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772981732198</updated>
     </task>
-    <option name="localTasksCounter" value="48" />
+    <task id="LOCAL-00048" summary="Stabilization when encountering an OS permission issue when creating a server.">
+      <option name="closed" value="true" />
+      <created>1772989898958</created>
+      <option name="number" value="00048" />
+      <option name="presentableId" value="LOCAL-00048" />
+      <option name="project" value="LOCAL" />
+      <updated>1772989898958</updated>
+    </task>
+    <option name="localTasksCounter" value="49" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -485,7 +494,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Correction of the error revealed by unit tests" />
     <MESSAGE value="Finalizes version 0.5.0" />
     <MESSAGE value="Starting version 0.5.1.dev1" />
     <MESSAGE value="Finalize version 0.5.1" />
@@ -510,6 +518,7 @@
     <MESSAGE value="starting v0.5..6.dev1" />
     <MESSAGE value="Strengthening of TLS v1.3 encrypted session negotiation between client and server." />
     <MESSAGE value="Strengthening network discovery" />
-    <option name="LAST_COMMIT_MESSAGE" value="Strengthening network discovery" />
+    <MESSAGE value="Stabilization when encountering an OS permission issue when creating a server." />
+    <option name="LAST_COMMIT_MESSAGE" value="Stabilization when encountering an OS permission issue when creating a server." />
   </component>
 </project>

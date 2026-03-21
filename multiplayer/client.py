@@ -29,31 +29,57 @@ class GameClient:
     def discover_servers(timeout=2):
         """
         Discovers game servers on the local network using UDP multicast.
-
-        Args:
-            timeout (int): The number of seconds to listen for responses.
-
-        Returns:
-            A list of (host, port) tuples for discovered servers.
+        This method attempts to send discovery messages on all available network interfaces.
         """
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        sock.settimeout(timeout)
-        
-        sock.sendto(DISCOVERY_MESSAGE, (MULTICAST_GROUP, DISCOVERY_PORT))
-        
-        servers = []
+        servers = {}
         end_time = time.time() + timeout
+
+        # Create a socket for receiving responses
+        recv_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        recv_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            recv_sock.bind(('', DISCOVERY_PORT))
+        except OSError as e:
+            print(f"Could not bind discovery listener socket: {e}. Discovery may fail.")
+            return []
         
+        recv_sock.settimeout(max(0.1, timeout / 4))
+
+        # Get all local IP addresses to send from
+        try:
+            host_name = socket.gethostname()
+            all_ips = socket.gethostbyname_ex(host_name)[2]
+        except socket.gaierror:
+            all_ips = ['127.0.0.1']
+
+        # Send discovery message from each interface
+        for ip in all_ips:
+            if ip.startswith("127."): continue # Skip loopback
+            try:
+                send_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+                send_sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(ip))
+                send_sock.sendto(DISCOVERY_MESSAGE, (MULTICAST_GROUP, DISCOVERY_PORT))
+                send_sock.close()
+            except (OSError, socket.error):
+                # This can fail on some virtual/inactive interfaces, which is fine.
+                pass
+        
+        # Listen for responses
         while time.time() < end_time:
             try:
-                data, _ = sock.recvfrom(1024)
+                data, _ = recv_sock.recvfrom(1024)
                 ip_bytes, port = struct.unpack(RESPONSE_MESSAGE_FORMAT, data)
                 host = ip_bytes.decode('utf-8').strip('\x00')
-                servers.append((host, port))
+                if (host, port) not in servers:
+                    servers[(host, port)] = None # Use dict for uniqueness
             except socket.timeout:
-                break
+                continue
+            except (struct.error, UnicodeDecodeError):
+                # Ignore malformed packets
+                continue
         
-        return list(set(servers))
+        recv_sock.close()
+        return list(servers.keys())
 
     def _send_command(self, action, params=None):
         """Sends a command to the server and returns the response."""

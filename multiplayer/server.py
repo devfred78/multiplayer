@@ -9,6 +9,7 @@ import struct
 import ssl
 import tempfile
 import os
+import logging
 from multiprocessing import Process
 from datetime import datetime, timedelta, timezone
 from cryptography import x509
@@ -70,6 +71,8 @@ def _generate_self_signed_cert():
 
 def _run_server_process(host, port, password, use_tls, certfile, keyfile):
     """The main server loop that listens for and handles connections."""
+    logger = logging.getLogger("GameServer")
+    logger.info(f"Démarrage du processus serveur sur {host}:{port}")
     games = {}
     games_lock = threading.Lock()
     context = None
@@ -103,7 +106,8 @@ def _run_server_process(host, port, password, use_tls, certfile, keyfile):
 
 def _handle_client(conn, addr, games, lock, server_password):
     """Handles a single client connection."""
-    print(f"Connected by {addr}")
+    logger = logging.getLogger("GameServer")
+    logger.info(f"Connected by {addr}")
     try:
         with conn:
             data = conn.recv(1024)
@@ -123,7 +127,7 @@ def _handle_client(conn, addr, games, lock, server_password):
                 error_response = {'status': 'error', 'type': type(e).__name__, 'message': str(e)}
                 conn.sendall(json.dumps(error_response, cls=EnumEncoder).encode('utf-8'))
     finally:
-        print(f"Disconnected from {addr}")
+        logger.info(f"Disconnected from {addr}")
 
 def _execute_command(games, action, params):
     """Executes a command on the game objects and returns a response."""
@@ -241,7 +245,8 @@ class GameServer:
             try:
                 data, addr = sock.recvfrom(1024)
                 if data == DISCOVERY_MESSAGE:
-                    print(f"Discovery request from {addr}, sending response...")
+                    logger = logging.getLogger("GameServer")
+                    logger.info(f"Discovery request from {addr}, sending response...")
                     response_ip = self._get_lan_ip()
                     response_port = self.port
                     message = struct.pack(RESPONSE_MESSAGE_FORMAT, response_ip.encode('utf-8'), response_port)

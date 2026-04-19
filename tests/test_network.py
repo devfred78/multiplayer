@@ -3,7 +3,7 @@ Unit tests for the client-server architecture.
 """
 import pytest
 import time
-from multiplayer import GameServer, GameClient, Player
+from multiplayer import GameServer, GameClient, Player, exceptions, GameState
 from multiplayer.exceptions import (
     ConnectionError,
     GameNotFoundError,
@@ -143,6 +143,47 @@ def test_game_password_success(game_server):
     game = client.create_game(password=TEST_GAME_PASSWORD)
     game.add_player(Player("Alice"), password=TEST_GAME_PASSWORD)
     # No error should be raised
+
+def test_remote_game_lifecycle(game_server):
+    """Tests the full lifecycle methods of RemoteGame (pause, resume, next_turn)."""
+    client = GameClient(port=TEST_PORT)
+    game = client.create_game(turn_based=True)
+    game.add_player(Player("Alice"))
+    game.start()
+    
+    game.pause()
+    assert game.state['status'] == GameState.PENDING.value
+    
+    game.resume()
+    assert game.state['status'] == GameState.IN_PROGRESS.value
+    
+    game.next_turn()
+    # next_turn doesn't change status but we verify it doesn't crash
+    assert game.state['status'] == GameState.IN_PROGRESS.value
+
+def test_unknown_action(game_server):
+    """Tests that the server handles unknown actions correctly."""
+    client = GameClient(port=TEST_PORT)
+    # We use _send_command directly to send an invalid action
+    with pytest.raises(exceptions.ServerError, match="Unknown action"):
+        client._send_command('invalid_action', {'game_id': 'some-id'})
+
+def test_server_already_running(game_server):
+    """Tests that starting an already running server is handled gracefully."""
+    server = GameServer(host='0.0.0.0', port=TEST_PORT)
+    # This should just print a message and return
+    server.start()
+
+def test_stop_non_running_server():
+    """Tests stopping a server that isn't running."""
+    server = GameServer(host='0.0.0.0', port=TEST_PORT + 5)
+    server.stop() # Should print "Server is not running."
+
+def test_get_current_player_no_players(game_server):
+    """Tests get_current_player when no players are added."""
+    client = GameClient(port=TEST_PORT)
+    game = client.create_game()
+    assert game.current_player is None
 
 def test_game_password_failure(game_server):
     """Tests that joining a password-protected game with the wrong password fails."""

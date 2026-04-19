@@ -86,8 +86,10 @@ class Game:
         Starts the game.
 
         Raises:
-            GameLogicError: If there are no players in the game.
+            GameLogicError: If there are no players in the game or if the game is already in progress.
         """
+        if self.state == GameState.IN_PROGRESS:
+            raise GameLogicError("Game is already in progress")
         if not self.players:
             raise GameLogicError("Cannot start a game with no players")
         self.state = GameState.IN_PROGRESS

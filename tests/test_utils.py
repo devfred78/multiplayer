@@ -36,6 +36,27 @@ def test_get_available_categories():
     assert "roman_gods" not in game_cats
     assert "cities" not in player_cats
 
+def test_register_invalid_category_type():
+    with pytest.raises(ValueError, match="category_type must be 'game' or 'player'"):
+        register_name_category("fail", ["a"], "invalid")
+
+def test_suggest_invalid_category():
+    assert suggest_game_name("non_existent") is None
+    assert suggest_player_name("non_existent") is None
+
+def test_get_names_from_list():
+    from multiplayer.utils import _get_names_from_source
+    names = ["A", "B"]
+    assert _get_names_from_source(names) == names
+
+def test_get_names_from_invalid_source():
+    from multiplayer.utils import _get_names_from_source
+    # This should trigger the FileNotFoundError and return None
+    assert _get_names_from_source("non_existent_file_path_12345.txt") is None
+
+def test_unregister_non_existent_category():
+    assert unregister_name_category("non_existent") is False
+
 def test_suggest_game_name_random():
     """
     Tests that suggest_game_name with no category returns a valid name.

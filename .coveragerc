@@ -1,0 +1,7 @@
+[run]
+concurrency = multiprocessing
+parallel = True
+sigterm = True
+
+[report]
+show_missing = True

@@ -14,13 +14,11 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+This package provides tools to manage a local IPC (Inter Process Communication) logging system
 """
 
-"""This package provides tools to manage a local IPC (Inter Process Communication) logging system"""
-
-import os
 from pathlib import Path
-import subprocess
 import sys
 
 # local path

@@ -14,22 +14,9 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+This module provides tools to manage a log server
 """
-
-"""This module provides tools to manage a log server"""
-
-# from sys import stdin, stdout, exit
-
-# while(True):
-    # print("Waiting for stdin...")
-    # raw_data = input()
-    # # raw_data = stdin.read()
-    # print(f"Input receipt !: {raw_data}")
-    # if 'EXIT' in raw_data:
-        # exit(0)
-    # print(raw_data, flush = True)
-    # # stdout.write(raw_data)
-    # # stdout.flush()
 
 import logging
 from pathlib import Path

@@ -28,7 +28,7 @@ def wait_for_server(port, timeout=5, use_tls=False):
                 context.check_hostname = False
                 context.verify_mode = ssl.CERT_NONE
                 with socket.create_connection(('127.0.0.1', port), timeout=0.5) as sock:
-                    with context.wrap_socket(sock, server_hostname='localhost') as ssock:
+                    with context.wrap_socket(sock, server_hostname='localhost'):
                         return True
             else:
                 with socket.create_connection(('127.0.0.1', port), timeout=0.5):

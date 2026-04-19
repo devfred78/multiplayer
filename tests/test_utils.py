@@ -144,7 +144,7 @@ def test_register_and_use_custom_player_category_from_file(tmp_path):
     suggested_name = suggest_player_name("heroes")
     assert suggested_name in ["Hero1", "Hero2"]
 
-def test_register_invalid_category_type():
+def test_register_invalid_category_type_extended():
     """
     Tests that registering with an invalid type raises a ValueError.
     """
@@ -162,7 +162,7 @@ def test_unregister_custom_category():
     assert result is True
     assert "temp_cat" not in get_available_categories("game")
 
-def test_unregister_non_existent_category():
+def test_unregister_non_existent_category_extended():
     """
     Tests that unregistering a non-existent category returns False.
     """

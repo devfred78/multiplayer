@@ -14,9 +14,9 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-"""
 
-"""This module provides tools for managing interface languages."""
+This module provides tools for managing interface languages.
+"""
 
 import logging
 from pathlib import Path
@@ -138,7 +138,7 @@ class Language():
         elif isinstance(file, str):
             try:
                 my_file = Path(file)
-            except:
+            except Exception:
                 try:
                     self._load_lng_dict(self._parse_str_lng(file))
                 except tomllib.TOMLDecodeError:
@@ -398,7 +398,7 @@ class Languages():
                 self._supported_languages.append(language)
                 self.log.info(f"Language '{language.header['language']}' is properly supported, with the following variation(s): {language.countries}.")
             else:
-                self.log.warning(f"{lang_file} file is decoded, but not usable.")
+                self.log.warning(f"{lng_file} file is decoded, but not usable.")
     
     def remove(self, lng:str):
         """

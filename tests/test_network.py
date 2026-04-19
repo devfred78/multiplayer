@@ -3,6 +3,8 @@ Unit tests for the client-server architecture.
 """
 import pytest
 import time
+import socket
+import ssl
 from multiplayer import GameServer, GameClient, Player, exceptions, GameState
 from multiplayer.exceptions import (
     ConnectionError,
@@ -16,35 +18,59 @@ TEST_PORT = 65433
 TEST_SERVER_PASSWORD = "test_server_password"
 TEST_GAME_PASSWORD = "test_game_password"
 
+def wait_for_server(port, timeout=5, use_tls=False):
+    """Wait for the server to be ready by trying to connect to it."""
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        try:
+            if use_tls:
+                context = ssl.create_default_context()
+                context.check_hostname = False
+                context.verify_mode = ssl.CERT_NONE
+                with socket.create_connection(('127.0.0.1', port), timeout=0.5) as sock:
+                    with context.wrap_socket(sock, server_hostname='localhost') as ssock:
+                        return True
+            else:
+                with socket.create_connection(('127.0.0.1', port), timeout=0.5):
+                    return True
+        except (socket.error, ConnectionRefusedError, ssl.SSLError):
+            time.sleep(0.1)
+    return False
+
 @pytest.fixture(scope="module")
 def game_server():
     """Fixture to start and stop a server without security."""
     server = GameServer(host='0.0.0.0', port=TEST_PORT)
     server.start()
-    time.sleep(0.2)
-    yield
+    if not wait_for_server(TEST_PORT):
+        server.stop()
+        pytest.fail("Server failed to start in time")
+    yield server
     server.stop()
-    time.sleep(0.2)
 
 @pytest.fixture(scope="module")
 def secure_game_server():
     """Fixture to start and stop a server with a password."""
-    server = GameServer(host='0.0.0.0', port=TEST_PORT + 1, password=TEST_SERVER_PASSWORD)
+    port = TEST_PORT + 1
+    server = GameServer(host='0.0.0.0', port=port, password=TEST_SERVER_PASSWORD)
     server.start()
-    time.sleep(0.2)
-    yield
+    if not wait_for_server(port):
+        server.stop()
+        pytest.fail("Secure server failed to start in time")
+    yield server
     server.stop()
-    time.sleep(0.2)
 
 @pytest.fixture(scope="module")
 def tls_game_server():
     """Fixture to start and stop a server with TLS encryption."""
-    server = GameServer(host='0.0.0.0', port=TEST_PORT + 2, use_tls=True)
+    port = TEST_PORT + 2
+    server = GameServer(host='0.0.0.0', port=port, use_tls=True)
     server.start()
-    time.sleep(0.2)
-    yield
+    if not wait_for_server(port, use_tls=True):
+        server.stop()
+        pytest.fail("TLS server failed to start in time")
+    yield server
     server.stop()
-    time.sleep(0.2)
 
 def test_server_discovery(game_server):
     """Tests that the server discovery mechanism works."""

@@ -81,12 +81,22 @@ def _run_server_process(host, port, password, use_tls, certfile, keyfile):
     bindsocket.bind((host, port))
     bindsocket.listen()
     try:
+        bindsocket.settimeout(1.0)
         while True:
-            newsocket, fromaddr = bindsocket.accept()
-            conn = context.wrap_socket(newsocket, server_side=True) if use_tls else newsocket
-            thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, games_lock, password))
-            thread.start()
+                try:
+                    newsocket, fromaddr = bindsocket.accept()
+                except socket.timeout:
+                    continue
+                try:
+                    conn = context.wrap_socket(newsocket, server_side=True) if use_tls else newsocket
+                    thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, games_lock, password))
+                    thread.daemon = True
+                    thread.start()
+                except (ssl.SSLError, OSError) as e:
+                    print(f"Failed to wrap socket or start thread: {e}")
+                    newsocket.close()
     finally:
+        bindsocket.close()
         if use_tls:
             os.remove(certfile)
             os.remove(keyfile)
@@ -201,17 +211,21 @@ class GameServer:
             print("TLS encryption is enabled.")
         print("Network discovery service started.")
 
-    def stop(self):
+    def stop(self, timeout=5):
         """Stops the game server and discovery service."""
         if self._server_process and self._server_process.is_alive():
             self._server_process.terminate()
-            self._server_process.join()
+            self._server_process.join(timeout=timeout)
+            if self._server_process.is_alive():
+                print("Server process did not terminate gracefully, killing it...")
+                self._server_process.kill()
+                self._server_process.join()
             print("Server stopped.")
         else:
             print("Server is not running.")
         if self._discovery_thread and self._discovery_thread.is_alive():
             self._stop_discovery.set()
-            self._discovery_thread.join()
+            self._discovery_thread.join(timeout=timeout)
             print("Network discovery service stopped.")
 
     def _run_discovery_service(self):

@@ -55,10 +55,11 @@ class GameClient:
         
         return list(set(servers))
 
-    def _send_command(self, action, params=None):
+    def _send_command(self, action, params=None, timeout=5):
         """Sends a command to the server and returns the response."""
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(timeout)
             
             conn = None
             if self.use_tls:

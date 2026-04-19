@@ -205,6 +205,7 @@ class GameServer:
         self._server_process.start()
         self._stop_discovery.clear()
         self._discovery_thread = threading.Thread(target=self._run_discovery_service)
+        self._discovery_thread.daemon = True
         self._discovery_thread.start()
         print(f"Server started on {self.host}:{self.port} with PID {self._server_process.pid}")
         if self.use_tls:

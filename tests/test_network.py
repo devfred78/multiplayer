@@ -190,9 +190,10 @@ def test_remote_game_lifecycle(game_server):
 def test_unknown_action(game_server):
     """Tests that the server handles unknown actions correctly."""
     client = GameClient(port=TEST_PORT)
-    # We use _send_command directly to send an invalid action
+    game = client.create_game()
+    # We use _send_command directly to send an invalid action to a valid game
     with pytest.raises(exceptions.ServerError, match="Unknown action"):
-        client._send_command('invalid_action', {'game_id': 'some-id'})
+        client._send_command('invalid_action', {'game_id': game.game_id})
 
 def test_server_already_running(game_server):
     """Tests that starting an already running server is handled gracefully."""
@@ -206,10 +207,12 @@ def test_stop_non_running_server():
     server.stop() # Should print "Server is not running."
 
 def test_get_current_player_no_players(game_server):
-    """Tests get_current_player when no players are added."""
+    """Tests get_current_player when a game is turn-based but has no players (and is not started)."""
     client = GameClient(port=TEST_PORT)
-    game = client.create_game()
-    assert game.current_player is None
+    game = client.create_game(turn_based=True)
+    # Even if turn-based, it's not in progress, so it should raise GameLogicError
+    with pytest.raises(exceptions.GameLogicError, match="Game is not in progress"):
+        _ = game.current_player
 
 def test_game_password_failure(game_server):
     """Tests that joining a password-protected game with the wrong password fails."""

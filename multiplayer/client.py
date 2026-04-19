@@ -175,6 +175,12 @@ class RemoteGame:
         """Gets the state of the remote game."""
         return self._send_command('get_game_state')
 
+    @property
+    def players(self):
+        """Gets the list of players in the remote game."""
+        data = self._send_command('get_players')
+        return [Player(p['name'], **p['attributes']) for p in data]
+
     def set_state(self, state):
         """Sets the state of the remote game."""
         return self._send_command('set_game_state', {'state': state})

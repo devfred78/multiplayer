@@ -173,6 +173,9 @@ def _execute_command(games, action, params):
                     result = {'status': 'success', 'data': None}
             elif action == 'get_game_state':
                 result = {'status': 'success', 'data': {'status': game.state, 'custom': game.custom_state}}
+            elif action == 'get_players':
+                player_list = [{'name': p.name, 'attributes': p.attributes} for p in game.players]
+                result = {'status': 'success', 'data': player_list}
             elif action == 'set_game_state':
                 game.custom_state = params.get('state')
                 result = {'status': 'success'}

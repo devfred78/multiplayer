@@ -59,13 +59,13 @@ print(f"Current turn: {full_state['custom']['turn']}")
 A script is available to launch a complete test environment with:
 - An IPC log server (`IPClogging`) in a separate window.
 - A game server.
-- Two client instances simulating a game.
+- Two separate client instances simulating a game, each in its own terminal window.
 
 To run it:
 ```bash
 uv run python scripts/full_test_env.py
 ```
-This will open a new Windows Terminal window displaying color-coded logs of the session.
+This will open several Windows Terminal windows: one for the log server and one for each client instance, allowing you to see the real-time interactions and logs.
 
 ### Local Usage
 

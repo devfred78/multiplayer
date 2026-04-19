@@ -119,6 +119,12 @@ def test_game_proxy_interaction(game_server):
     new_state = game.state
     assert new_state['custom']['score'] == 50
     
+    # Test getting players list
+    players = game.players
+    assert len(players) == 1
+    assert players[0].name == "Alice"
+    assert players[0].attributes['score'] == 100
+    
     game.stop()
     final_state = game.state
     assert final_state['status'] == 'finished'

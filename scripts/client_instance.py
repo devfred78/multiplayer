@@ -20,7 +20,7 @@ def setup_logging(log_port, player_name):
     console_handler.setFormatter(logging.Formatter(f'%(levelname)s:{player_name}:%(message)s'))
     root_logger.addHandler(console_handler)
 
-def run_client(player_name, game_id, host, port, is_creator):
+def run_client(player_name, game_id, host, port, is_creator, min_players):
     logger = logging.getLogger(f"Client-{player_name}")
     logger.info(f"Connecting to server at {host}:{port}...")
     
@@ -60,9 +60,9 @@ def run_client(player_name, game_id, host, port, is_creator):
     game_proxy.add_player(Player(player_name, score=0))
 
     if is_creator:
-        # Wait for second player
-        logger.info("Waiting for other players to join...")
-        while len(game_proxy.players) < 2:
+        # Wait for all players
+        logger.info(f"Waiting for {min_players} players to join...")
+        while len(game_proxy.players) < min_players:
             time.sleep(0.5)
         
         logger.info("Starting the game...")
@@ -168,6 +168,7 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=65432, help="Server port")
     parser.add_argument("--log-port", type=int, default=5005, help="IPClogging port")
     parser.add_argument("--creator", action="store_true", help="Flag if this client creates the game")
+    parser.add_argument("--players", type=int, default=2, help="Minimum number of players to wait for (creator only)")
     
     args = parser.parse_args()
 
@@ -177,4 +178,4 @@ if __name__ == "__main__":
     sys.path.append(str(project_root))
 
     setup_logging(args.log_port, args.name)
-    run_client(args.name, args.game_id, args.host, args.port, args.creator)
+    run_client(args.name, args.game_id, args.host, args.port, args.creator, args.players)

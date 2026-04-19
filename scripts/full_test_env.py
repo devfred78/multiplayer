@@ -4,6 +4,7 @@ import subprocess
 import time
 import sys
 import os
+import argparse
 from pathlib import Path
 from multiplayer import GameServer, GameClient, Player, GameState
 
@@ -39,7 +40,7 @@ def launch_log_server():
     # Give the server some time to start
     time.sleep(3)
 
-def launch_client_instance(name, game_id, is_creator=False):
+def launch_client_instance(name, game_id, is_creator=False, num_players=2):
     """Launches a client instance in a new terminal window."""
     client_script = Path("scripts/client_instance.py").resolve()
     
@@ -47,11 +48,12 @@ def launch_client_instance(name, game_id, is_creator=False):
     cmd = ['wt', 'new-tab', '-p', 'Command Prompt', '-d', '.', 'cmd', '/k', 'uv', 'run', 'python', str(client_script), '--name', name, '--game-id', game_id]
     if is_creator:
         cmd.append('--creator')
+        cmd.extend(['--players', str(num_players)])
     
     subprocess.Popen(cmd, shell=True)
 
-def run_simulation():
-    """Coordinates the simulation between two separate client instances."""
+def run_simulation(num_players=2):
+    """Coordinates the simulation between separate client instances."""
     logger = logging.getLogger("Simulation")
     
     logger.info("Starting GameServer...")
@@ -62,14 +64,23 @@ def run_simulation():
     game_id = "Full-Test-Game"
     
     try:
+        # Player names for the simulation
+        player_names = ["Alice", "Bob", "Charlie", "Dave", "Eve", "Frank", "Grace", "Heidi"]
+        if num_players > len(player_names):
+            # Generate more names if needed
+            for i in range(len(player_names), num_players):
+                player_names.append(f"Player-{i+1}")
+        
         # Launch Client 1 (Creator)
-        launch_client_instance("Alice", game_id, is_creator=True)
+        launch_client_instance(player_names[0], game_id, is_creator=True, num_players=num_players)
         time.sleep(2) # Give it time to create the game
         
-        # Launch Client 2 (Joiner)
-        launch_client_instance("Bob", game_id, is_creator=False)
+        # Launch other clients (Joiners)
+        for i in range(1, num_players):
+            launch_client_instance(player_names[i], game_id, is_creator=False)
+            time.sleep(0.5)
         
-        logger.info("Clients launched. The simulation is running in separate windows.")
+        logger.info(f"{num_players} clients launched. The simulation is running in separate windows.")
         logger.info("Waiting for clients to finish (based on score limit in client_instance.py)...")
         
         # Monitor the game status from here
@@ -113,6 +124,10 @@ def run_simulation():
         server.stop()
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Full multiplayer test environment")
+    parser.add_argument("--players", type=int, default=2, help="Number of players for the simulation")
+    args = parser.parse_args()
+
     # Ensure we are at project root
     project_root = Path(__file__).parent.parent.resolve()
     os.chdir(project_root)
@@ -123,7 +138,7 @@ if __name__ == "__main__":
     setup_logging()
     
     try:
-        run_simulation()
+        run_simulation(num_players=args.players)
     except Exception as e:
         logging.exception(f"Error during simulation: {e}")
     

@@ -213,11 +213,11 @@ class Language():
         try:
             data = tomllib.loads(str_lng)
         except tomllib.TOMLDecodeError:
-            self.log.warning(f"The provided string does not respect the expected TOML format. It will be not loaded.")
+            self.log.warning("The provided string does not respect the expected TOML format. It will be not loaded.")
             self._usable = False
             raise
         else:
-            self.log.debug(f"Provided string successfully loaded.")
+            self.log.debug("Provided string successfully loaded.")
             self._usable = True
             return data
 
@@ -239,7 +239,7 @@ class Language():
         try:
             self._header = data['header']
         except KeyError:
-            self.log.warning(f"Header not present in the language file. Language file not usable.")
+            self.log.warning("Header not present in the language file. Language file not usable.")
             self._usable = False
             raise tomllib.TOMLDecodeError
         
@@ -264,7 +264,7 @@ class Language():
         try:
             self._default_country = data['default']['country']
         except KeyError:
-            self.log.warning(f"The language file has no default country")
+            self.log.warning("The language file has no default country")
             self._default_country = self.countries[0]
             self.log.warning(f"{self._default_country} is used as default country for the language {self.header['language']}")
         else:

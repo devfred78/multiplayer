@@ -31,7 +31,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
     # # stdout.write(raw_data)
     # # stdout.flush()
 
-from collections import deque
 import logging
 from pathlib import Path
 import pickle

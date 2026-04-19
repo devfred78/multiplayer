@@ -22,7 +22,7 @@ Simple Python script echoing in the standard output what is given in the standar
 Exits if the stdin is b"EXIT" (in capitals)
 """
 
-from sys import stdin, stdout, exit
+from sys import exit
 
 while(True):
     print("Waiting for stdin...")

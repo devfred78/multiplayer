@@ -6,7 +6,7 @@ import sys
 import os
 import argparse
 from pathlib import Path
-from multiplayer import GameServer, GameClient, Player, GameState
+from multiplayer import GameServer, GameClient
 
 # Port configuration
 LOG_PORT = 5005

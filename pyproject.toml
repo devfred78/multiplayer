@@ -2,6 +2,7 @@
 name = "multiplayer"
 version = "0.5.5"
 description = "Library that allows you to manage multiple players, locally, on a network, or on the Internet."
+license = "MIT"
 license-files = ["LICENSE.md"]
 author = "devfred78"
 readme = "README.md"
@@ -9,7 +10,6 @@ requires-python = ">=3.14"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.14",
     "Topic :: Games/Entertainment",

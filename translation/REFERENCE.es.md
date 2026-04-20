@@ -55,12 +55,14 @@ Representa a un observador.
 
 ## Clases de Red
 
-### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False)`
+### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, logging_host=None, logging_port=None)`
 Gestiona las sesiones de juego y las peticiones de red.
 
 *   **`password`** (`str`, opcional): Una contraseña global para proteger el servidor.
 *   **`admin_password`** (`str`, opcional): Una contraseña para acceso administrativo.
 *   **`use_tls`** (`bool`, opcional): Si es `True`, habilita el cifrado TLS v1.3.
+*   **`logging_host`** (`str`, opcional): La dirección del host de un servidor de logging.
+*   **`logging_port`** (`int`, opcional): El puerto del servidor de logging.
 
 ---
 
@@ -78,6 +80,7 @@ Una clase de cliente para que los administradores gestionen un `GameServer`.
 *   `list_all_players()`: Devuelve una lista de todos los jugadores conectados actualmente al servidor, incluyendo su ID y nombre de juego asociados.
 *   `stop_server()`: Solicita que el servidor se apague.
 *   `restart_server()`: Solicita que el servidor se reinicie (borra todos los juegos actuales).
+*   `set_logging_config(host, port)`: Configura el servidor para enviar sus registros a un servidor de registros remoto en la dirección y el puerto especificados.
 
 ---
 
@@ -146,6 +149,4 @@ Sugiere un nombre aleatorio para un jugador.
 *   **`PlayerLimitReachedError`**: Lanzada al añadir un jugador a una partida llena.
 *   **`ObserverLimitReachedError`**: Lanzada al añadir un observador a una partida qui ha alcanzado su límite de observadores.
 *   **`GameNotFoundError`**: Lanzada cuando un cliente solicita un `id` de partida que no existe.
-*   **`NetworkError`**: Excepción base para problemas de red.
-*   **`ConnectionError`**: Lanzada cuando un cliente no puede conectarse al servidor.
-*   **`ServerError`**: Lanzada para errores genéricos reportad
+*   **`NetworkError`**: Excepción base para prob

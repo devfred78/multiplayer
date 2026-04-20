@@ -93,7 +93,11 @@ class GameClient:
                 if response.get('status') == 'error':
                     self._handle_error(response)
                 
-                return response.get('data')
+                # If there's data, return it; otherwise return the response itself
+                # to allow checking 'status' or other fields for commands without 'data'.
+                if 'data' in response:
+                    return response.get('data')
+                return response
         except (socket.error, ssl.SSLError) as e:
             raise exceptions.ConnectionError(f"Failed to connect to server: {e}")
         except json.JSONDecodeError:
@@ -154,6 +158,10 @@ class GameAdmin:
     def list_all_players(self):
         """Lists all players currently connected to the server across all games."""
         return self._client._send_command('list_all_players')
+
+    def set_logging_config(self, host, port):
+        """Sets the logging server address and port."""
+        return self._client._send_command('set_logging_config', {'host': host, 'port': port})
 
 class RemoteGame:
     """

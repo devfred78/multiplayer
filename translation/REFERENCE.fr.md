@@ -61,12 +61,14 @@ Représente un observateur.
 
 ## Classes Réseau
 
-### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False)`
+### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, logging_host=None, logging_port=None)`
 Gère les sessions de jeu et les requêtes réseau.
 
 *   **`password`** (`str`, optionnel) : Un mot de passe global pour protéger le serveur.
 *   **`admin_password`** (`str`, optionnel) : Un mot de passe pour l'accès administrateur.
 *   **`use_tls`** (`bool`, optionnel) : Si `True`, active le chiffrement TLS v1.3.
+*   **`logging_host`** (`str`, optionnel) : L'adresse de l'hôte d'un serveur de logging.
+*   **`logging_port`** (`int`, optionnel) : Le port du serveur de logging.
 
 #### Méthodes
 *   `start()`: Démarre le serveur.
@@ -88,6 +90,7 @@ Une classe client pour les administrateurs pour gérer un `GameServer`.
 *   `list_all_players()` : Liste tous les joueurs actuellement connectés au serveur, incluant l'ID et le nom de leur partie respective.
 *   `stop_server()` : Demande l'arrêt du serveur.
 *   `restart_server()` : Demande le redémarrage du serveur (efface toutes les parties en cours).
+*   `set_logging_config(host, port)` : Configure le serveur pour envoyer ses logs à un serveur de logging distant à l'adresse et au port spécifiés.
 
 ---
 

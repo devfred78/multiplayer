@@ -69,9 +69,15 @@ def _generate_self_signed_cert():
     cert_file.close()
     return cert_file.name, key_file.name
 
-def _run_server_process(host, port, password, admin_password, use_tls, certfile, keyfile):
+def _run_server_process(host, port, password, admin_password, use_tls, certfile, keyfile, logging_host=None, logging_port=None):
     """The main server loop that listens for and handles connections."""
     logger = logging.getLogger("GameServer")
+    if logging_host and logging_port:
+        from logging.handlers import SocketHandler
+        handler = SocketHandler(logging_host, logging_port)
+        logger.addHandler(handler)
+        logger.info(f"Logging configured to send to {logging_host}:{logging_port}")
+
     logger.info(f"Starting server process on {host}:{port}")
     games = {}
     games_lock = threading.Lock()
@@ -86,18 +92,18 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
     try:
         bindsocket.settimeout(1.0)
         while True:
-                try:
-                    newsocket, fromaddr = bindsocket.accept()
-                except socket.timeout:
-                    continue
-                try:
-                    conn = context.wrap_socket(newsocket, server_side=True) if use_tls else newsocket
-                    thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, games_lock, password, admin_password))
-                    thread.daemon = True
-                    thread.start()
-                except (ssl.SSLError, OSError) as e:
-                    print(f"Failed to wrap socket or start thread: {e}")
-                    newsocket.close()
+            try:
+                newsocket, fromaddr = bindsocket.accept()
+            except socket.timeout:
+                continue
+            try:
+                conn = context.wrap_socket(newsocket, server_side=True) if use_tls else newsocket
+                thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, games_lock, password, admin_password))
+                thread.daemon = True
+                thread.start()
+            except (ssl.SSLError, OSError) as e:
+                print(f"Failed to wrap socket or start thread: {e}")
+                newsocket.close()
     finally:
         bindsocket.close()
         if use_tls:
@@ -120,7 +126,7 @@ def _handle_client(conn, addr, games, lock, server_password, admin_password):
                 params = command.get('params', {})
 
                 # Check if it's an admin action
-                is_admin_action = action in ['stop_server', 'restart_server', 'kick_player', 'kick_observer', 'get_server_info']
+                is_admin_action = action in ['stop_server', 'restart_server', 'kick_player', 'kick_observer', 'get_server_info', 'set_logging_config', 'list_all_players']
                 
                 if is_admin_action:
                     if admin_password is None:
@@ -142,46 +148,58 @@ def _handle_client(conn, addr, games, lock, server_password, admin_password):
 def _execute_command(games, action, params):
     """Executes a command on the game objects and returns a response."""
     try:
+        # Server-level actions
         if action == 'create_game':
             game_id = str(uuid.uuid4())
             games[game_id] = Game(**params)
-            result = {'status': 'success', 'data': {'game_id': game_id}}
+            return {'status': 'success', 'data': {'game_id': game_id}}
+        
         elif action == 'list_games':
             game_list = {gid: g.attributes for gid, g in games.items() if g.state != GameState.FINISHED}
-            result = {'status': 'success', 'data': game_list}
+            return {'status': 'success', 'data': game_list}
+        
         elif action == 'stop_server':
-            import os
-            # Sending response before stopping the process
             result = {'status': 'success', 'message': 'Server stopping...'}
-            # Note: In practice, we might want a cleaner shutdown
-            # but here we follow the request to act on the server.
-            # Use a thread to give time for the response to be sent.
             def delayed_exit():
                 import time
                 time.sleep(0.5)
                 os._exit(0)
             threading.Thread(target=delayed_exit).start()
+            return result
+        
         elif action == 'restart_server':
-            import os
             result = {'status': 'success', 'message': 'Server restarting...'}
             def delayed_restart():
                 import time
                 time.sleep(0.5)
-                # Use a specific exit code for restart if needed,
-                # but here the simplest for a real process "restart"
-                # would be to relaunch the script. 
-                # For this lib, we'll say the process stops and it's up to the
-                # manager (GameServer) to relaunch it if desired, 
-                # or simply simulate restart by clearing games.
-                # But the request is "restart the server".
-                # Let's just clear the games dictionary to simulate a fresh state.
                 games.clear()
             threading.Thread(target=delayed_restart).start()
+            return result
+        
         elif action == 'get_server_info':
-            result = {'status': 'success', 'data': {
+            return {'status': 'success', 'data': {
                 'games_count': len(games),
                 'active_games': [gid for gid, g in games.items() if g.state != GameState.FINISHED]
             }}
+        
+        elif action == 'set_logging_config':
+            logging_host = params.get('host')
+            logging_port = params.get('port')
+            if logging_host and logging_port:
+                from logging.handlers import SocketHandler
+                logger = logging.getLogger("GameServer")
+                # Remove existing SocketHandlers if any to avoid duplicates
+                for h in logger.handlers[:]:
+                    if isinstance(h, SocketHandler):
+                        logger.removeHandler(h)
+                
+                handler = SocketHandler(logging_host, logging_port)
+                logger.addHandler(handler)
+                logger.info(f"Logging reconfigured to send to {logging_host}:{logging_port}")
+                return {'status': 'success'}
+            else:
+                return {'status': 'error', 'message': 'Missing host or port'}
+        
         elif action == 'list_all_players':
             all_players = []
             for gid, game in games.items():
@@ -193,99 +211,101 @@ def _execute_command(games, action, params):
                         'game_id': gid,
                         'game_name': game_name
                     })
-            result = {'status': 'success', 'data': all_players}
-        else:
-            game_id = params.get('game_id')
-            if not game_id or game_id not in games:
-                return {'status': 'error', 'type': 'GameNotFoundError', 'message': 'Game not found'}
-            game = games[game_id]
-            if action == 'add_player':
-                player_data = params['player']
-                player = Player(player_data['name'], **player_data.get('attributes', {}))
-                game_password = params.get('game_password')
-                game.add_player(player, password=game_password)
-                result = {'status': 'success'}
-            elif action == 'add_observer':
-                observer_data = params['observer']
-                observer = Observer(observer_data['name'], **observer_data.get('attributes', {}))
-                game_password = params.get('game_password')
-                game.add_observer(observer, password=game_password)
-                result = {'status': 'success'}
-            elif action == 'start':
-                game.start()
-                result = {'status': 'success'}
-            elif action == 'pause':
-                game.pause()
-                result = {'status': 'success'}
-            elif action == 'resume':
-                game.resume()
-                result = {'status': 'success'}
-            elif action == 'stop':
-                game.stop()
-                result = {'status': 'success'}
-            elif action == 'next_turn':
-                game.next_turn()
-                result = {'status': 'success'}
-            elif action == 'get_current_player':
-                player = game.current_player
-                if player:
-                    result = {'status': 'success', 'data': {'name': player.name, 'attributes': player.attributes}}
-                else:
-                    result = {'status': 'success', 'data': None}
-            elif action == 'get_game_state':
-                result = {'status': 'success', 'data': {'status': game.state, 'custom': game.custom_state}}
-            elif action == 'get_players':
-                player_list = [{'name': p.name, 'attributes': p.attributes} for p in game.players]
-                result = {'status': 'success', 'data': player_list}
-            elif action == 'get_observers':
-                observer_list = [{'name': o.name, 'attributes': o.attributes} for o in game.observers]
-                result = {'status': 'success', 'data': observer_list}
-            elif action == 'set_game_state':
-                game.custom_state = params.get('state')
-                result = {'status': 'success'}
-            elif action == 'stop_server':
-                # Since the server runs in a separate process, 
-                # we can't easily stop it from here without signal or flag.
-                # However, the GameServer.stop() method terminates the process.
-                # Here we could just signal that we want to stop.
-                # For simplicity, let's say it's not implemented yet or 
-                # use os._exit if we really want to kill the process from within.
-                # But _run_server_process is the target.
-                result = {'status': 'success', 'message': 'Server stopping...'}
-                # Actually, let's just exit the process.
-                import os
-                os._exit(0)
-            elif action == 'get_server_info':
-                result = {'status': 'success', 'data': {
-                    'games_count': len(games),
-                    'active_games': [gid for gid, g in games.items() if g.state != GameState.FINISHED]
-                }}
-            elif action == 'kick_player':
-                player_name = params.get('player_name')
-                game.remove_player(player_name)
-                result = {'status': 'success'}
-            elif action == 'kick_observer':
-                observer_name = params.get('observer_name')
-                game.remove_observer(observer_name)
-                result = {'status': 'success'}
+            return {'status': 'success', 'data': all_players}
+
+        # Game-specific actions
+        game_id = params.get('game_id')
+        if not game_id or game_id not in games:
+            return {'status': 'error', 'type': 'GameNotFoundError', 'message': 'Game not found'}
+        
+        game = games[game_id]
+        
+        if action == 'add_player':
+            player_data = params['player']
+            player = Player(player_data['name'], **player_data.get('attributes', {}))
+            game_password = params.get('game_password')
+            game.add_player(player, password=game_password)
+            return {'status': 'success'}
+        
+        elif action == 'add_observer':
+            observer_data = params['observer']
+            observer = Observer(observer_data['name'], **observer_data.get('attributes', {}))
+            game_password = params.get('game_password')
+            game.add_observer(observer, password=game_password)
+            return {'status': 'success'}
+        
+        elif action == 'start':
+            game.start()
+            return {'status': 'success'}
+        
+        elif action == 'pause':
+            game.pause()
+            return {'status': 'success'}
+        
+        elif action == 'resume':
+            game.resume()
+            return {'status': 'success'}
+        
+        elif action == 'stop':
+            game.stop()
+            return {'status': 'success'}
+        
+        elif action == 'next_turn':
+            game.next_turn()
+            return {'status': 'success'}
+        
+        elif action == 'get_current_player':
+            player = game.current_player
+            if player:
+                return {'status': 'success', 'data': {'name': player.name, 'attributes': player.attributes}}
             else:
-                result = {'status': 'error', 'type': 'ServerError', 'message': 'Unknown action'}
+                return {'status': 'success', 'data': None}
+        
+        elif action == 'get_game_state':
+            return {'status': 'success', 'data': {'status': game.state, 'custom': game.custom_state}}
+        
+        elif action == 'get_players':
+            player_list = [{'name': p.name, 'attributes': p.attributes} for p in game.players]
+            return {'status': 'success', 'data': player_list}
+        
+        elif action == 'get_observers':
+            observer_list = [{'name': o.name, 'attributes': o.attributes} for o in game.observers]
+            return {'status': 'success', 'data': observer_list}
+        
+        elif action == 'set_game_state':
+            game.custom_state = params.get('state')
+            return {'status': 'success'}
+        
+        elif action == 'kick_player':
+            player_name = params.get('player_name')
+            game.remove_player(player_name)
+            return {'status': 'success'}
+        
+        elif action == 'kick_observer':
+            observer_name = params.get('observer_name')
+            game.remove_observer(observer_name)
+            return {'status': 'success'}
+        
+        else:
+            return {'status': 'error', 'type': 'ServerError', 'message': 'Unknown action'}
+            
     except (GameLogicError, PlayerLimitReachedError, ObserverLimitReachedError, AuthenticationError) as e:
-        result = {'status': 'error', 'type': type(e).__name__, 'message': str(e)}
+        return {'status': 'error', 'type': type(e).__name__, 'message': str(e)}
     except Exception as e:
-        result = {'status': 'error', 'type': 'ServerError', 'message': str(e)}
-    return result
+        return {'status': 'error', 'type': 'ServerError', 'message': str(e)}
 
 class GameServer:
     """
     Manages multiple Game instances and handles network requests from clients.
     """
-    def __init__(self, host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False):
+    def __init__(self, host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, logging_host=None, logging_port=None):
         self.host = host
         self.port = port
         self.password = password
         self.admin_password = admin_password
         self.use_tls = use_tls
+        self.logging_host = logging_host
+        self.logging_port = logging_port
         self._server_process = None
         self._discovery_thread = None
         self._stop_discovery = threading.Event()
@@ -298,7 +318,7 @@ class GameServer:
         certfile, keyfile = (None, None)
         if self.use_tls:
             certfile, keyfile = _generate_self_signed_cert()
-        self._server_process = Process(target=_run_server_process, args=(self.host, self.port, self.password, self.admin_password, self.use_tls, certfile, keyfile))
+        self._server_process = Process(target=_run_server_process, args=(self.host, self.port, self.password, self.admin_password, self.use_tls, certfile, keyfile, self.logging_host, self.logging_port))
         self._server_process.start()
         self._stop_discovery.clear()
         self._discovery_thread = threading.Thread(target=self._run_discovery_service)

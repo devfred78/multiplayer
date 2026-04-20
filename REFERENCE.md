@@ -73,7 +73,7 @@ An enumeration for the state of the game.
 
 These classes manage the client-server architecture.
 
-### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False)`
+### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, logging_host=None, logging_port=None)`
 Manages game sessions and handles network requests.
 
 *   **`host`** (`str`): The host address to bind to. Use `'0.0.0.0'` to make it accessible on the local network.
@@ -81,6 +81,8 @@ Manages game sessions and handles network requests.
 *   **`password`** (`str`, optional): A global password to protect the server.
 *   **`admin_password`** (`str`, optional): A password for administrative access.
 *   **`use_tls`** (`bool`, optional): If `True`, enables TLS v1.3 encryption for all communications. Defaults to `False`.
+*   **`logging_host`** (`str`, optional): The host address of a logging server to send logs to.
+*   **`logging_port`** (`int`, optional): The port of the logging server.
 
 #### Methods
 *   `start()`: Starts the server in a background process.
@@ -104,6 +106,7 @@ A client class for administrators to manage a `GameServer`.
 *   `list_all_players()`: Returns a list of all players currently connected to the server, including their associated game ID and name.
 *   `stop_server()`: Requests the server to shut down.
 *   `restart_server()`: Requests the server to restart (clears all current games).
+*   `set_logging_config(host, port)`: Configures the server to send its logs to a remote logging server at the specified address and port.
 
 ---
 

@@ -83,13 +83,16 @@ def _get_names_from_source(source):
     if isinstance(source, list):
         return source
     
+    # Ensure source uses correct separators for the OS
+    source_path = Path(source)
+    
     # 1. Try relative to this file first (most reliable in both dev and production layouts)
     try:
         current_file_dir = Path(__file__).parent.resolve()
-        path = (current_file_dir / source).resolve()
+        path = (current_file_dir / source_path).resolve()
         if path.is_file():
             with open(path, 'r', encoding='utf-8') as f:
-                if source.endswith('.csv'):
+                if str(source).endswith('.csv'):
                     reader = csv.reader(f)
                     try:
                         next(reader)  # Assume header
@@ -98,40 +101,57 @@ def _get_names_from_source(source):
                         return []
                 else:
                     return [line.strip() for line in f if line.strip()]
-    except (OSError, ValueError):
+    except Exception:
         pass
 
     # 2. Try as an absolute or CWD-relative file path
     try:
-        path = Path(source)
-        if path.is_file():
-            with open(path, 'r', encoding='utf-8') as f:
-                # Simple line-based reading for .txt or .csv
-                return [line.strip() for line in f if line.strip()]
-    except (OSError, ValueError):
+        if source_path.is_file():
+            with open(source_path, 'r', encoding='utf-8') as f:
+                if str(source).endswith('.csv'):
+                    reader = csv.reader(f)
+                    try:
+                        next(reader)
+                        return [row[0] for row in reader if row]
+                    except StopIteration:
+                        return []
+                else:
+                    return [line.strip() for line in f if line.strip()]
+    except Exception:
         pass
 
     # 3. Fallback to package resource (standard PEP 302/modern way)
     try:
-        # source is something like 'data/cities.csv'
-        # We need to access it relative to the multiplayer package
-        parts = Path(source).parts
-        resource_path = resources.files('multiplayer')
-        for part in parts:
-            resource_path = resource_path.joinpath(part)
-            
-        with resource_path.open('r', encoding='utf-8') as f:
-            if source.endswith('.csv'):
-                reader = csv.reader(f)
-                try:
-                    next(reader)  # Assume header
-                    return [row[0] for row in reader if row]
-                except StopIteration:
-                    return []
+        # Try finding it in the multiplayer.data subpackage first
+        try:
+            package_path = resources.files('multiplayer.data')
+            # If we are looking for 'data/cities.csv', and we are in 'multiplayer.data',
+            # we just need 'cities.csv'
+            if 'data' in source_path.parts:
+                file_name = source_path.name
+                resource_path = package_path.joinpath(file_name)
             else:
-                return [line.strip() for line in f if line.strip()]
-    except (FileNotFoundError, IsADirectoryError, TypeError, ModuleNotFoundError, AttributeError):
-        return None
+                resource_path = package_path.joinpath(*source_path.parts)
+        except (ImportError, ModuleNotFoundError, ValueError):
+            # Fallback to main package
+            package_path = resources.files('multiplayer')
+            resource_path = package_path.joinpath(*source_path.parts)
+            
+        if resource_path.is_file():
+            with resource_path.open('r', encoding='utf-8') as f:
+                if str(source).endswith('.csv'):
+                    reader = csv.reader(f)
+                    try:
+                        next(reader)  # Assume header
+                        return [row[0] for row in reader if row]
+                    except StopIteration:
+                        return []
+                else:
+                    return [line.strip() for line in f if line.strip()]
+    except Exception:
+        pass
+
+    return None
 
 def _suggest_from_category(category, valid_builtin_cats, valid_custom_cats):
     """Internal helper to suggest a name from a specific category."""

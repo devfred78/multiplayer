@@ -92,7 +92,10 @@ def main():
             "--with-editable", ".[dev]",
             "python", "-c", 
             "from multiplayer.utils import _get_names_from_source; " 
-            "res = _get_names_from_source('data/cities.csv'); "
+            "import os; from pathlib import Path; "
+            "source = 'data/cities.csv'; "
+            "res = _get_names_from_source(source); "
+            "print(f'Checking {source}... Found: {len(res) if res else \"None\"}'); "
             "import sys; sys.exit(0 if res and len(res) > 0 else 1)"
         ]
         

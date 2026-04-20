@@ -116,6 +116,37 @@ class GameClient:
         """Retrieves a list of available games from the server."""
         return self._send_command('list_games')
 
+class GameAdmin:
+    """
+    A client class for administrators to connect to and manage a GameServer.
+    """
+    def __init__(self, host='127.0.0.1', port=65432, admin_password=None, use_tls=False):
+        self.host = host
+        self.port = port
+        self.admin_password = admin_password
+        self.use_tls = use_tls
+        self._client = GameClient(host, port, admin_password, use_tls)
+
+    def stop_server(self):
+        """Requests the server to shut down."""
+        return self._client._send_command('stop_server')
+
+    def get_server_info(self):
+        """Retrieves information about the server's status and active games."""
+        return self._client._send_command('get_server_info')
+
+    def list_games(self):
+        """Retrieves a list of available games from the server."""
+        return self._client.list_games()
+
+    def kick_player(self, game_id, player_name):
+        """Kicks a player from a specific game."""
+        return self._client._send_command('kick_player', {'game_id': game_id, 'player_name': player_name})
+
+    def kick_observer(self, game_id, observer_name):
+        """Kicks an observer from a specific game."""
+        return self._client._send_command('kick_observer', {'game_id': game_id, 'observer_name': observer_name})
+
 class RemoteGame:
     """
     A proxy for a Game object on a remote server.

@@ -69,7 +69,7 @@ def _generate_self_signed_cert():
     cert_file.close()
     return cert_file.name, key_file.name
 
-def _run_server_process(host, port, password, use_tls, certfile, keyfile):
+def _run_server_process(host, port, password, admin_password, use_tls, certfile, keyfile):
     """The main server loop that listens for and handles connections."""
     logger = logging.getLogger("GameServer")
     logger.info(f"Démarrage du processus serveur sur {host}:{port}")
@@ -92,7 +92,7 @@ def _run_server_process(host, port, password, use_tls, certfile, keyfile):
                     continue
                 try:
                     conn = context.wrap_socket(newsocket, server_side=True) if use_tls else newsocket
-                    thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, games_lock, password))
+                    thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, games_lock, password, admin_password))
                     thread.daemon = True
                     thread.start()
                 except (ssl.SSLError, OSError) as e:
@@ -104,7 +104,7 @@ def _run_server_process(host, port, password, use_tls, certfile, keyfile):
             os.remove(certfile)
             os.remove(keyfile)
 
-def _handle_client(conn, addr, games, lock, server_password):
+def _handle_client(conn, addr, games, lock, server_password, admin_password):
     """Handles a single client connection."""
     logger = logging.getLogger("GameServer")
     logger.info(f"Connected by {addr}")
@@ -116,10 +116,20 @@ def _handle_client(conn, addr, games, lock, server_password):
             try:
                 command = json.loads(data.decode('utf-8'))
                 client_password = command.get('password')
-                if server_password is not None and client_password != server_password:
-                    raise AuthenticationError("Invalid server password")
                 action = command.get('action')
                 params = command.get('params', {})
+
+                # Check if it's an admin action
+                is_admin_action = action in ['stop_server', 'kick_player', 'kick_observer', 'get_server_info']
+                
+                if is_admin_action:
+                    if admin_password is None:
+                         raise AuthenticationError("Admin actions are disabled on this server")
+                    if client_password != admin_password:
+                        raise AuthenticationError("Invalid admin password")
+                elif server_password is not None and client_password != server_password:
+                    raise AuthenticationError("Invalid server password")
+
                 with lock:
                     response = _execute_command(games, action, params)
                 conn.sendall(json.dumps(response, cls=EnumEncoder).encode('utf-8'))
@@ -139,6 +149,23 @@ def _execute_command(games, action, params):
         elif action == 'list_games':
             game_list = {gid: g.attributes for gid, g in games.items() if g.state != GameState.FINISHED}
             result = {'status': 'success', 'data': game_list}
+        elif action == 'stop_server':
+            import os
+            # Envoi d'une réponse avant d'arrêter le processus
+            result = {'status': 'success', 'message': 'Server stopping...'}
+            # Note: En pratique, on pourrait vouloir un arrêt plus propre
+            # mais ici on suit la demande de pouvoir agir sur le serveur.
+            # On utilise un thread pour laisser le temps à la réponse d'être envoyée.
+            def delayed_exit():
+                import time
+                time.sleep(0.5)
+                os._exit(0)
+            threading.Thread(target=delayed_exit).start()
+        elif action == 'get_server_info':
+            result = {'status': 'success', 'data': {
+                'games_count': len(games),
+                'active_games': [gid for gid, g in games.items() if g.state != GameState.FINISHED]
+            }}
         else:
             game_id = params.get('game_id')
             if not game_id or game_id not in games:
@@ -188,6 +215,37 @@ def _execute_command(games, action, params):
             elif action == 'set_game_state':
                 game.custom_state = params.get('state')
                 result = {'status': 'success'}
+            elif action == 'stop_server':
+                # Since the server runs in a separate process, 
+                # we can't easily stop it from here without signal or flag.
+                # However, the GameServer.stop() method terminates the process.
+                # Here we could just signal that we want to stop.
+                # For simplicity, let's say it's not implemented yet or 
+                # use os._exit if we really want to kill the process from within.
+                # But _run_server_process is the target.
+                result = {'status': 'success', 'message': 'Server stopping...'}
+                # Actually, let's just exit the process.
+                import os
+                os._exit(0)
+            elif action == 'get_server_info':
+                result = {'status': 'success', 'data': {
+                    'games_count': len(games),
+                    'active_games': [gid for gid, g in games.items() if g.state != GameState.FINISHED]
+                }}
+            elif action == 'kick_player':
+                player_name = params.get('player_name')
+                game.remove_player(player_name)
+                result = {'status': 'success'}
+            elif action == 'kick_observer':
+                observer_name = params.get('observer_name')
+                game.remove_observer(observer_name)
+                result = {'status': 'success'}
+            elif action == 'stop_server':
+                # Deja traité plus haut, mais on garde pour la cohérence si on réorganise
+                pass
+            elif action == 'get_server_info':
+                # Deja traité plus haut
+                pass
             else:
                 result = {'status': 'error', 'type': 'ServerError', 'message': 'Unknown action'}
     except (GameLogicError, PlayerLimitReachedError, ObserverLimitReachedError, AuthenticationError) as e:
@@ -200,10 +258,11 @@ class GameServer:
     """
     Manages multiple Game instances and handles network requests from clients.
     """
-    def __init__(self, host='0.0.0.0', port=65432, password=None, use_tls=False):
+    def __init__(self, host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False):
         self.host = host
         self.port = port
         self.password = password
+        self.admin_password = admin_password
         self.use_tls = use_tls
         self._server_process = None
         self._discovery_thread = None
@@ -217,7 +276,7 @@ class GameServer:
         certfile, keyfile = (None, None)
         if self.use_tls:
             certfile, keyfile = _generate_self_signed_cert()
-        self._server_process = Process(target=_run_server_process, args=(self.host, self.port, self.password, self.use_tls, certfile, keyfile))
+        self._server_process = Process(target=_run_server_process, args=(self.host, self.port, self.password, self.admin_password, self.use_tls, certfile, keyfile))
         self._server_process.start()
         self._stop_discovery.clear()
         self._discovery_thread = threading.Thread(target=self._run_discovery_service)

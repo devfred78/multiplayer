@@ -55,11 +55,27 @@ Representa a un observador.
 
 ## Clases de Red
 
-### `GameServer(host='0.0.0.0', port=65432, password=None, use_tls=False)`
+### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False)`
 Gestiona las sesiones de juego y las peticiones de red.
 
 *   **`password`** (`str`, opcional): Una contraseña global para proteger el servidor.
+*   **`admin_password`** (`str`, opcional): Una contraseña para acceso administrativo.
 *   **`use_tls`** (`bool`, opcional): Si es `True`, habilita el cifrado TLS v1.3.
+
+---
+
+### `GameAdmin(host='127.0.0.1', port=65432, admin_password=None, use_tls=False)`
+Una clase de cliente para que los administradores gestionen un `GameServer`.
+
+*   **`admin_password`** (`str`, opcional): La contraseña de administrador para el servidor.
+*   **`use_tls`** (`bool`, opcional): Si es `True`, el cliente se conectará usando TLS.
+
+#### Métodos
+*   `get_server_info()`: Devuelve información sobre el servidor (número de juegos, IDs activos).
+*   `list_games()`: Devuelve una lista de todos los juegos activos.
+*   `kick_player(game_id, player_name)`: Elimina a un jugador de un juego específico.
+*   `kick_observer(game_id, observer_name)`: Elimina a un observador de un juego específico.
+*   `stop_server()`: Solicita que el servidor se apague.
 
 ---
 

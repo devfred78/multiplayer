@@ -17,7 +17,8 @@ For a detailed technical description of all classes and functions, see the [API 
 *   **Local & Networked:** Use in a single process or in a client-server architecture.
 *   **Combined Game State:** A flexible system for synchronizing both the core game status (e.g., `in_progress`) and any custom game data.
 *   **Observer Support:** Ability to add observers who can view the game state without participating as players.
-*   **Multi-Layered Security:** Supports both server-wide passwords and per-game passwords, with optional TLS v1.3 encryption.
+*   **Administrator Role:** New `GameAdmin` class to manage the server, kick players/observers, and monitor server status.
+*   **Multi-Layered Security:** Supports server passwords, admin passwords, and per-game passwords, with optional TLS v1.3 encryption.
 *   **Automatic Server Discovery:** Clients can automatically find running servers on the local network.
 *   **Extensible Name Suggestions:** Includes a utility function to suggest creative names for games and players.
 *   **Multiple Games:** The server can manage multiple game sessions simultaneously, and the game list is now filtered to hide finished games.
@@ -91,14 +92,38 @@ game.start()
 ```python
 from multiplayer import GameServer
 
-# Start a secure server
+# Start a secure server with admin support
 server = GameServer(
     host='0.0.0.0',
     port=12345,
     password="my_server_password",
+    admin_password="my_admin_password",
     use_tls=True
 )
 server.start()
+```
+
+#### Administrator Usage
+```python
+from multiplayer import GameAdmin
+
+# Connect as administrator
+admin = GameAdmin(
+    host='localhost',
+    port=12345,
+    admin_password="my_admin_password",
+    use_tls=True
+)
+
+# Manage the server
+info = admin.get_server_info()
+print(f"Active games: {info['games_count']}")
+
+# Kick a player if necessary
+# admin.kick_player(game_id, "player_name")
+
+# Stop the server remotely
+# admin.stop_server()
 ```
 
 #### Client Usage

@@ -61,15 +61,31 @@ Représente un observateur.
 
 ## Classes Réseau
 
-### `GameServer(host='0.0.0.0', port=65432, password=None, use_tls=False)`
+### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False)`
 Gère les sessions de jeu et les requêtes réseau.
 
 *   **`password`** (`str`, optionnel) : Un mot de passe global pour protéger le serveur.
+*   **`admin_password`** (`str`, optionnel) : Un mot de passe pour l'accès administrateur.
 *   **`use_tls`** (`bool`, optionnel) : Si `True`, active le chiffrement TLS v1.3.
 
 #### Méthodes
 *   `start()`: Démarre le serveur.
 *   `stop()`: Arrête le serveur.
+
+---
+
+### `GameAdmin(host='127.0.0.1', port=65432, admin_password=None, use_tls=False)`
+Une classe client pour les administrateurs pour gérer un `GameServer`.
+
+*   **`admin_password`** (`str`, optionnel) : Le mot de passe administrateur du serveur.
+*   **`use_tls`** (`bool`, optionnel) : Si `True`, le client se connectera en utilisant TLS.
+
+#### Méthodes
+*   `get_server_info()` : Retourne les infos du serveur (nombre de parties, IDs actifs).
+*   `list_games()` : Liste toutes les parties actives.
+*   `kick_player(game_id, player_name)` : Expulse un joueur d'une partie.
+*   `kick_observer(game_id, observer_name)` : Expulse un observateur d'une partie.
+*   `stop_server()` : Demande l'arrêt du serveur.
 
 ---
 
@@ -140,4 +156,4 @@ Suggère un nom aléatoire pour un joueur.
 *   **`GameNotFoundError`** : Levée lorsqu'un client demande un `id` de partie qui n'existe pas.
 *   **`NetworkError`** : Exception de base pour les problèmes réseau.
 *   **`ConnectionError`** : Levée lorsqu'un client ne parvient pas à se connecter au serveur.
-*   **`ServerError`** : Levée pour les erreurs g�
+*   **`ServerError`** : Levée pour les erreurs g�

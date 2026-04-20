@@ -1,0 +1,56 @@
+import pytest
+import time
+from multiplayer import GameServer, GameClient, GameAdmin, Player, AuthenticationError
+
+def test_admin_authentication_success():
+    server = GameServer(port=65440, admin_password="admin_secret")
+    server.start()
+    time.sleep(1)
+    try:
+        admin = GameAdmin(port=65440, admin_password="admin_secret")
+        info = admin.get_server_info()
+        assert 'games_count' in info
+    finally:
+        server.stop()
+
+def test_admin_authentication_failure():
+    server = GameServer(port=65441, admin_password="admin_secret")
+    server.start()
+    time.sleep(1)
+    try:
+        admin = GameAdmin(port=65441, admin_password="wrong_password")
+        with pytest.raises(AuthenticationError):
+            admin.get_server_info()
+    finally:
+        server.stop()
+
+def test_admin_kick_player():
+    server = GameServer(port=65442, admin_password="admin_secret")
+    server.start()
+    time.sleep(1)
+    try:
+        client = GameClient(port=65442)
+        remote_game = client.create_game(name="KickTest")
+        remote_game.add_player(Player("Victim"))
+        
+        assert len(remote_game.players) == 1
+        
+        admin = GameAdmin(port=65442, admin_password="admin_secret")
+        admin.kick_player(remote_game.game_id, "Victim")
+        
+        assert len(remote_game.players) == 0
+    finally:
+        server.stop()
+
+def test_admin_stop_server():
+    server = GameServer(port=65443, admin_password="admin_secret")
+    server.start()
+    time.sleep(1)
+    
+    admin = GameAdmin(port=65443, admin_password="admin_secret")
+    admin.stop_server()
+    
+    time.sleep(1)
+    # The process should be dead. GameServer.stop() might still be called in finally but it should handle it.
+    assert not server._server_process.is_alive()
+    server.stop() # Cleanup discovery service

@@ -57,7 +57,12 @@ def run_simulation(num_players=2):
     logger = logging.getLogger("Simulation")
     
     logger.info("Starting GameServer...")
-    server = GameServer(host='127.0.0.1', port=GAME_PORT)
+    server = GameServer(
+        host='127.0.0.1', 
+        port=GAME_PORT,
+        logging_host='localhost',
+        logging_port=LOG_PORT
+    )
     server.start()
     time.sleep(1) # Wait for server to start
     
@@ -129,7 +134,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--color-mode",
         choices=["level", "origin"],
-        default="level",
+        default="origin",
         help="Coloration mode for the log server: 'level' (by criticality) or 'origin' (by message source)"
     )
     args = parser.parse_args()

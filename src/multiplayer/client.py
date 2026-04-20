@@ -6,6 +6,8 @@ import json
 import struct
 import time
 import ssl
+import logging
+from logging.handlers import SocketHandler
 from .game import Player, Observer
 from . import exceptions
 
@@ -24,6 +26,32 @@ class GameClient:
         self.port = port
         self.password = password
         self.use_tls = use_tls
+        self._logger = logging.getLogger("GameClient")
+        self._logger.setLevel(logging.INFO)
+
+    def configure_logging(self, host, port, name=None):
+        """
+        Configures the client to send logs to a logging server.
+        
+        Args:
+            host (str): The host of the logging server.
+            port (int): The port of the logging server.
+            name (str, optional): A custom name for the logger.
+        """
+        if name:
+            self._logger = logging.getLogger(name)
+            self._logger.setLevel(logging.INFO)
+            
+        # Remove existing SocketHandlers
+        for h in self._logger.handlers[:]:
+            if isinstance(h, SocketHandler):
+                self._logger.removeHandler(h)
+                
+        handler = SocketHandler(host, port)
+        self._logger.addHandler(handler)
+        # Flush or trigger immediate send if possible? No direct way in SocketHandler,
+        # but emitting a log usually works.
+        self._logger.info(f"Logging configured for {self._logger.name}")
 
     @staticmethod
     def discover_servers(timeout=2):
@@ -114,7 +142,15 @@ class GameClient:
     def create_game(self, **game_options):
         """Requests the server to create a new game and returns a proxy to it."""
         data = self._send_command('create_game', game_options)
-        return RemoteGame(data['game_id'], self.host, self.port, self.password, self.use_tls)
+        remote_game = RemoteGame(data['game_id'], self.host, self.port, self.password, self.use_tls)
+        
+        # Propagate logging configuration if any
+        for h in self._logger.handlers:
+            if isinstance(h, SocketHandler):
+                remote_game.configure_logging(h.host, h.port)
+                break
+                
+        return remote_game
 
     def list_games(self):
         """Retrieves a list of available games from the server."""
@@ -130,6 +166,13 @@ class GameAdmin:
         self.admin_password = admin_password
         self.use_tls = use_tls
         self._client = GameClient(host, port, admin_password, use_tls)
+        self._logger = logging.getLogger("GameAdmin")
+        self._logger.setLevel(logging.INFO)
+
+    def configure_logging(self, host, port):
+        """Configures the admin client to send logs to a logging server."""
+        self._client.configure_logging(host, port, "GameAdmin")
+        self._logger = self._client._logger
 
     def stop_server(self):
         """Requests the server to shut down."""
@@ -176,6 +219,15 @@ class RemoteGame:
         self.host = host
         self.port = port
         self._client = GameClient(host, port, password, use_tls)
+        self._logger = logging.getLogger("RemoteGame")
+        self._logger.setLevel(logging.INFO)
+
+    def configure_logging(self, host, port, name=None):
+        """Configures the remote game proxy to send logs to a logging server."""
+        if name is None:
+            name = f"RemoteGame.{self.game_id[:8]}"
+        self._client.configure_logging(host, port, name)
+        self._logger = self._client._logger
 
     def _send_command(self, action, params=None):
         """Sends a command to the server for a specific game and returns the response."""

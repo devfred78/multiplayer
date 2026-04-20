@@ -72,8 +72,13 @@ def _generate_self_signed_cert():
 def _run_server_process(host, port, password, admin_password, use_tls, certfile, keyfile, logging_host=None, logging_port=None):
     """The main server loop that listens for and handles connections."""
     logger = logging.getLogger("GameServer")
+    logger.setLevel(logging.INFO)
     if logging_host and logging_port:
         from logging.handlers import SocketHandler
+        # Remove existing SocketHandlers if any
+        for h in logger.handlers[:]:
+            if isinstance(h, SocketHandler):
+                logger.removeHandler(h)
         handler = SocketHandler(logging_host, logging_port)
         logger.addHandler(handler)
         logger.info(f"Logging configured to send to {logging_host}:{logging_port}")

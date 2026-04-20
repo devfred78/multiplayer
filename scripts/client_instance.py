@@ -20,11 +20,15 @@ def setup_logging(log_port, player_name):
     console_handler.setFormatter(logging.Formatter(f'%(levelname)s:{player_name}:%(message)s'))
     root_logger.addHandler(console_handler)
 
-def run_client(player_name, game_id, host, port, is_creator, min_players):
+def run_client(player_name, game_id, host, port, is_creator, min_players, log_host, log_port):
     logger = logging.getLogger(f"Client-{player_name}")
     logger.info(f"Connecting to server at {host}:{port}...")
     
     client = GameClient(host=host, port=port)
+    if log_host and log_port:
+        client.configure_logging(log_host, log_port, f"Client-{player_name}")
+        # Update local logger reference after configuration
+        logger = client._logger
     
     if is_creator:
         logger.info(f"Creating game: {game_id}")
@@ -177,4 +181,4 @@ if __name__ == "__main__":
     sys.path.append(str(project_root / "src"))
 
     setup_logging(args.log_port, args.name)
-    run_client(args.name, args.game_id, args.host, args.port, args.creator, args.players)
+    run_client(args.name, args.game_id, args.host, args.port, args.creator, args.players, "localhost", args.log_port)

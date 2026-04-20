@@ -29,6 +29,42 @@ import threading
 from time import sleep
 
 from colorlog import ColoredFormatter
+from colorlog.escape_codes import escape_codes
+
+class OriginColoredFormatter(ColoredFormatter):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.origin_colors = {
+            "GameServer": "purple",
+            "GameClient": "green",
+            "GameAdmin": "red",
+            "RemoteGame": "blue",
+            "Observer": "cyan",
+        }
+        self.available_colors = ["blue", "cyan", "green", "purple", "red", "white", "yellow"]
+        self._next_color_idx = 0
+        self._assigned_colors = {}
+
+    def format(self, record):
+        # Use the name as origin
+        origin = record.name
+        # Try to find a specific color or assign one
+        color = self.origin_colors.get(origin)
+        if not color:
+            # If the name is like "RemoteGame.Alice", try "RemoteGame"
+            base_origin = origin.split('.')[0]
+            color = self.origin_colors.get(base_origin)
+            
+        if not color:
+            if origin not in self._assigned_colors:
+                self._assigned_colors[origin] = self.available_colors[self._next_color_idx % len(self.available_colors)]
+                self._next_color_idx += 1
+            color = self._assigned_colors[origin]
+        
+        # Temporarily inject the color for the formatter
+        # Use get to avoid KeyError if something goes wrong
+        record.log_color = escape_codes.get(color, "")
+        return super().format(record)
 
 if __name__ != '__main__': 
     from . import UNIX_SOCKET_PATH
@@ -62,35 +98,6 @@ class LoggingServer(threading.Thread):
         handler = logging.StreamHandler()
         
         if color_mode == "origin":
-            class OriginColoredFormatter(ColoredFormatter):
-                def __init__(self, *args, **kwargs):
-                    super().__init__(*args, **kwargs)
-                    self.origin_colors = {
-                        "GameServer": "purple",
-                        "GameClient": "green",
-                        "GameAdmin": "red",
-                        "RemoteGame": "blue",
-                        "Observer": "cyan",
-                    }
-                    self.available_colors = ["blue", "cyan", "green", "magenta", "red", "white", "yellow"]
-                    self._next_color_idx = 0
-                    self._assigned_colors = {}
-
-                def format(self, record):
-                    # Use the module or name as origin
-                    origin = record.name
-                    if origin not in self.origin_colors:
-                        if origin not in self._assigned_colors:
-                            self._assigned_colors[origin] = self.available_colors[self._next_color_idx % len(self.available_colors)]
-                            self._next_color_idx += 1
-                        color = self._assigned_colors[origin]
-                    else:
-                        color = self.origin_colors[origin]
-                    
-                    # Temporarily inject the color for the formatter
-                    record.log_color = self.escape_codes[color]
-                    return super().format(record)
-
             formatter = OriginColoredFormatter(
                 "%(log_color)s[%(asctime)s][%(levelname)s][%(name)s]:%(message)s",
                 datefmt="%Y-%m-%d %H:%M:%S",
@@ -121,7 +128,7 @@ class LoggingServer(threading.Thread):
             host.unlink(missing_ok = True)  # Delete the socket file if existing
             sock_family = socket.AF_UNIX
         else: # AF_INET family
-            self.address = (host, port)
+            self.address = (str(host), port)
             sock_family = socket.AF_INET
         
         # maximum wait time (in seconds) before detecting a closed connection
@@ -196,12 +203,20 @@ class LoggingServer(threading.Thread):
         
         received_bytes = list()
         for _ in range(nb_bytes):
-            rbyte = sock.recv(1)
+            try:
+                rbyte = sock.recv(1)
+            except (ConnectionResetError, BrokenPipeError, OSError):
+                rbyte = b''
+            
             if rbyte == b'': # socket connection broken
                 self._sel.unregister(sock)
-                sock.shutdown(socket.SHUT_RD)
+                try:
+                    sock.shutdown(socket.SHUT_RD)
+                except OSError:
+                    pass
                 sock.close()
-                self._registered_connections.remove(sock)
+                if sock in self._registered_connections:
+                    self._registered_connections.remove(sock)
                 # print("CONNECTION CLOSED")
                 # print(f"Number of remaining available connection(s): {len(self._registered_connections)}")
                 if len(self._registered_connections) == 0:
@@ -226,10 +241,16 @@ class LoggingServer(threading.Thread):
                 avail_conns = [key.fileobj for (key, mask) in events]
                 
                 # Check for connections to close
-                for conn in self._registered_connections:
+                for conn in list(self._registered_connections):
                     if conn not in avail_conns:
-                        self._sel.unregister(conn)
-                        conn.shutdown(socket.SHUT_RD)
+                        try:
+                            self._sel.unregister(conn)
+                        except KeyError:
+                            pass
+                        try:
+                            conn.shutdown(socket.SHUT_RD)
+                        except OSError:
+                            pass
                         conn.close()
                         self._registered_connections.remove(conn)
                 

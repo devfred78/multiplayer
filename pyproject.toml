@@ -32,5 +32,5 @@ build-backend = "uv_build"
 
 [tool.uv.build-backend]
 module-name = "multiplayer"
-module-root = ""
+module-root = "src"
 package-data = { "multiplayer" = ["data/*.csv"] }

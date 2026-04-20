@@ -175,7 +175,6 @@ if __name__ == "__main__":
     # Setup paths
     project_root = Path(__file__).parent.parent.resolve()
     sys.path.append(str(project_root / "src"))
-    sys.path.append(str(project_root))
 
     setup_logging(args.log_port, args.name)
     run_client(args.name, args.game_id, args.host, args.port, args.creator, args.players)

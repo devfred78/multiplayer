@@ -1,20 +1,46 @@
 """
-multiplayer, a Python library for managing multiplayer games
-Copyright (C) 2025 [devfred78](https://github.com/devfred78)
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
+This package provides classes for managing a multiplayer game, both locally and over a network.
 """
+from .game import Game, Player, GameState
+from .server import GameServer
+from .client import GameClient, RemoteGame
 
-def hello() -> str:
-    return "Hello from multiplayer!"
+from .utils import (
+    suggest_game_name,
+    suggest_player_name,
+    get_available_categories,
+    register_name_category,
+    unregister_name_category,
+)
+from .exceptions import (
+    MultiplayerError,
+    GameLogicError,
+    PlayerLimitReachedError,
+    GameNotFoundError,
+    NetworkError,
+    ConnectionError,
+    ServerError,
+    AuthenticationError,
+)
+
+__all__ = [
+    'Game',
+    'Player',
+    'GameState',
+    'GameServer',
+    'GameClient',
+    'RemoteGame',
+    'suggest_game_name',
+    'suggest_player_name',
+    'get_available_categories',
+    'register_name_category',
+    'unregister_name_category',
+    'MultiplayerError',
+    'GameLogicError',
+    'PlayerLimitReachedError',
+    'GameNotFoundError',
+    'NetworkError',
+    'ConnectionError',
+    'ServerError',
+    'AuthenticationError',
+]

@@ -132,7 +132,6 @@ if __name__ == "__main__":
     project_root = Path(__file__).parent.parent.resolve()
     os.chdir(project_root)
     sys.path.append(str(project_root / "src"))
-    sys.path.append(str(project_root)) # For multiplayer
 
     launch_log_server()
     setup_logging()

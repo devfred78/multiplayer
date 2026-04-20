@@ -92,6 +92,7 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
         context.minimum_version = ssl.TLSVersion.TLSv1_3
         context.load_cert_chain(certfile=certfile, keyfile=keyfile)
     bindsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    bindsocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     bindsocket.bind((host, port))
     bindsocket.listen()
     try:
@@ -336,6 +337,7 @@ class GameServer:
         if self.use_tls:
             certfile, keyfile = _generate_self_signed_cert()
         self._server_process = Process(target=_run_server_process, args=(self.host, self.port, self.password, self.admin_password, self.use_tls, certfile, keyfile, self.logging_host, self.logging_port, self.logger_name))
+        self._server_process.daemon = True
         self._server_process.start()
         self._stop_discovery.clear()
         self._discovery_thread = threading.Thread(target=self._run_discovery_service)

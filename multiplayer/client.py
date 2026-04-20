@@ -36,22 +36,27 @@ class GameClient:
         Returns:
             A list of (host, port) tuples for discovered servers.
         """
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        sock.settimeout(timeout)
-        
-        sock.sendto(DISCOVERY_MESSAGE, (MULTICAST_GROUP, DISCOVERY_PORT))
-        
         servers = []
-        end_time = time.time() + timeout
-        
-        while time.time() < end_time:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) as sock:
+            sock.settimeout(timeout)
+            
             try:
-                data, _ = sock.recvfrom(1024)
-                ip_bytes, port = struct.unpack(RESPONSE_MESSAGE_FORMAT, data)
-                host = ip_bytes.decode('utf-8').strip('\x00')
-                servers.append((host, port))
-            except socket.timeout:
-                break
+                sock.sendto(DISCOVERY_MESSAGE, (MULTICAST_GROUP, DISCOVERY_PORT))
+            except OSError:
+                # On some systems (like MacOS in CI), multicast might not be available
+                return []
+            
+            end_time = time.time() + timeout
+            while time.time() < end_time:
+                try:
+                    data, _ = sock.recvfrom(1024)
+                    ip_bytes, port = struct.unpack(RESPONSE_MESSAGE_FORMAT, data)
+                    host = ip_bytes.decode('utf-8').strip('\x00')
+                    servers.append((host, port))
+                except socket.timeout:
+                    break
+                except Exception:
+                    continue
         
         return list(set(servers))
 

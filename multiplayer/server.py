@@ -238,24 +238,41 @@ class GameServer:
 
     def _run_discovery_service(self):
         """Listens for multicast discovery messages and responds."""
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind(('', DISCOVERY_PORT))
-        mreq = struct.pack("4sl", socket.inet_aton(MULTICAST_GROUP), socket.INADDR_ANY)
-        sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
-        sock.settimeout(1.0)
-        while not self._stop_discovery.is_set():
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) as sock:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            # SO_REUSEPORT is necessary for some OS (like MacOS) when binding to the same port
+            if hasattr(socket, 'SO_REUSEPORT'):
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+            
             try:
-                data, addr = sock.recvfrom(1024)
-                if data == DISCOVERY_MESSAGE:
-                    logger = logging.getLogger("GameServer")
-                    logger.info(f"Discovery request from {addr}, sending response...")
-                    response_ip = self._get_lan_ip()
-                    response_port = self.port
-                    message = struct.pack(RESPONSE_MESSAGE_FORMAT, response_ip.encode('utf-8'), response_port)
-                    sock.sendto(message, addr)
-            except socket.timeout:
-                continue
+                sock.bind(('', DISCOVERY_PORT))
+            except OSError as e:
+                logging.getLogger("GameServer").error(f"Failed to bind discovery service to port {DISCOVERY_PORT}: {e}")
+                return
+
+            mreq = struct.pack("4sl", socket.inet_aton(MULTICAST_GROUP), socket.INADDR_ANY)
+            try:
+                sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+            except OSError as e:
+                logging.getLogger("GameServer").error(f"Failed to join multicast group: {e}")
+                return
+
+            sock.settimeout(1.0)
+            while not self._stop_discovery.is_set():
+                try:
+                    data, addr = sock.recvfrom(1024)
+                    if data == DISCOVERY_MESSAGE:
+                        logger = logging.getLogger("GameServer")
+                        logger.info(f"Discovery request from {addr}, sending response...")
+                        response_ip = self._get_lan_ip()
+                        response_port = self.port
+                        message = struct.pack(RESPONSE_MESSAGE_FORMAT, response_ip.encode('utf-8'), response_port)
+                        sock.sendto(message, addr)
+                except socket.timeout:
+                    continue
+                except Exception as e:
+                    logging.getLogger("GameServer").error(f"Error in discovery service: {e}")
+                    break
 
     def _get_lan_ip(self):
         """Finds the local IP address of the machine."""

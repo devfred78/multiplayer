@@ -75,6 +75,18 @@ def tls_game_server():
 def test_server_discovery(game_server):
     """Tests that the server discovery mechanism works."""
     discovered_servers = GameClient.discover_servers(timeout=1)
+    if not discovered_servers:
+        # Check if it was because of an OSError (no route to host)
+        # On some CI systems (like MacOS), multicast discovery might not be available.
+        # We try to send a test multicast packet to see if it's supported.
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) as s:
+                from multiplayer.client import MULTICAST_GROUP, DISCOVERY_PORT
+                s.sendto(b'test', (MULTICAST_GROUP, DISCOVERY_PORT))
+        except OSError:
+            pytest.skip("Multicast discovery not supported on this host")
+            return
+
     assert len(discovered_servers) > 0
     found = any(port == TEST_PORT for _, port in discovered_servers)
     assert found

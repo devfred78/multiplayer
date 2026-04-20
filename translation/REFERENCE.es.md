@@ -76,6 +76,7 @@ Una clase de cliente para que los administradores gestionen un `GameServer`.
 *   `kick_player(game_id, player_name)`: Elimina a un jugador de un juego específico.
 *   `kick_observer(game_id, observer_name)`: Elimina a un observador de un juego específico.
 *   `stop_server()`: Solicita que el servidor se apague.
+*   `restart_server()`: Solicita que el servidor se reinicie (borra todos los juegos actuales).
 
 ---
 

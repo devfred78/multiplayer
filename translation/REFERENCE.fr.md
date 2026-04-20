@@ -86,6 +86,7 @@ Une classe client pour les administrateurs pour gérer un `GameServer`.
 *   `kick_player(game_id, player_name)` : Expulse un joueur d'une partie.
 *   `kick_observer(game_id, observer_name)` : Expulse un observateur d'une partie.
 *   `stop_server()` : Demande l'arrêt du serveur.
+*   `restart_server()` : Demande le redémarrage du serveur (efface toutes les parties en cours).
 
 ---
 

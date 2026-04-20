@@ -131,6 +131,10 @@ class GameAdmin:
         """Requests the server to shut down."""
         return self._client._send_command('stop_server')
 
+    def restart_server(self):
+        """Requests the server to restart (clears all current games)."""
+        return self._client._send_command('restart_server')
+
     def get_server_info(self):
         """Retrieves information about the server's status and active games."""
         return self._client._send_command('get_server_info')

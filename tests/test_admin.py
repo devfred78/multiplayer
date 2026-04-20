@@ -54,3 +54,23 @@ def test_admin_stop_server():
     # The process should be dead. GameServer.stop() might still be called in finally but it should handle it.
     assert not server._server_process.is_alive()
     server.stop() # Cleanup discovery service
+
+def test_admin_restart_server():
+    server = GameServer(port=65444, admin_password="admin_secret")
+    server.start()
+    time.sleep(1)
+    try:
+        client = GameClient(port=65444)
+        client.create_game(name="GameToClear")
+        
+        admin = GameAdmin(port=65444, admin_password="admin_secret")
+        info = admin.get_server_info()
+        assert info['games_count'] == 1
+        
+        admin.restart_server()
+        time.sleep(1) # Laisse le temps au thread de vider les jeux
+        
+        info = admin.get_server_info()
+        assert info['games_count'] == 0
+    finally:
+        server.stop()

@@ -163,6 +163,10 @@ class GameAdmin:
         """Sets the logging server address and port."""
         return self._client._send_command('set_logging_config', {'host': host, 'port': port})
 
+    def set_logging_enabled(self, enabled):
+        """Enables or disables logging on the server."""
+        return self._client._send_command('set_logging_enabled', {'enabled': enabled})
+
 class RemoteGame:
     """
     A proxy for a Game object on a remote server.

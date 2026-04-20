@@ -107,6 +107,7 @@ A client class for administrators to manage a `GameServer`.
 *   `stop_server()`: Requests the server to shut down.
 *   `restart_server()`: Requests the server to restart (clears all current games).
 *   `set_logging_config(host, port)`: Configures the server to send its logs to a remote logging server at the specified address and port.
+*   `set_logging_enabled(enabled)`: Enables (`True`) or disables (`False`) logging on the server.
 
 ---
 

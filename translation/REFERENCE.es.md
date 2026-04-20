@@ -81,6 +81,7 @@ Una clase de cliente para que los administradores gestionen un `GameServer`.
 *   `stop_server()`: Solicita que el servidor se apague.
 *   `restart_server()`: Solicita que el servidor se reinicie (borra todos los juegos actuales).
 *   `set_logging_config(host, port)`: Configura el servidor para enviar sus registros a un servidor de registros remoto en la dirección y el puerto especificados.
+*   `set_logging_enabled(enabled)`: Activa (`True`) o desactiva (`False`) los registros en el servidor.
 
 ---
 

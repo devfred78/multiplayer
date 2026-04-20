@@ -126,7 +126,7 @@ def _handle_client(conn, addr, games, lock, server_password, admin_password):
                 params = command.get('params', {})
 
                 # Check if it's an admin action
-                is_admin_action = action in ['stop_server', 'restart_server', 'kick_player', 'kick_observer', 'get_server_info', 'set_logging_config', 'list_all_players']
+                is_admin_action = action in ['stop_server', 'restart_server', 'kick_player', 'kick_observer', 'get_server_info', 'set_logging_config', 'set_logging_enabled', 'list_all_players']
                 
                 if is_admin_action:
                     if admin_password is None:
@@ -199,6 +199,17 @@ def _execute_command(games, action, params):
                 return {'status': 'success'}
             else:
                 return {'status': 'error', 'message': 'Missing host or port'}
+        
+        elif action == 'set_logging_enabled':
+            enabled = params.get('enabled', True)
+            logger = logging.getLogger("GameServer")
+            if enabled:
+                logger.setLevel(logging.INFO)
+                logger.info("Logging enabled")
+            else:
+                logger.info("Logging disabled")
+                logger.setLevel(logging.CRITICAL + 1)  # Effectively disables all logging
+            return {'status': 'success'}
         
         elif action == 'list_all_players':
             all_players = []
@@ -382,16 +393,17 @@ class GameServer:
                     continue
                 except Exception as e:
                     logging.getLogger("GameServer").error(f"Error in discovery service: {e}")
-                    break
 
     def _get_lan_ip(self):
-        """Finds the local IP address of the machine."""
+        """Helper to get the local LAN IP address."""
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
+            # doesn't even have to be reachable
             s.connect(('10.255.255.255', 1))
-            IP = s.getsockname()[0]
+            ip = s.getsockname()[0]
         except Exception:
-            IP = '127.0.0.1'
+            ip = '127.0.0.1'
         finally:
             s.close()
-        return IP
+        return ip
+ 

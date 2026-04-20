@@ -68,21 +68,38 @@ def main():
             
         subprocess.run(cmd_ruff, check=True)
         print("Ruff check successful!")
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
         print("Ruff found syntax or style issues.")
+        sys.exit(e.returncode)
     
     # 3. Run unit tests in an isolated environment
     print("\n--- Running unit tests in an isolated environment ---")
     try:
         # Configure PYTHONPATH to include project sources
         env = os.environ.copy()
-        abs_root = str(project_root)
         abs_src = str(project_root / "src")
         # Ensure project folders are in the PYTHONPATH
-        env["PYTHONPATH"] = f"{abs_root}{os.pathsep}{abs_src}{os.pathsep}{env.get('PYTHONPATH', '')}"
+        # In CI, PYTHONPATH is often set to 'src'
+        env["PYTHONPATH"] = f"{abs_src}{os.pathsep}{env.get('PYTHONPATH', '')}"
         
         # We use 'uv run' with --no-project to force an environment separate from the project's
         # We install the project with its dev dependencies in editable mode
+        # We ALSO run a check for the data files to ensure they are discoverable
+        check_data_cmd = [
+            "uv", "run",
+            "--no-project",
+            "--python", "3.14",
+            "--with-editable", ".[dev]",
+            "python", "-c", 
+            "from multiplayer.utils import _get_names_from_source; " 
+            "res = _get_names_from_source('data/cities.csv'); "
+            "import sys; sys.exit(0 if res and len(res) > 0 else 1)"
+        ]
+        
+        print("Verifying data file access in isolated environment...")
+        subprocess.run(check_data_cmd, env=env, check=True)
+        print("Data file access verified!")
+
         cmd = [
             "uv", "run", 
             "--no-project", 
@@ -94,7 +111,7 @@ def main():
         subprocess.run(cmd, env=env, check=True)
         print("\nAll tests passed successfully!")
     except subprocess.CalledProcessError:
-        print("\nSome tests failed.")
+        print("\nVerification or tests failed.")
         sys.exit(1)
 
 if __name__ == "__main__":

@@ -83,20 +83,37 @@ def _get_names_from_source(source):
     if isinstance(source, list):
         return source
     
-    # Try as a file path first
-    path = Path(source)
-    if path.is_file():
-        with open(path, 'r', encoding='utf-8') as f:
-            # Simple line-based reading for .txt or .csv
-            return [line.strip() for line in f if line.strip()]
+    # Try as a file path first if it looks like one and exists
+    try:
+        path = Path(source)
+        if path.is_file():
+            with open(path, 'r', encoding='utf-8') as f:
+                # Simple line-based reading for .txt or .csv
+                return [line.strip() for line in f if line.strip()]
+    except (OSError, ValueError):
+        pass
 
     # Fallback to package resource
     try:
-        with resources.files('multiplayer').joinpath(source).open('r', encoding='utf-8') as f:
-            reader = csv.reader(f)
-            next(reader)  # Assume header
-            return [row[0] for row in reader]
-    except (FileNotFoundError, IsADirectoryError, TypeError):
+        # source is something like 'data/cities.csv'
+        # We need to access it relative to the multiplayer package
+        # Split source to handle subdirectories if any (though resources.files is better)
+        parts = Path(source).parts
+        resource_path = resources.files('multiplayer')
+        for part in parts:
+            resource_path = resource_path.joinpath(part)
+            
+        with resource_path.open('r', encoding='utf-8') as f:
+            if source.endswith('.csv'):
+                reader = csv.reader(f)
+                try:
+                    next(reader)  # Assume header
+                    return [row[0] for row in reader if row]
+                except StopIteration:
+                    return []
+            else:
+                return [line.strip() for line in f if line.strip()]
+    except (FileNotFoundError, IsADirectoryError, TypeError, ModuleNotFoundError):
         return None
 
 def _suggest_from_category(category, valid_builtin_cats, valid_custom_cats):

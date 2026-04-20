@@ -69,9 +69,9 @@ def _generate_self_signed_cert():
     cert_file.close()
     return cert_file.name, key_file.name
 
-def _run_server_process(host, port, password, admin_password, use_tls, certfile, keyfile, logging_host=None, logging_port=None):
+def _run_server_process(host, port, password, admin_password, use_tls, certfile, keyfile, logging_host=None, logging_port=None, logger_name="GameServer"):
     """The main server loop that listens for and handles connections."""
-    logger = logging.getLogger("GameServer")
+    logger = logging.getLogger(logger_name)
     logger.setLevel(logging.INFO)
     if logging_host and logging_port:
         from logging.handlers import SocketHandler
@@ -103,7 +103,7 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
                 continue
             try:
                 conn = context.wrap_socket(newsocket, server_side=True) if use_tls else newsocket
-                thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, games_lock, password, admin_password))
+                thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, games_lock, password, admin_password, logger_name))
                 thread.daemon = True
                 thread.start()
             except (ssl.SSLError, OSError) as e:
@@ -115,9 +115,9 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
             os.remove(certfile)
             os.remove(keyfile)
 
-def _handle_client(conn, addr, games, lock, server_password, admin_password):
+def _handle_client(conn, addr, games, lock, server_password, admin_password, logger_name="GameServer"):
     """Handles a single client connection."""
-    logger = logging.getLogger("GameServer")
+    logger = logging.getLogger(logger_name)
     logger.info(f"Connected by {addr}")
     try:
         with conn:
@@ -314,7 +314,7 @@ class GameServer:
     """
     Manages multiple Game instances and handles network requests from clients.
     """
-    def __init__(self, host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, logging_host=None, logging_port=None):
+    def __init__(self, host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, logging_host=None, logging_port=None, logger_name="GameServer"):
         self.host = host
         self.port = port
         self.password = password
@@ -322,6 +322,7 @@ class GameServer:
         self.use_tls = use_tls
         self.logging_host = logging_host
         self.logging_port = logging_port
+        self.logger_name = logger_name
         self._server_process = None
         self._discovery_thread = None
         self._stop_discovery = threading.Event()
@@ -334,7 +335,7 @@ class GameServer:
         certfile, keyfile = (None, None)
         if self.use_tls:
             certfile, keyfile = _generate_self_signed_cert()
-        self._server_process = Process(target=_run_server_process, args=(self.host, self.port, self.password, self.admin_password, self.use_tls, certfile, keyfile, self.logging_host, self.logging_port))
+        self._server_process = Process(target=_run_server_process, args=(self.host, self.port, self.password, self.admin_password, self.use_tls, certfile, keyfile, self.logging_host, self.logging_port, self.logger_name))
         self._server_process.start()
         self._stop_discovery.clear()
         self._discovery_thread = threading.Thread(target=self._run_discovery_service)
@@ -373,14 +374,14 @@ class GameServer:
             try:
                 sock.bind(('', DISCOVERY_PORT))
             except OSError as e:
-                logging.getLogger("GameServer").error(f"Failed to bind discovery service to port {DISCOVERY_PORT}: {e}")
+                logging.getLogger(self.logger_name).error(f"Failed to bind discovery service to port {DISCOVERY_PORT}: {e}")
                 return
 
             mreq = struct.pack("4sl", socket.inet_aton(MULTICAST_GROUP), socket.INADDR_ANY)
             try:
                 sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
             except OSError as e:
-                logging.getLogger("GameServer").error(f"Failed to join multicast group: {e}")
+                logging.getLogger(self.logger_name).error(f"Failed to join multicast group: {e}")
                 return
 
             sock.settimeout(1.0)
@@ -388,7 +389,7 @@ class GameServer:
                 try:
                     data, addr = sock.recvfrom(1024)
                     if data == DISCOVERY_MESSAGE:
-                        logger = logging.getLogger("GameServer")
+                        logger = logging.getLogger(self.logger_name)
                         logger.info(f"Discovery request from {addr}, sending response...")
                         response_ip = self._get_lan_ip()
                         response_port = self.port
@@ -397,7 +398,7 @@ class GameServer:
                 except socket.timeout:
                     continue
                 except Exception as e:
-                    logging.getLogger("GameServer").error(f"Error in discovery service: {e}")
+                    logging.getLogger(self.logger_name).error(f"Error in discovery service: {e}")
 
     def _get_lan_ip(self):
         """Helper to get the local LAN IP address."""

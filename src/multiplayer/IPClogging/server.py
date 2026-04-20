@@ -41,30 +41,51 @@ class OriginColoredFormatter(ColoredFormatter):
             "RemoteGame": "blue",
             "Observer": "cyan",
         }
-        self.available_colors = ["blue", "cyan", "green", "purple", "red", "white", "yellow"]
+        self.available_colors = ["blue", "cyan", "purple", "red", "white", "yellow"]
         self._next_color_idx = 0
         self._assigned_colors = {}
 
     def format(self, record):
         # Use the name as origin
         origin = record.name
-        # Try to find a specific color or assign one
-        color = self.origin_colors.get(origin)
-        if not color:
-            # If the name is like "RemoteGame.Alice", try "RemoteGame"
-            base_origin = origin.split('.')[0]
-            color = self.origin_colors.get(base_origin)
-            
-        if not color:
-            if origin not in self._assigned_colors:
-                self._assigned_colors[origin] = self.available_colors[self._next_color_idx % len(self.available_colors)]
-                self._next_color_idx += 1
-            color = self._assigned_colors[origin]
         
-        # Temporarily inject the color for the formatter
-        # Use get to avoid KeyError if something goes wrong
-        record.log_color = escape_codes.get(color, "")
-        return super().format(record)
+        # Check if we have an assigned color for this specific origin
+        if origin in self._assigned_colors:
+            color = self._assigned_colors[origin]
+        # Check if it's a known fixed origin
+        elif origin in self.origin_colors:
+            color = self.origin_colors[origin]
+        else:
+            # Try matching by base (e.g., "RemoteGame.Alice" -> "RemoteGame")
+            base_origin = origin.split('.')[0]
+            if base_origin in self.origin_colors:
+                color = self.origin_colors[base_origin]
+            else:
+                # Assign a new dynamic color for this specific origin
+                color = self.available_colors[self._next_color_idx % len(self.available_colors)]
+                self._assigned_colors[origin] = color
+                self._next_color_idx += 1
+        
+        # We manually apply the color to avoid ColoredFormatter overriding it 
+        # based on the log level.
+        message = super().format(record)
+        
+        # super().format(record) will have used ColoredFormatter's logic 
+        # which might have injected a color based on level if %(log_color)s was present.
+        # But since we want to OVERRIDE it with the origin color:
+        
+        color_code = escape_codes.get(color, "")
+        reset_code = escape_codes.get("reset", "")
+        
+        # If the message already has color codes at the beginning, we replace them.
+        # ColoredFormatter usually starts with the color code.
+        if message.startswith('\x1b['):
+            # Find the end of the first escape sequence
+            end_idx = message.find('m')
+            if end_idx != -1:
+                return f"{color_code}{message[end_idx+1:]}"
+        
+        return f"{color_code}{message}{reset_code}"
 
 if __name__ != '__main__': 
     from . import UNIX_SOCKET_PATH

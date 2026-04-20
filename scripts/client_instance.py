@@ -8,8 +8,9 @@ from multiplayer import GameClient, Player, exceptions
 from multiplayer.client import RemoteGame
 
 def setup_logging(log_port, player_name):
+    # Root logger configuration
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)
+    root_logger.setLevel(logging.INFO)
     
     # Handler to send logs to the IPClogging server
     socket_handler = SocketHandler('localhost', log_port)
@@ -20,21 +21,32 @@ def setup_logging(log_port, player_name):
     console_handler.setFormatter(logging.Formatter(f'%(levelname)s:{player_name}:%(message)s'))
     root_logger.addHandler(console_handler)
 
+    # Configure specific loggers to use the same handlers
+    for name in ["GameClient", "RemoteGame", f"Client-{player_name}"]:
+        l = logging.getLogger(name)
+        l.setLevel(logging.INFO)
+        l.propagate = True
+
 def run_client(player_name, game_id, host, port, is_creator, min_players, log_host, log_port):
     logger = logging.getLogger(f"Client-{player_name}")
     logger.info(f"Connecting to server at {host}:{port}...")
     
     client = GameClient(host=host, port=port)
+    # If log_host and log_port are provided, configure the client to use them
+    # This will also set the internal logger name to Client-NAME
     if log_host and log_port:
         client.configure_logging(log_host, log_port, f"Client-{player_name}")
-        # Update local logger reference after configuration
+        # Local reference should point to the same logger
         logger = client._logger
     
     if is_creator:
         logger.info(f"Creating game: {game_id}")
         game_proxy = client.create_game(name=game_id, turn_based=True)
-        # We need to use the actual game_id from the proxy if name was not enough
-        # But in current server impl, the name is NOT the id. 
+        # Ensure the proxy also knows about the custom logger name
+        if log_host and log_port:
+            game_proxy.configure_logging(log_host, log_port, f"Client-{player_name}")
+            logger = game_proxy._logger
+        
         actual_game_id = game_proxy.game_id
         logger.info(f"Actual game ID: {actual_game_id}")
     else:
@@ -59,6 +71,9 @@ def run_client(player_name, game_id, host, port, is_creator, min_players, log_ho
             return
 
         game_proxy = RemoteGame(actual_game_id, host=host, port=port)
+        if log_host and log_port:
+            game_proxy.configure_logging(log_host, log_port, f"Client-{player_name}")
+            logger = game_proxy._logger
 
     logger.info(f"Adding player {player_name}...")
     game_proxy.add_player(Player(player_name, score=0))

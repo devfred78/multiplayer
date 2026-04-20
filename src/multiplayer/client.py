@@ -28,6 +28,22 @@ class GameClient:
         self.use_tls = use_tls
         self._logger = logging.getLogger("GameClient")
         self._logger.setLevel(logging.INFO)
+        self._logger.propagate = True # Ensure it bubbles up to root by default
+        # Check if root logger has a SocketHandler (configured by setup_logging in scripts)
+        # but better yet, let's look for any SocketHandler in the hierarchy
+        self._check_external_logging()
+
+    def _check_external_logging(self):
+        """Checks if a SocketHandler is already configured in the logging hierarchy."""
+        curr = self._logger
+        while curr:
+            for h in curr.handlers:
+                if isinstance(h, SocketHandler):
+                    return True
+            if not curr.propagate:
+                break
+            curr = curr.parent
+        return False
 
     def configure_logging(self, host, port, name=None):
         """
@@ -41,17 +57,23 @@ class GameClient:
         if name:
             self._logger = logging.getLogger(name)
             self._logger.setLevel(logging.INFO)
+            # Ensure propagation is True so it reaches root logger if configured there
+            self._logger.propagate = True
             
-        # Remove existing SocketHandlers
+        # Check if already connected to this host/port via hierarchy
+        if self._check_external_logging():
+            self._logger.info(f"Using existing IPC logging configuration for {self._logger.name}")
+            return
+
+        # Remove existing SocketHandlers ONLY on this specific logger to avoid duplicates
+        # but keep others if they were there (though unlikely on this specific logger)
         for h in self._logger.handlers[:]:
             if isinstance(h, SocketHandler):
                 self._logger.removeHandler(h)
                 
         handler = SocketHandler(host, port)
         self._logger.addHandler(handler)
-        # Flush or trigger immediate send if possible? No direct way in SocketHandler,
-        # but emitting a log usually works.
-        self._logger.info(f"Logging configured for {self._logger.name}")
+        self._logger.info(f"Logging configured for {self._logger.name} to {host}:{port}")
 
     @staticmethod
     def discover_servers(timeout=2):
@@ -90,6 +112,7 @@ class GameClient:
 
     def _send_command(self, action, params=None, timeout=5):
         """Sends a command to the server and returns the response."""
+        self._logger.debug(f"Sending command {action} with params {params}")
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(timeout)
@@ -221,6 +244,9 @@ class RemoteGame:
         self._client = GameClient(host, port, password, use_tls)
         self._logger = logging.getLogger("RemoteGame")
         self._logger.setLevel(logging.INFO)
+        self._logger.propagate = True
+        # RemoteGame should ideally use the same logger name if possible
+        # but for now we just ensure it propagates to the same destination.
 
     def configure_logging(self, host, port, name=None):
         """Configures the remote game proxy to send logs to a logging server."""
@@ -244,6 +270,7 @@ class RemoteGame:
             player (Player): The player to add.
             password (str, optional): The password for this specific game.
         """
+        self._logger.info(f"Adding player {player.name} to game {self.game_id}")
         params = {
             'player': {'name': player.name, 'attributes': player.attributes},
             'game_password': password,
@@ -266,6 +293,7 @@ class RemoteGame:
 
     def start(self):
         """Starts the remote game."""
+        self._logger.info(f"Starting game {self.game_id}")
         self._send_command('start')
 
     def pause(self):
@@ -282,6 +310,7 @@ class RemoteGame:
 
     def next_turn(self):
         """Advances to the next turn in the remote game."""
+        self._logger.debug(f"Advancing turn in game {self.game_id}")
         self._send_command('next_turn')
 
     @property

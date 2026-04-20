@@ -120,6 +120,18 @@ Un objet proxy représentant une partie exécutée sur le serveur.
 *   **`state`**: Retourne un dictionnaire contenant à la fois le `GameState` et l'état personnalisé. Exemple : `{'status': 'in_progress', 'custom': {'score': 100}}`.
 *   **`observers`**: Retourne une liste des noms des observateurs dans la partie.
 
+## Serveur de Logging Autonome
+
+Le package `multiplayer` inclut un serveur de logging autonome qui peut être utilisé pour recevoir et afficher les logs de plusieurs instances de `GameServer`.
+
+### `multiplayer-log-server [--port PORT] [--color-mode MODE]`
+Démarre le serveur de logging autonome.
+
+*   **`--port`** (`int`, optionnel) : Le port TCP sur lequel écouter. Par défaut `5000`.
+*   **`--color-mode`** (`str`, optionnel) : Le mode de coloration des logs. Les options sont :
+    *   `level` : Colore les logs en fonction de leur criticité (ex: INFO est vert, ERROR est rouge). C'est le mode par défaut.
+    *   `origin` : Colore les logs en fonction du nom du logger (ex: `GameServer`, `GameClient`, `GameAdmin`, etc.). Cela aide à différencier les messages provenant de différentes sources.
+
 ## Fonctions Utilitaires
 
 ### Suggestions de Noms

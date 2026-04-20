@@ -11,12 +11,18 @@ def main():
         default=5000, 
         help="Port to listen on (default: 5000)"
     )
+    parser.add_argument(
+        "--color-mode",
+        choices=["level", "origin"],
+        default="level",
+        help="Coloration mode: 'level' (by criticality) or 'origin' (by message source)"
+    )
     
     args = parser.parse_args()
     
     try:
         print(f"Starting standalone logging server on port {args.port}...")
-        server(args.port)
+        server(args.port, color_mode=args.color_mode)
     except KeyboardInterrupt:
         print("\nLogging server stopped by user.")
     except Exception as e:

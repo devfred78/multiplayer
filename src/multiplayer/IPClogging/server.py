@@ -52,7 +52,7 @@ class LoggingServer(threading.Thread):
     This class inherits from threading.Thread, meaning that it starts with the `start()` method, and it is NON blocking.
     """
     
-    def __init__(self, host: Path = UNIX_SOCKET_PATH, port: int|None = None, timeout: int = 5):
+    def __init__(self, host: Path = UNIX_SOCKET_PATH, port: int|None = None, timeout: int = 5, color_mode: str = "level"):
         
         super().__init__()
         
@@ -60,20 +60,58 @@ class LoggingServer(threading.Thread):
         self.logger = logging.getLogger("ServerLog")
         self.logger.setLevel(logging.NOTSET)
         handler = logging.StreamHandler()
-        formatter = ColoredFormatter(
-            "%(log_color)s[%(asctime)s][%(levelname)s][%(module)s]:%(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-            reset=True,
-            log_colors={
-                "DEBUG": "cyan",
-                "INFO": "green",
-                "WARNING": "yellow",
-                "ERROR": "red",
-                "CRITICAL": "red,bg_white",
-            },
-            secondary_log_colors={},
-            style="%",
-        )
+        
+        if color_mode == "origin":
+            class OriginColoredFormatter(ColoredFormatter):
+                def __init__(self, *args, **kwargs):
+                    super().__init__(*args, **kwargs)
+                    self.origin_colors = {
+                        "GameServer": "purple",
+                        "GameClient": "green",
+                        "GameAdmin": "red",
+                        "RemoteGame": "blue",
+                        "Observer": "cyan",
+                    }
+                    self.available_colors = ["blue", "cyan", "green", "magenta", "red", "white", "yellow"]
+                    self._next_color_idx = 0
+                    self._assigned_colors = {}
+
+                def format(self, record):
+                    # Use the module or name as origin
+                    origin = record.name
+                    if origin not in self.origin_colors:
+                        if origin not in self._assigned_colors:
+                            self._assigned_colors[origin] = self.available_colors[self._next_color_idx % len(self.available_colors)]
+                            self._next_color_idx += 1
+                        color = self._assigned_colors[origin]
+                    else:
+                        color = self.origin_colors[origin]
+                    
+                    # Temporarily inject the color for the formatter
+                    record.log_color = self.escape_codes[color]
+                    return super().format(record)
+
+            formatter = OriginColoredFormatter(
+                "%(log_color)s[%(asctime)s][%(levelname)s][%(name)s]:%(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
+                reset=True,
+                style="%",
+            )
+        else:
+            formatter = ColoredFormatter(
+                "%(log_color)s[%(asctime)s][%(levelname)s][%(module)s]:%(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
+                reset=True,
+                log_colors={
+                    "DEBUG": "cyan",
+                    "INFO": "green",
+                    "WARNING": "yellow",
+                    "ERROR": "red",
+                    "CRITICAL": "red,bg_white",
+                },
+                secondary_log_colors={},
+                style="%",
+            )
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
 
@@ -218,13 +256,14 @@ class LoggingServer(threading.Thread):
                             self.stop()
                 
 
-def server(port:int = 5000):
+def server(port:int = 5000, color_mode: str = "level"):
     print("****************************")
     print("*   Logging server         *")
     print(f"*    port = {port}           *")
+    print(f"*    color mode = {color_mode}    *")
     print("****************************")
     print()
-    lserv = LoggingServer(host = "localhost", port=port)
+    lserv = LoggingServer(host = "localhost", port=port, color_mode=color_mode)
     lserv.start()
     try:
         lserv.join()
@@ -235,13 +274,23 @@ if __name__ == '__main__':
     ### Launch the logging server in a separated thread ###
     
     if len(sys.argv) >= 2:
-        if "--port" in sys.argv[1].lower():
+        port = 5000
+        color_mode = "level"
+        
+        if "--port" in sys.argv:
+            idx = sys.argv.index("--port")
             try:
-                port = int(sys.argv[2])
-            except ValueError:
-                port = 5000
-            server(port)
-        else:
-            server()
+                port = int(sys.argv[idx + 1])
+            except (ValueError, IndexError):
+                pass
+        
+        if "--color-mode" in sys.argv:
+            idx = sys.argv.index("--color-mode")
+            try:
+                color_mode = sys.argv[idx + 1]
+            except IndexError:
+                pass
+                
+        server(port, color_mode)
     else:
         server()

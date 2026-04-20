@@ -141,6 +141,18 @@ A proxy object representing a game running on the server.
 *   **`state`**: Returns a dictionary containing both the `GameState` and the custom state. Example: `{'status': 'in_progress', 'custom': {'score': 100}}`.
 *   **`observers`**: Returns a list of `Observer` names in the game.
 
+## Standalone Logging Server
+
+The `multiplayer` package includes a standalone logging server that can be used to receive and display logs from multiple `GameServer` instances.
+
+### `multiplayer-log-server [--port PORT] [--color-mode MODE]`
+Starts the standalone logging server.
+
+*   **`--port`** (`int`, optional): The TCP port to listen on. Defaults to `5000`.
+*   **`--color-mode`** (`str`, optional): The coloration mode for the logs. Options are:
+    *   `level`: Colors logs based on their criticality (e.g., INFO is green, ERROR is red). This is the default.
+    *   `origin`: Colors logs based on the name of the logger (e.g., `GameServer`, `GameClient`, `GameAdmin`, etc.). This helps differentiate messages from different sources.
+
 ## Utility Functions
 
 ### Name Suggestions

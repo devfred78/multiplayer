@@ -110,6 +110,18 @@ Un objeto proxy que representa una partida en el servidor.
 *   **`state`**: Devuelve un diccionario que contiene tanto el `GameState` como el estado personalizado. Ejemplo: `{'status': 'in_progress', 'custom': {'score': 100}}`.
 *   **`observers`**: Devuelve una lista de nombres de los observadores en la partida.
 
+## Servidor de Registros Autónomo
+
+El paquete `multiplayer` incluye un servidor de registros autónomo que se puede usar para recibir y mostrar registros de múltiples instancias de `GameServer`.
+
+### `multiplayer-log-server [--port PORT] [--color-mode MODE]`
+Inicia el servidor de registros autónomo.
+
+*   **`--port`** (`int`, opcional): El puerto TCP en el que escuchar. Por defecto es `5000`.
+*   **`--color-mode`** (`str`, opcional): El modo de coloración para los registros. Las opciones son:
+    *   `level`: Colorea los registros según su criticidad (ej. INFO es verde, ERROR es rojo). Este es el modo predeterminado.
+    *   `origin`: Colorea los registros según el nombre del registrador (ej. `GameServer`, `GameClient`, `GameAdmin`, etc.). Esto ayuda a diferenciar los mensajes de diferentes fuentes.
+
 ## Funciones de Utilidad
 
 ### Sugerencias de Nombres

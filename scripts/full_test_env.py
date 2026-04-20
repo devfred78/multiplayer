@@ -26,16 +26,16 @@ def setup_logging():
     console_handler.setFormatter(logging.Formatter('%(levelname)s:%(name)s:%(message)s'))
     root_logger.addHandler(console_handler)
 
-def launch_log_server():
+def launch_log_server(color_mode="level"):
     """Launches the log server in a new terminal window."""
     # Path to IPClogging's server.py
     # We assume the script is launched from the project root
     server_path = Path("src/multiplayer/IPClogging/server.py").resolve()
     
-    print(f"Launching log server on port {LOG_PORT}...")
+    print(f"Launching log server on port {LOG_PORT} (mode: {color_mode})...")
     # Using Windows Terminal (wt) to open a new window
     # Using 'uv run' to ensure dependencies (colorlog) are present
-    subprocess.Popen(['wt', 'new-tab', '-p', 'Command Prompt', '-d', '.', 'cmd', '/k', 'uv', 'run', 'python', str(server_path), '--port', str(LOG_PORT)], shell=True)
+    subprocess.Popen(['wt', 'new-tab', '-p', 'Command Prompt', '-d', '.', 'cmd', '/k', 'uv', 'run', 'python', str(server_path), '--port', str(LOG_PORT), '--color-mode', color_mode], shell=True)
     
     # Give the server some time to start
     time.sleep(3)
@@ -126,6 +126,12 @@ def run_simulation(num_players=2):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Full multiplayer test environment")
     parser.add_argument("--players", type=int, default=2, help="Number of players for the simulation")
+    parser.add_argument(
+        "--color-mode",
+        choices=["level", "origin"],
+        default="level",
+        help="Coloration mode for the log server: 'level' (by criticality) or 'origin' (by message source)"
+    )
     args = parser.parse_args()
 
     # Ensure we are at project root
@@ -133,7 +139,7 @@ if __name__ == "__main__":
     os.chdir(project_root)
     sys.path.append(str(project_root / "src"))
 
-    launch_log_server()
+    launch_log_server(color_mode=args.color_mode)
     setup_logging()
     
     try:

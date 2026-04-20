@@ -81,14 +81,13 @@ def main():
         # Ensure project folders are in the PYTHONPATH
         env["PYTHONPATH"] = f"{abs_root}{os.pathsep}{abs_src}{os.pathsep}{env.get('PYTHONPATH', '')}"
         
-        # We use 'uv run' with --no-project to force an env separate from the project's
-        # --with-editable . installs the current project in editable mode in this ephemeral env
+        # We use 'uv run' with --no-project to force an environment separate from the project's
+        # We install the project with its dev dependencies in editable mode
         cmd = [
             "uv", "run", 
             "--no-project", 
             "--python", "3.14", 
-            "--with-editable", ".", 
-            "--extra", "dev", 
+            "--with-editable", ".[dev]", 
             "pytest"
         ]
         

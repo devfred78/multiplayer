@@ -48,3 +48,6 @@ Thumbs.db
 
 # --- PROJECT SPECIFICS --
 resources/
+
+# Local configuration and documentation
+private-doc/

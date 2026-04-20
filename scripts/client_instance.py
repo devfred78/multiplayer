@@ -23,9 +23,9 @@ def setup_logging(log_port, player_name):
 
     # Configure specific loggers to use the same handlers
     for name in ["GameClient", "RemoteGame", f"Client-{player_name}"]:
-        l = logging.getLogger(name)
-        l.setLevel(logging.INFO)
-        l.propagate = True
+        logger = logging.getLogger(name)
+        logger.setLevel(logging.INFO)
+        logger.propagate = True
 
 def run_client(player_name, game_id, host, port, is_creator, min_players, log_host, log_port):
     logger = logging.getLogger(f"Client-{player_name}")

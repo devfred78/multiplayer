@@ -3,7 +3,7 @@ This module provides classes for managing a multiplayer game.
 """
 
 import enum
-from .exceptions import GameLogicError, PlayerLimitReachedError, AuthenticationError
+from .exceptions import GameLogicError, PlayerLimitReachedError, ObserverLimitReachedError, AuthenticationError
 
 class GameState(enum.Enum):
     """
@@ -25,22 +25,37 @@ class Player:
         self.name = name
         self.attributes = kwargs
 
+class Observer:
+    """
+    Represents an observer in the game.
+
+    Args:
+        name (str): The name of the observer.
+        **kwargs: Additional attributes for the observer.
+    """
+    def __init__(self, name, **kwargs):
+        self.name = name
+        self.attributes = kwargs
+
 class Game:
     """
     Represents a multiplayer game.
 
     Args:
         max_players (int, optional): The maximum number of players allowed in the game. Defaults to None.
+        max_observers (int, optional): The maximum number of observers allowed in the game. Defaults to None.
         turn_based (bool, optional): Whether the game is turn-based or simultaneous. Defaults to False.
         password (str, optional): A password to protect this specific game.
         **kwargs: Additional attributes for the game.
     """
-    def __init__(self, max_players=None, turn_based=False, password=None, **kwargs):
+    def __init__(self, max_players=None, max_observers=None, turn_based=False, password=None, **kwargs):
         self.max_players = max_players
+        self.max_observers = max_observers
         self.turn_based = turn_based
         self.password = password
         self.attributes = kwargs
         self.players = []
+        self.observers = []
         self.state = GameState.PENDING
         self.current_player_index = 0
         self.custom_state = {}
@@ -63,6 +78,24 @@ class Game:
             raise PlayerLimitReachedError("Maximum number of players reached")
         self.players.append(player)
 
+    def add_observer(self, observer, password=None):
+        """
+        Adds an observer to the game.
+
+        Args:
+            observer (Observer): The observer to add.
+            password (str, optional): The password required to join the game.
+
+        Raises:
+            AuthenticationError: If the provided password does not match the game's password.
+            ObserverLimitReachedError: If the maximum number of observers has been reached.
+        """
+        if self.password is not None and self.password != password:
+            raise AuthenticationError("Invalid password for this game")
+        if self.max_observers is not None and len(self.observers) >= self.max_observers:
+            raise ObserverLimitReachedError("Maximum number of observers reached")
+        self.observers.append(observer)
+
     def remove_player(self, player_name):
         """
         Removes a player from the game by name.
@@ -80,6 +113,17 @@ class Game:
                     self.state = GameState.PENDING
                 elif self.current_player_index >= removed_player_index:
                     self.current_player_index = self.current_player_index % len(self.players)
+
+    def remove_observer(self, observer_name):
+        """
+        Removes an observer from the game by name.
+
+        Args:
+            observer_name (str): The name of the observer to remove.
+        """
+        observer_to_remove = next((o for o in self.observers if o.name == observer_name), None)
+        if observer_to_remove:
+            self.observers.remove(observer_to_remove)
 
     def start(self):
         """

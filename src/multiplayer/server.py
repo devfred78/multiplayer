@@ -19,8 +19,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 import enum
 
-from .game import Game, Player, GameState
-from .exceptions import GameLogicError, PlayerLimitReachedError, AuthenticationError
+from .game import Game, Player, Observer, GameState
+from .exceptions import GameLogicError, PlayerLimitReachedError, ObserverLimitReachedError, AuthenticationError
 
 # Custom JSON Encoder to handle enums
 class EnumEncoder(json.JSONEncoder):
@@ -150,6 +150,12 @@ def _execute_command(games, action, params):
                 game_password = params.get('game_password')
                 game.add_player(player, password=game_password)
                 result = {'status': 'success'}
+            elif action == 'add_observer':
+                observer_data = params['observer']
+                observer = Observer(observer_data['name'], **observer_data.get('attributes', {}))
+                game_password = params.get('game_password')
+                game.add_observer(observer, password=game_password)
+                result = {'status': 'success'}
             elif action == 'start':
                 game.start()
                 result = {'status': 'success'}
@@ -176,12 +182,15 @@ def _execute_command(games, action, params):
             elif action == 'get_players':
                 player_list = [{'name': p.name, 'attributes': p.attributes} for p in game.players]
                 result = {'status': 'success', 'data': player_list}
+            elif action == 'get_observers':
+                observer_list = [{'name': o.name, 'attributes': o.attributes} for o in game.observers]
+                result = {'status': 'success', 'data': observer_list}
             elif action == 'set_game_state':
                 game.custom_state = params.get('state')
                 result = {'status': 'success'}
             else:
                 result = {'status': 'error', 'type': 'ServerError', 'message': 'Unknown action'}
-    except (GameLogicError, PlayerLimitReachedError, AuthenticationError) as e:
+    except (GameLogicError, PlayerLimitReachedError, ObserverLimitReachedError, AuthenticationError) as e:
         result = {'status': 'error', 'type': type(e).__name__, 'message': str(e)}
     except Exception as e:
         result = {'status': 'error', 'type': 'ServerError', 'message': str(e)}

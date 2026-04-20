@@ -1,7 +1,7 @@
 """
 This package provides classes for managing a multiplayer game, both locally and over a network.
 """
-from .game import Game, Player, GameState
+from .game import Game, Player, Observer, GameState
 from .server import GameServer
 from .client import GameClient, RemoteGame
 
@@ -16,6 +16,7 @@ from .exceptions import (
     MultiplayerError,
     GameLogicError,
     PlayerLimitReachedError,
+    ObserverLimitReachedError,
     GameNotFoundError,
     NetworkError,
     ConnectionError,
@@ -26,6 +27,7 @@ from .exceptions import (
 __all__ = [
     'Game',
     'Player',
+    'Observer',
     'GameState',
     'GameServer',
     'GameClient',
@@ -38,6 +40,7 @@ __all__ = [
     'MultiplayerError',
     'GameLogicError',
     'PlayerLimitReachedError',
+    'ObserverLimitReachedError',
     'GameNotFoundError',
     'NetworkError',
     'ConnectionError',

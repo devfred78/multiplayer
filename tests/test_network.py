@@ -5,7 +5,7 @@ import pytest
 import time
 import socket
 import ssl
-from multiplayer import GameServer, GameClient, Player, exceptions, GameState
+from multiplayer import GameServer, GameClient, Player, Observer, exceptions, GameState
 from multiplayer.exceptions import (
     ConnectionError,
     GameNotFoundError,
@@ -181,6 +181,23 @@ def test_tls_server_connection_failure_mismatch(tls_game_server):
     with pytest.raises(ConnectionError):
         client.list_games()
 
+def test_observer_network(game_server):
+    """Tests adding and listing observers over the network."""
+    client = GameClient(port=TEST_PORT)
+    game = client.create_game(name="Observer Test", max_observers=1)
+    
+    obs = Observer("NetWatcher", status="observing")
+    game.add_observer(obs)
+    
+    observers = game.observers
+    assert len(observers) == 1
+    assert observers[0].name == "NetWatcher"
+    assert observers[0].attributes["status"] == "observing"
+    
+    # Verify limit
+    with pytest.raises(exceptions.ObserverLimitReachedError):
+        game.add_observer(Observer("TooMany"))
+
 def test_game_password_success(game_server):
     """Tests joining a password-protected game with the correct password."""
     client = GameClient(port=TEST_PORT)
@@ -238,3 +255,4 @@ def test_game_password_failure(game_server):
     game = client.create_game(password=TEST_GAME_PASSWORD)
     with pytest.raises(AuthenticationError, match="Invalid password for this game"):
         game.add_player(Player("Alice"), password="wrong_game_password")
+

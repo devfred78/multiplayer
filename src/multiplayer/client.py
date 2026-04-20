@@ -6,7 +6,7 @@ import json
 import struct
 import time
 import ssl
-from .game import Player
+from .game import Player, Observer
 from . import exceptions
 
 # Constants for network discovery
@@ -147,6 +147,20 @@ class RemoteGame:
         }
         self._send_command('add_player', params)
 
+    def add_observer(self, observer, password=None):
+        """
+        Adds an observer to the remote game.
+
+        Args:
+            observer (Observer): The observer to add.
+            password (str, optional): The password for this specific game.
+        """
+        params = {
+            'observer': {'name': observer.name, 'attributes': observer.attributes},
+            'game_password': password,
+        }
+        self._send_command('add_observer', params)
+
     def start(self):
         """Starts the remote game."""
         self._send_command('start')
@@ -185,6 +199,12 @@ class RemoteGame:
         """Gets the list of players in the remote game."""
         data = self._send_command('get_players')
         return [Player(p['name'], **p['attributes']) for p in data]
+
+    @property
+    def observers(self):
+        """Gets the list of observers in the remote game."""
+        data = self._send_command('get_observers')
+        return [Observer(o['name'], **o['attributes']) for o in data]
 
     def set_state(self, state):
         """Sets the state of the remote game."""

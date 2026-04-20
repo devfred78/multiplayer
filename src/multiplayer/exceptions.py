@@ -14,6 +14,10 @@ class PlayerLimitReachedError(GameLogicError):
     """Raised when trying to add a player to a full game."""
     pass
 
+class ObserverLimitReachedError(GameLogicError):
+    """Raised when trying to add an observer to a full game."""
+    pass
+
 class GameNotFoundError(MultiplayerError):
     """Raised when a game_id is not found on the server."""
     pass

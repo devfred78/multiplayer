@@ -85,6 +85,7 @@ Une classe client pour les administrateurs pour gérer un `GameServer`.
 *   `list_games()` : Liste toutes les parties actives.
 *   `kick_player(game_id, player_name)` : Expulse un joueur d'une partie.
 *   `kick_observer(game_id, observer_name)` : Expulse un observateur d'une partie.
+*   `list_all_players()` : Liste tous les joueurs actuellement connectés au serveur, incluant l'ID et le nom de leur partie respective.
 *   `stop_server()` : Demande l'arrêt du serveur.
 *   `restart_server()` : Demande le redémarrage du serveur (efface toutes les parties en cours).
 

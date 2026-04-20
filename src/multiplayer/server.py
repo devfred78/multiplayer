@@ -182,6 +182,18 @@ def _execute_command(games, action, params):
                 'games_count': len(games),
                 'active_games': [gid for gid, g in games.items() if g.state != GameState.FINISHED]
             }}
+        elif action == 'list_all_players':
+            all_players = []
+            for gid, game in games.items():
+                game_name = game.attributes.get('name', 'Unknown')
+                for player in game.players:
+                    all_players.append({
+                        'name': player.name,
+                        'attributes': player.attributes,
+                        'game_id': gid,
+                        'game_name': game_name
+                    })
+            result = {'status': 'success', 'data': all_players}
         else:
             game_id = params.get('game_id')
             if not game_id or game_id not in games:

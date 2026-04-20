@@ -101,6 +101,7 @@ A client class for administrators to manage a `GameServer`.
 *   `list_games()`: Returns a list of all active games on the server.
 *   `kick_player(game_id, player_name)`: Removes a player from a specific game.
 *   `kick_observer(game_id, observer_name)`: Removes an observer from a specific game.
+*   `list_all_players()`: Returns a list of all players currently connected to the server, including their associated game ID and name.
 *   `stop_server()`: Requests the server to shut down.
 *   `restart_server()`: Requests the server to restart (clears all current games).
 

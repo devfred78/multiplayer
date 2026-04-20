@@ -151,6 +151,10 @@ class GameAdmin:
         """Kicks an observer from a specific game."""
         return self._client._send_command('kick_observer', {'game_id': game_id, 'observer_name': observer_name})
 
+    def list_all_players(self):
+        """Lists all players currently connected to the server across all games."""
+        return self._client._send_command('list_all_players')
+
 class RemoteGame:
     """
     A proxy for a Game object on a remote server.

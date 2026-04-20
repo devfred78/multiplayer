@@ -15,7 +15,8 @@ Para una descripción técnica detallada de todas las clases y funciones, consul
 ## Características
 
 *   **Local y en Red:** Úsalo en un solo proceso o en una arquitectura cliente-servidor.
-*   **Estado de Juego Combinado:** Un sistema flexible para sincronizar tanto el estado principal del juego (ej: `in_progress`) como datos de juego personalizados.
+*   **Estado de Juego Combinado:** Un sistema flexible para sincronizar tanto el estado principal del jeu (ej: `in_progress`) como datos de juego personalizados.
+*   **Soporte de Observadores:** Capacidad de añadir observadores que pueden ver el estado del juego sin participar como jugadores.
 *   **Seguridad Multinivel:** Soporta contraseñas para todo el servidor y por partida, con cifrado TLS v1.3 opcional.
 *   **Descubrimiento Automático de Servidores:** Los clientes pueden encontrar automáticamente servidores en funcionamiento en la red local.
 *   **Sugerencias de Nombres Extensibles:** Incluye una función de utilidad para sugerir nombres creativos para juegos y jugadores.

@@ -6,15 +6,25 @@ Este documento proporciona una referencia detallada de la API pública del módu
 
 ## Clases Principales
 
-### `Game(max_players=None, turn_based=False, password=None, **kwargs)`
+### `Game(max_players=None, turn_based=False, password=None, max_observers=None, **kwargs)`
 Representa una única sesión de juego.
 
 *   **`max_players`** (`int`, opcional): El número máximo de jugadores.
+*   **`max_observers`** (`int`, opcional): El número máximo de observadores.
 *   **`turn_based`** (`bool`, opcional): `True` si el juego es por turnos.
 *   **`password`** (`str`, opcional): Una contraseña para proteger esta partida.
 *   **`**kwargs`**: Atributos personalizados para la partida.
 
+#### Métodos
+*   `add_player(player, password=None)`: Añade un objeto `Player` a la partida.
+*   `remove_player(player_name)`: Elimina un jugador de la partida por su nombre.
+*   `add_observer(observer)`: Añade un objeto `Observer` a la partida.
+*   `remove_observer(observer_name)`: Elimina un observador de la partida por su nombre.
+*   `start()`: Inicia la partida.
+
 #### Propiedades
+*   **`players`**: Una lista de objetos `Player`.
+*   **`observers`**: Una lista de objetos `Observer`.
 *   **`state`**: El `GameState` actual de la partida (ej., `GameState.IN_PROGRESS`).
 *   **`custom_state`**: Un diccionario para almacenar cualquier dato específico del juego.
 
@@ -25,6 +35,18 @@ Representa a un jugador.
 
 *   **`name`** (`str`): El nombre del jugador.
 *   **`**kwargs`**: Atributos personalizados para el jugador.
+
+---
+
+### `Observer(name, **kwargs)`
+Representa a un observador.
+
+*   **`name`** (`str`): El nombre del observador.
+*   **`**kwargs`**: Atributos personalizados para el observador.
+
+#### Propiedades
+*   **`name`**: El nombre del observador.
+*   **`attributes`**: Un diccionario de los atributos personalizados del observador.
 
 ---
 
@@ -59,10 +81,12 @@ Un objeto proxy que representa una partida en el servidor.
 
 #### Métodos
 *   `add_player(player, password=None)`: Añade un `Player` a la partida remota.
+*   `add_observer(observer)`: Añade un `Observer` a la partida remota.
 *   `set_state(new_state)`: Sobrescribe el diccionario `custom_state` de la partida en el servidor.
 
 #### Propiedades
 *   **`state`**: Devuelve un diccionario que contiene tanto el `GameState` como el estado personalizado. Ejemplo: `{'status': 'in_progress', 'custom': {'score': 100}}`.
+*   **`observers`**: Devuelve una lista de nombres de los observadores en la partida.
 
 ## Funciones de Utilidad
 
@@ -102,8 +126,8 @@ Sugiere un nombre aleatorio para un jugador.
 *   **`MultiplayerError`**: Excepción base para todos los errores del módulo.
 *   **`GameLogicError`**: Para errores en las reglas del juego.
 *   **`PlayerLimitReachedError`**: Lanzada al añadir un jugador a una partida llena.
+*   **`ObserverLimitReachedError`**: Lanzada al añadir un observador a una partida qui ha alcanzado su límite de observadores.
 *   **`GameNotFoundError`**: Lanzada cuando un cliente solicita un `id` de partida que no existe.
 *   **`NetworkError`**: Excepción base para problemas de red.
 *   **`ConnectionError`**: Lanzada cuando un cliente no puede conectarse al servidor.
-*   **`ServerError`**: Lanzada para errores genéricos reportados por el servidor.
-*   **`AuthenticationError`**: Lanzada para fallos de autenticación tanto del servidor como de la partida.
+*   **`ServerError`**: Lanzada para errores genéricos reportad

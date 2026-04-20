@@ -16,6 +16,7 @@ For a detailed technical description of all classes and functions, see the [API 
 
 *   **Local & Networked:** Use in a single process or in a client-server architecture.
 *   **Combined Game State:** A flexible system for synchronizing both the core game status (e.g., `in_progress`) and any custom game data.
+*   **Observer Support:** Ability to add observers who can view the game state without participating as players.
 *   **Multi-Layered Security:** Supports both server-wide passwords and per-game passwords, with optional TLS v1.3 encryption.
 *   **Automatic Server Discovery:** Clients can automatically find running servers on the local network.
 *   **Extensible Name Suggestions:** Includes a utility function to suggest creative names for games and players.

@@ -122,12 +122,12 @@ class LoggingServer(threading.Thread):
             while self._running:
                 try:
                     conn, addr = self._socket.accept()
-                    print("CONNECTION ESTABLISHED !!")
+                    # print("CONNECTION ESTABLISHED !!")
                     conn.setblocking(False) # the connection is now non-blocking
                     # self._connections.append(conn)
                     self._sel.register(conn, selectors.EVENT_READ)
                     self._registered_connections.append(conn)
-                    print(f"Number of available connection(s): {len(self._registered_connections)}")
+                    # print(f"Number of available connection(s): {len(self._registered_connections)}")
                 except socket.timeout:
                     pass
                 except socket.error as err:
@@ -164,10 +164,10 @@ class LoggingServer(threading.Thread):
                 sock.shutdown(socket.SHUT_RD)
                 sock.close()
                 self._registered_connections.remove(sock)
-                print("CONNECTION CLOSED")
-                print(f"Number of remaining available connection(s): {len(self._registered_connections)}")
+                # print("CONNECTION CLOSED")
+                # print(f"Number of remaining available connection(s): {len(self._registered_connections)}")
                 if len(self._registered_connections) == 0:
-                    print("No connection left: stopping the server...")
+                    print("No connection left: stopping the log server...")
                     self._running = False
                     self.stop()
                 break
@@ -181,7 +181,7 @@ class LoggingServer(threading.Thread):
         Print all strings given by connected clients.
         """
         sleep(2)
-        print("Server is now ready")
+        print("Log server is now ready")
         while self._running:
             if len(self._registered_connections) > 0:
                 events = self._sel.select(self._timeout)
@@ -210,10 +210,10 @@ class LoggingServer(threading.Thread):
                     except pickle.UnpicklingError:
                         print("\x1b[31m!!! UNABLE TO DECODE THE RECEIVED LOG MESSAGE !!!")
                     except EOFError:
-                        print("CONNECTION CLOSED")
-                        print(f"Number of remaining available connection(s): {len(self._registered_connections)}")
+                        # print("CONNECTION CLOSED")
+                        # print(f"Number of remaining available connection(s): {len(self._registered_connections)}")
                         if len(self._registered_connections) == 0:
-                            print("No connection left: stopping the server...")
+                            # print("No connection left: stopping the log server...")
                             self._running = False
                             self.stop()
                 

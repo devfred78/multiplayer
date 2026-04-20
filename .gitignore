@@ -30,7 +30,10 @@ htmlcov/
 # --- DOCKER ---
 .docker/
 # We keep the Dockerfile, but we mostly forget the persistent data
-data/
+# Allow the project's data package (the general data/ rule was blocking it)
+!/src/multiplayer/data/
+# Use a more specific rule for ignored data to avoid blocking subdirectories
+/data/
 db_data/
 
 # --- IDE (VS Code, PyCharm) ---

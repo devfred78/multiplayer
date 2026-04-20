@@ -124,7 +124,9 @@ def _get_names_from_source(source):
     try:
         # Try finding it in the multiplayer.data subpackage first
         try:
-            package_path = resources.files('multiplayer.data')
+            # We explicitly import the subpackage to ensure it's loaded
+            import multiplayer.data
+            package_path = resources.files(multiplayer.data)
             # If we are looking for 'data/cities.csv', and we are in 'multiplayer.data',
             # we just need 'cities.csv'
             if 'data' in source_path.parts:
@@ -134,7 +136,8 @@ def _get_names_from_source(source):
                 resource_path = package_path.joinpath(*source_path.parts)
         except (ImportError, ModuleNotFoundError, ValueError):
             # Fallback to main package
-            package_path = resources.files('multiplayer')
+            import multiplayer
+            package_path = resources.files(multiplayer)
             resource_path = package_path.joinpath(*source_path.parts)
             
         if resource_path.is_file():

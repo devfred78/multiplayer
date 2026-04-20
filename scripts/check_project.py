@@ -92,11 +92,11 @@ def main():
             "--with-editable", ".[dev]",
             "python", "-c", 
             "from multiplayer.utils import _get_names_from_source; " 
-            "import os; from pathlib import Path; "
-            "source = 'data/cities.csv'; "
-            "res = _get_names_from_source(source); "
-            "print(f'Checking {source}... Found: {len(res) if res else \"None\"}'); "
-            "import sys; sys.exit(0 if res and len(res) > 0 else 1)"
+            "import sys; "
+            "sources = ['data/cities.csv', 'data/roman_gods.csv']; "
+            "results = [(s, _get_names_from_source(s)) for s in sources]; "
+            "[print(f'Checking {s}... Found: {len(r) if r else \"None\"}') for s, r in results]; "
+            "sys.exit(0 if all(r and len(r) > 0 for s, r in results) else 1)"
         ]
         
         print("Verifying data file access in isolated environment...")

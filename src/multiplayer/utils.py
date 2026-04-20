@@ -83,7 +83,25 @@ def _get_names_from_source(source):
     if isinstance(source, list):
         return source
     
-    # Try as a file path first if it looks like one and exists
+    # 1. Try relative to this file first (most reliable in both dev and production layouts)
+    try:
+        current_file_dir = Path(__file__).parent.resolve()
+        path = (current_file_dir / source).resolve()
+        if path.is_file():
+            with open(path, 'r', encoding='utf-8') as f:
+                if source.endswith('.csv'):
+                    reader = csv.reader(f)
+                    try:
+                        next(reader)  # Assume header
+                        return [row[0] for row in reader if row]
+                    except StopIteration:
+                        return []
+                else:
+                    return [line.strip() for line in f if line.strip()]
+    except (OSError, ValueError):
+        pass
+
+    # 2. Try as an absolute or CWD-relative file path
     try:
         path = Path(source)
         if path.is_file():
@@ -93,11 +111,10 @@ def _get_names_from_source(source):
     except (OSError, ValueError):
         pass
 
-    # Fallback to package resource
+    # 3. Fallback to package resource (standard PEP 302/modern way)
     try:
         # source is something like 'data/cities.csv'
         # We need to access it relative to the multiplayer package
-        # Split source to handle subdirectories if any (though resources.files is better)
         parts = Path(source).parts
         resource_path = resources.files('multiplayer')
         for part in parts:
@@ -113,7 +130,7 @@ def _get_names_from_source(source):
                     return []
             else:
                 return [line.strip() for line in f if line.strip()]
-    except (FileNotFoundError, IsADirectoryError, TypeError, ModuleNotFoundError):
+    except (FileNotFoundError, IsADirectoryError, TypeError, ModuleNotFoundError, AttributeError):
         return None
 
 def _suggest_from_category(category, valid_builtin_cats, valid_custom_cats):

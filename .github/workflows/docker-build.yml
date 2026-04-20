@@ -1,0 +1,55 @@
+name: Build Game Server Docker Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      port:
+        description: 'Port d''écoute du serveur de jeu'
+        required: true
+        default: '65432'
+      enable_logging:
+        description: 'Activer l''envoi des logs vers un serveur centralisé'
+        type: boolean
+        default: false
+      logging_host:
+        description: 'Adresse du serveur de log (si activé)'
+        required: false
+      logging_port:
+        description: 'Port du serveur de log (si activé)'
+        required: false
+        default: '5000'
+      image_tag:
+        description: 'Tag de l''image Docker'
+        required: true
+        default: 'latest'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: actions/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false # On ne push pas par défaut sans config de registry
+          tags: multiplayer-server:${{ github.event.inputs.image_tag }}
+          load: true
+
+      - name: Verify image and Show Run Command
+        run: |
+          echo "Image built successfully: multiplayer-server:${{ github.event.inputs.image_tag }}"
+          
+          CMD="docker run -d -p ${{ github.event.inputs.port }}:${{ github.event.inputs.port }} multiplayer-server:${{ github.event.inputs.image_tag }} --port ${{ github.event.inputs.port }}"
+          
+          if [ "${{ github.event.inputs.enable_logging }}" = "true" ]; then
+            CMD="$CMD --logging-host ${{ github.event.inputs.logging_host }} --logging-port ${{ github.event.inputs.logging_port }}"
+          fi
+          
+          echo "To run the server, use:"
+          echo "$CMD"

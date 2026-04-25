@@ -6,14 +6,15 @@ Este documento proporciona una referencia detallada de la API pública del módu
 
 ## Clases Principales
 
-### `Game(max_players=None, turn_based=False, password=None, max_observers=None, **kwargs)`
+### `Game(name=None, max_players=None, turn_based=False, password=None, max_observers=None, **kwargs)`
 Representa una única sesión de juego.
 
+*   **`name`** (`str`, opcional): El nombre de la sesión de juego. Por defecto es `None`.
 *   **`max_players`** (`int`, opcional): El número máximo de jugadores.
 *   **`max_observers`** (`int`, opcional): El número máximo de observadores.
 *   **`turn_based`** (`bool`, opcional): `True` si el juego es por turnos.
 *   **`password`** (`str`, opcional): Una contraseña para proteger esta partida.
-*   **`**kwargs`**: Atributos personalizados para la partida.
+*   **`**kwargs`**: Atributos personalizados para la partida (ej: `difficulty="hard"`).
 
 #### Métodos
 *   `add_player(player, password=None)`: Añade un objeto `Player` a la partida.
@@ -55,7 +56,7 @@ Representa a un observador.
 
 ## Clases de Red
 
-### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, logging_host=None, logging_port=None)`
+### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, logging_host=None, logging_port=None, name=None)`
 Gestiona las sesiones de juego y las peticiones de red.
 
 *   **`password`** (`str`, opcional): Una contraseña global para proteger el servidor.
@@ -63,6 +64,7 @@ Gestiona las sesiones de juego y las peticiones de red.
 *   **`use_tls`** (`bool`, opcional): Si es `True`, habilita el cifrado TLS v1.3.
 *   **`logging_host`** (`str`, opcional): La dirección del host de un servidor de logging.
 *   **`logging_port`** (`int`, opcional): El puerto del servidor de logging.
+*   **`name`** (`str`, opcional): Un nombre para la instancia del servidor.
 
 ---
 
@@ -73,7 +75,7 @@ Una clase de cliente para que los administradores gestionen un `GameServer`.
 *   **`use_tls`** (`bool`, opcional): Si es `True`, el cliente se conectará usando TLS.
 
 #### Métodos
-*   `get_server_info()`: Devuelve información sobre el servidor (número de juegos, IDs activos).
+*   `get_server_info()`: Devuelve información sobre el servidor (nombre, número de juegos, IDs activos).
 *   `list_games()`: Devuelve una lista de todos los juegos activos.
 *   `kick_player(game_id, player_name)`: Elimina a un jugador de un juego específico.
 *   `kick_observer(game_id, observer_name)`: Elimina a un observador de un juego específico.

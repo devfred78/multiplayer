@@ -56,4 +56,13 @@ print(f"Turno actual: {estado_completo['custom']['turno']}")
 ```
 
 ### Uso Local
-... (El resto del contenido es correcto)
+
+Puedes usar la clase `Game` directamente, incluyendo una contraseña para la validación local.
+
+```python
+from multiplayer import Game, Player, suggest_game_name
+
+game = Game(name="Mi Super Partida", password="local_game_pass")
+game.add_player(Player("Alice"), password="local_game_pass")
+game.start()
+```

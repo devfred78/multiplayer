@@ -42,13 +42,15 @@ class Game:
     Represents a multiplayer game.
 
     Args:
+        name (str, optional): The name of the game session. Defaults to None.
         max_players (int, optional): The maximum number of players allowed in the game. Defaults to None.
         max_observers (int, optional): The maximum number of observers allowed in the game. Defaults to None.
         turn_based (bool, optional): Whether the game is turn-based or simultaneous. Defaults to False.
         password (str, optional): A password to protect this specific game.
         **kwargs: Additional attributes for the game.
     """
-    def __init__(self, max_players=None, max_observers=None, turn_based=False, password=None, **kwargs):
+    def __init__(self, name=None, max_players=None, max_observers=None, turn_based=False, password=None, **kwargs):
+        self.name = name
         self.max_players = max_players
         self.max_observers = max_observers
         self.turn_based = turn_based

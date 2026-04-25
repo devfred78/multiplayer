@@ -71,12 +71,18 @@ def test_create_game_with_options():
     assert not game.players
     assert game.state == GameState.PENDING
 
+def test_create_game_with_name():
+    """
+    Tests that a game can be created with a name.
+    """
+    game = Game(name="My Super Game")
+    assert game.name == "My Super Game"
+
 def test_create_game_with_attributes():
     """
     Tests that a game can be created with custom attributes.
     """
-    game = Game(name="My Game", difficulty="Hard")
-    assert game.attributes["name"] == "My Game"
+    game = Game(difficulty="Hard")
     assert game.attributes["difficulty"] == "Hard"
 
 def test_add_player():

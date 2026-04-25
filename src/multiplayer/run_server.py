@@ -13,6 +13,7 @@ def main():
     parser.add_argument("--logging-host", help="IPC logging server host")
     parser.add_argument("--logging-port", type=int, help="IPC logging server port")
     parser.add_argument("--logger-name", default="GameServer", help="Name of the logger (default: GameServer)")
+    parser.add_argument("--name", help="Name of the server instance")
 
     args = parser.parse_args()
 
@@ -24,7 +25,8 @@ def main():
         use_tls=args.use_tls,
         logging_host=args.logging_host,
         logging_port=args.logging_port,
-        logger_name=args.logger_name
+        logger_name=args.logger_name,
+        name=args.name
     )
 
     try:

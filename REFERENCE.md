@@ -74,7 +74,7 @@ An enumeration for the state of the game.
 
 These classes manage the client-server architecture.
 
-### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, logging_host=None, logging_port=None)`
+### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, logging_host=None, logging_port=None, name=None)`
 Manages game sessions and handles network requests.
 
 *   **`host`** (`str`): The host address to bind to. Use `'0.0.0.0'` to make it accessible on the local network.
@@ -84,6 +84,7 @@ Manages game sessions and handles network requests.
 *   **`use_tls`** (`bool`, optional): If `True`, enables TLS v1.3 encryption for all communications. Defaults to `False`.
 *   **`logging_host`** (`str`, optional): The host address of a logging server to send logs to.
 *   **`logging_port`** (`int`, optional): The port of the logging server.
+*   **`name`** (`str`, optional): A name for the server instance.
 
 #### Methods
 *   `start()`: Starts the server in a background process.
@@ -100,7 +101,7 @@ A client class for administrators to manage a `GameServer`.
 *   **`use_tls`** (`bool`, optional): If `True`, the client will connect using TLS. Defaults to `False`.
 
 #### Methods
-*   `get_server_info()`: Returns information about the server (number of games, active game IDs).
+*   `get_server_info()`: Returns information about the server (name, number of games, active game IDs).
 *   `list_games()`: Returns a list of all active games on the server.
 *   `kick_player(game_id, player_name)`: Removes a player from a specific game.
 *   `kick_observer(game_id, observer_name)`: Removes an observer from a specific game.
@@ -197,4 +198,4 @@ Suggests a random name for a player.
 *   **`NetworkError`**: Base exception for network-related issues.
 *   **`ConnectionError`**: Raised when a client fails to connect to the server.
 *   **`ServerError`**: Raised for generic errors reported by the server.
-*   **`AuthenticationError`**: Raised for both server and game password authentication failures.
+*   **`AuthenticationError`**: Raised for both server and game password authentication failu

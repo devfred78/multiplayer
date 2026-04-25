@@ -69,7 +69,7 @@ def _generate_self_signed_cert():
     cert_file.close()
     return cert_file.name, key_file.name
 
-def _run_server_process(host, port, password, admin_password, use_tls, certfile, keyfile, logging_host=None, logging_port=None, logger_name="GameServer"):
+def _run_server_process(host, port, password, admin_password, use_tls, certfile, keyfile, logging_host=None, logging_port=None, logger_name="GameServer", name=None):
     """The main server loop that listens for and handles connections."""
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.INFO)
@@ -83,7 +83,10 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
         logger.addHandler(handler)
         logger.info(f"Logging configured to send to {logging_host}:{logging_port}")
 
-    logger.info(f"Starting server process on {host}:{port}")
+    server_start_msg = f"Starting server process on {host}:{port}"
+    if name:
+        server_start_msg += f" (Name: {name})"
+    logger.info(server_start_msg)
     games = {}
     games_lock = threading.Lock()
     context = None
@@ -104,7 +107,7 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
                 continue
             try:
                 conn = context.wrap_socket(newsocket, server_side=True) if use_tls else newsocket
-                thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, games_lock, password, admin_password, logger_name))
+                thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, games_lock, password, admin_password, logger_name, name))
                 thread.daemon = True
                 thread.start()
             except (ssl.SSLError, OSError) as e:
@@ -116,7 +119,7 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
             os.remove(certfile)
             os.remove(keyfile)
 
-def _handle_client(conn, addr, games, lock, server_password, admin_password, logger_name="GameServer"):
+def _handle_client(conn, addr, games, lock, server_password, admin_password, logger_name="GameServer", server_name=None):
     """Handles a single client connection."""
     logger = logging.getLogger(logger_name)
     logger.info(f"Connected by {addr}")
@@ -143,7 +146,7 @@ def _handle_client(conn, addr, games, lock, server_password, admin_password, log
                     raise AuthenticationError("Invalid server password")
 
                 with lock:
-                    response = _execute_command(games, action, params)
+                    response = _execute_command(games, action, params, server_name=server_name)
                 conn.sendall(json.dumps(response, cls=EnumEncoder).encode('utf-8'))
             except (json.JSONDecodeError, TypeError, AuthenticationError) as e:
                 error_response = {'status': 'error', 'type': type(e).__name__, 'message': str(e)}
@@ -151,7 +154,7 @@ def _handle_client(conn, addr, games, lock, server_password, admin_password, log
     finally:
         logger.info(f"Disconnected from {addr}")
 
-def _execute_command(games, action, params):
+def _execute_command(games, action, params, server_name=None):
     """Executes a command on the game objects and returns a response."""
     try:
         # Server-level actions
@@ -184,6 +187,7 @@ def _execute_command(games, action, params):
         
         elif action == 'get_server_info':
             return {'status': 'success', 'data': {
+                'server_name': server_name,
                 'games_count': len(games),
                 'active_games': [gid for gid, g in games.items() if g.state != GameState.FINISHED]
             }}
@@ -220,7 +224,7 @@ def _execute_command(games, action, params):
         elif action == 'list_all_players':
             all_players = []
             for gid, game in games.items():
-                game_name = game.attributes.get('name', 'Unknown')
+                game_name = game.name or 'Unknown'
                 for player in game.players:
                     all_players.append({
                         'name': player.name,
@@ -315,7 +319,7 @@ class GameServer:
     """
     Manages multiple Game instances and handles network requests from clients.
     """
-    def __init__(self, host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, logging_host=None, logging_port=None, logger_name="GameServer"):
+    def __init__(self, host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, logging_host=None, logging_port=None, logger_name="GameServer", name=None):
         self.host = host
         self.port = port
         self.password = password
@@ -324,6 +328,7 @@ class GameServer:
         self.logging_host = logging_host
         self.logging_port = logging_port
         self.logger_name = logger_name
+        self.name = name
         self._server_process = None
         self._discovery_thread = None
         self._stop_discovery = threading.Event()
@@ -336,14 +341,17 @@ class GameServer:
         certfile, keyfile = (None, None)
         if self.use_tls:
             certfile, keyfile = _generate_self_signed_cert()
-        self._server_process = Process(target=_run_server_process, args=(self.host, self.port, self.password, self.admin_password, self.use_tls, certfile, keyfile, self.logging_host, self.logging_port, self.logger_name))
+        self._server_process = Process(target=_run_server_process, args=(self.host, self.port, self.password, self.admin_password, self.use_tls, certfile, keyfile, self.logging_host, self.logging_port, self.logger_name, self.name))
         self._server_process.daemon = True
         self._server_process.start()
         self._stop_discovery.clear()
         self._discovery_thread = threading.Thread(target=self._run_discovery_service)
         self._discovery_thread.daemon = True
         self._discovery_thread.start()
-        print(f"Server started on {self.host}:{self.port} with PID {self._server_process.pid}")
+        start_msg = f"Server started on {self.host}:{self.port} with PID {self._server_process.pid}"
+        if self.name:
+            start_msg += f" (Name: {self.name})"
+        print(start_msg)
         if self.use_tls:
             print("TLS encryption is enabled.")
         print("Network discovery service started.")

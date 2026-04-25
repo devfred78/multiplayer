@@ -62,7 +62,7 @@ Représente un observateur.
 
 ## Classes Réseau
 
-### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, logging_host=None, logging_port=None)`
+### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, logging_host=None, logging_port=None, name=None)`
 Gère les sessions de jeu et les requêtes réseau.
 
 *   **`password`** (`str`, optionnel) : Un mot de passe global pour protéger le serveur.
@@ -70,6 +70,7 @@ Gère les sessions de jeu et les requêtes réseau.
 *   **`use_tls`** (`bool`, optionnel) : Si `True`, active le chiffrement TLS v1.3.
 *   **`logging_host`** (`str`, optionnel) : L'adresse de l'hôte d'un serveur de logging.
 *   **`logging_port`** (`int`, optionnel) : Le port du serveur de logging.
+*   **`name`** (`str`, optionnel) : Un nom pour l'instance du serveur.
 
 #### Méthodes
 *   `start()`: Démarre le serveur.
@@ -84,7 +85,7 @@ Une classe client pour les administrateurs pour gérer un `GameServer`.
 *   **`use_tls`** (`bool`, optionnel) : Si `True`, le client se connectera en utilisant TLS.
 
 #### Méthodes
-*   `get_server_info()` : Retourne les infos du serveur (nombre de parties, IDs actifs).
+*   `get_server_info()` : Retourne les infos du serveur (nom, nombre de parties, IDs actifs).
 *   `list_games()` : Liste toutes les parties actives.
 *   `kick_player(game_id, player_name)` : Expulse un joueur d'une partie.
 *   `kick_observer(game_id, observer_name)` : Expulse un observateur d'une partie.

@@ -109,6 +109,29 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Junie CLI
+        run: curl -fsSL https://raw.githubusercontent.com/JetBrains/junie-cli/main/install.sh | bash
+
+      - name: Generate Release Description with Junie
+        env:
+          JUNIE_API_KEY: ${{ secrets.JUNIE_API_KEY }}
+        run: |
+          # Get the previous tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 ${{ github.ref_name }}^ 2>/dev/null || echo "")
+          
+          if [ -z "$PREVIOUS_TAG" ]; then
+            TASK="Analyze the codebase and generate a descriptive release text in English for the first release ${{ github.ref_name }}. Focus on the main features and purpose of the project."
+          else
+            TASK="Analyze the commits between $PREVIOUS_TAG and ${{ github.ref_name }}. Generate a descriptive release text in English summarizing the changes, new features, and bug fixes."
+          fi
+          
+          # Run Junie to generate the description
+          # Use --non-interactive to avoid prompts
+          # Use --brave-mode to allow Junie to explore the repo
+          ~/.local/bin/junie --task "$TASK" --output-format text --non-interactive --brave-mode > release_description.txt
 
       - name: Download all wheels
         uses: actions/download-artifact@v4
@@ -121,6 +144,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*.whl
-          generate_release_notes: true
+          body_path: release_description.txt
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}

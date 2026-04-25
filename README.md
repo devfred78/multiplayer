@@ -81,7 +81,7 @@ You can use the `Game` class directly, including with a password for local valid
 ```python
 from multiplayer import Game, Player, suggest_game_name
 
-game = Game(password="local_game_pass")
+game = Game(name="My Awesome Game", password="local_game_pass")
 game.add_player(Player("Alice"), password="local_game_pass")
 game.start()
 ```

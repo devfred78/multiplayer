@@ -6,14 +6,15 @@ Ce document fournit une référence détaillée de l'API publique du module `mul
 
 ## Classes Principales
 
-### `Game(max_players=None, turn_based=False, password=None, max_observers=None, **kwargs)`
+### `Game(name=None, max_players=None, turn_based=False, password=None, max_observers=None, **kwargs)`
 Représente une session de jeu unique.
 
+*   **`name`** (`str`, optionnel) : Le nom de la session de jeu. Par défaut `None`.
 *   **`max_players`** (`int`, optionnel) : Le nombre maximum de joueurs.
 *   **`max_observers`** (`int`, optionnel) : Le nombre maximum d'observateurs.
 *   **`turn_based`** (`bool`, optionnel) : `True` si le jeu est au tour par tour.
 *   **`password`** (`str`, optionnel) : Un mot de passe pour protéger cette partie.
-*   **`**kwargs`** : Attributs personnalisés pour la partie.
+*   **`**kwargs`** : Attributs personnalisés pour la partie (ex: `difficulty="hard"`).
 
 #### Méthodes
 *   `add_player(player, password=None)` : Ajoute un objet `Player` à la partie.

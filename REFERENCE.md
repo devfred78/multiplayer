@@ -8,14 +8,15 @@ This document provides a detailed reference for the public API of the `multiplay
 
 These classes are used for managing game logic, whether locally or on the server.
 
-### `Game(max_players=None, turn_based=False, password=None, max_observers=None, **kwargs)`
+### `Game(name=None, max_players=None, turn_based=False, password=None, max_observers=None, **kwargs)`
 Represents a single game session.
 
+*   **`name`** (`str`, optional): The name of the game session. Defaults to `None`.
 *   **`max_players`** (`int`, optional): The maximum number of players that can join. Defaults to `None` (unlimited).
 *   **`max_observers`** (`int`, optional): The maximum number of observers that can join. Defaults to `None` (unlimited).
 *   **`turn_based`** (`bool`, optional): `True` if the game is turn-based, `False` for simultaneous play. Defaults to `False`.
 *   **`password`** (`str`, optional): A password to protect this specific game.
-*   **`**kwargs`**: Custom attributes for the game (e.g., `name="My Game"`).
+*   **`**kwargs`**: Custom attributes for the game (e.g., `difficulty="hard"`).
 
 #### Methods
 *   `add_player(player, password=None)`: Adds a `Player` object to the game. The `password` is required if the game is password-protected.

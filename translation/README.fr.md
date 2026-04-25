@@ -56,4 +56,13 @@ print(f"Tour actuel : {etat_complet['custom']['tour']}")
 ```
 
 ### Utilisation Locale
-... (Le reste du contenu est correct)
+
+Vous pouvez utiliser la classe `Game` directement, y compris avec un mot de passe pour la validation locale.
+
+```python
+from multiplayer import Game, Player, suggest_game_name
+
+game = Game(name="Ma Super Partie", password="local_game_pass")
+game.add_player(Player("Alice"), password="local_game_pass")
+game.start()
+```

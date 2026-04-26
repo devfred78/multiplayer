@@ -61,7 +61,7 @@ def main():
     try:
         # We use --no-project to ensure total isolation from the project's venv
         # We specify the python version to ensure consistency
-        cmd_ruff = ["uv", "run", "--no-project", "--python", "3.14", "--with", "ruff", "ruff", "check", "."]
+        cmd_ruff = ["uv", "run", "--no-project", "--python", "3.12", "--with", "ruff", "ruff", "check", "."]
         if args.fix:
             cmd_ruff.append("--fix")
             print("Auto-fix mode enabled (--fix)")
@@ -88,7 +88,7 @@ def main():
         check_data_cmd = [
             "uv", "run",
             "--no-project",
-            "--python", "3.14",
+            "--python", "3.12",
             "--with-editable", ".[dev]",
             "python", "-c", 
             "from multiplayer.utils import _get_names_from_source; " 
@@ -106,7 +106,7 @@ def main():
         cmd = [
             "uv", "run", 
             "--no-project", 
-            "--python", "3.14", 
+            "--python", "3.12",
             "--with-editable", ".[dev]", 
             "pytest"
         ]

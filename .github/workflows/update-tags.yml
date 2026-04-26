@@ -1,5 +1,9 @@
 name: Update Tags in Workflows
 
+permissions:
+  contents: write
+  workflows: write
+
 on:
   push:
     tags:
@@ -9,9 +13,6 @@ on:
 jobs:
   update-tags:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      workflows: write
 
     steps:
       - name: Checkout code

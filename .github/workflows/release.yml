@@ -89,14 +89,14 @@ jobs:
           fi
           
           # Run Junie to generate the description
-          junie --auth "$JUNIE_API_KEY" --task "$TASK" --print > raw_output.txt
+          junie --auth "$JUNIE_API_KEY" --task "$TASK" > raw_output.txt
           
           # Clean ANSI escape sequences and non-printable characters
           # 1. Remove ANSI escape codes
           # 2. Remove other non-printable characters except newlines and tabs
           sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[mGK]//g" raw_output.txt | tr -cd '\11\12\15\40-\176' > cleaned_output.txt
           
-          # Junie with -p should already be clean, but we keep extraction as safety
+          # Junie output may contain logs, we keep extraction to get only the description
           if grep -q "### Summary" cleaned_output.txt; then
             # Extract content starting from the first markdown header
             sed -n '/###/,$p' cleaned_output.txt > release_description.txt

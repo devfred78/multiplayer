@@ -89,7 +89,7 @@ jobs:
           fi
           
           # Run Junie to generate the description
-          junie --auth "$JUNIE_API_KEY" --task "$TASK" -p > raw_output.txt
+          junie --auth "$JUNIE_API_KEY" --task "$TASK" --print > raw_output.txt
           
           # Clean ANSI escape sequences and non-printable characters
           # 1. Remove ANSI escape codes

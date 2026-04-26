@@ -91,11 +91,14 @@ jobs:
           # Run Junie to generate the description
           junie --auth "$JUNIE_API_KEY" --task "$TASK" --output-format text > raw_output.txt
           
-          # Clean the output
-          tr -cd '\11\12\15\40-\176' < raw_output.txt > cleaned_output.txt
+          # Clean ANSI escape sequences and non-printable characters
+          # 1. Remove ANSI escape codes
+          # 2. Remove other non-printable characters except newlines and tabs
+          sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[mGK]//g" raw_output.txt | tr -cd '\11\12\15\40-\176' > cleaned_output.txt
           
           if grep -q "TASK RESULT:" cleaned_output.txt; then
-            sed -n '/TASK RESULT:/,$p' cleaned_output.txt | sed '1d' > release_description.txt
+            # Extract content after TASK RESULT: and remove any leading/trailing blank lines or residues
+            sed -n '/TASK RESULT:/,$p' cleaned_output.txt | sed '1d' | sed 's/^\[[0-9;]*m//g' > release_description.txt
           else
             cp cleaned_output.txt release_description.txt
           fi

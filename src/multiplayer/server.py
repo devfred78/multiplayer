@@ -125,10 +125,14 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
                 newsocket.close()
     finally:
         bindsocket.close()
-        if use_tls and certfile and "tmp" in certfile.lower(): # Basic check to see if it's a temp file
+        # Clean up temporary files if they were created (indicated by "tmp" in filename or being specifically tracked)
+        # Note: self._temp_certs from GameServer is not available here, so we rely on path indicators or naming.
+        if use_tls and certfile and ("tmp" in certfile.lower() or "multiplayer_fullchain" in certfile.lower()): 
              try:
                 if os.path.exists(certfile): os.remove(certfile)
-                if os.path.exists(keyfile): os.remove(keyfile)
+                # Only remove keyfile if it's also a temp file (like in self-signed case)
+                if keyfile and "tmp" in keyfile.lower() and os.path.exists(keyfile): 
+                    os.remove(keyfile)
              except Exception:
                  pass
 
@@ -375,6 +379,35 @@ class GameServer:
                 if not os.path.exists(certfile) or not os.path.exists(keyfile):
                     print(f"Error: Certificate file {certfile} or key file {keyfile} not found.")
                     return
+                
+                # Auto-detect chain file
+                # If cert is 'cert.pem', looks for 'chain.pem'
+                # If cert is 'ECC-cert.pem', looks for 'ECC-chain.pem'
+                # If cert is 'RSA-cert.pem', looks for 'RSA-chain.pem'
+                cert_dir = os.path.dirname(os.path.abspath(certfile))
+                cert_name = os.path.basename(certfile)
+                if "-cert.pem" in cert_name:
+                    chain_name = cert_name.replace("-cert.pem", "-chain.pem")
+                elif cert_name == "cert.pem":
+                    chain_name = "chain.pem"
+                else:
+                    chain_name = None
+                
+                if chain_name:
+                    chain_path = os.path.join(cert_dir, chain_name)
+                    if os.path.exists(chain_path):
+                        print(f"Found matching chain file: {chain_name}. Creating full chain...")
+                        try:
+                            with tempfile.NamedTemporaryFile(delete=False, suffix=".pem", prefix="multiplayer_fullchain_") as tmp_fullchain:
+                                with open(certfile, 'rb') as f_cert:
+                                    tmp_fullchain.write(f_cert.read())
+                                if not tmp_fullchain.tell() == 0: # Ensure newline between certs if needed
+                                    tmp_fullchain.write(b"\n")
+                                with open(chain_path, 'rb') as f_chain:
+                                    tmp_fullchain.write(f_chain.read())
+                                certfile = tmp_fullchain.name
+                        except Exception as e:
+                            print(f"Warning: Failed to create temporary full chain file: {e}. Using original certificate.")
 
         self._server_process = Process(target=_run_server_process, args=(self.host, self.port, self.password, self.admin_password, self.use_tls, certfile, keyfile, self.logging_host, self.logging_port, self.logger_name, self.name))
         self._server_process.daemon = True

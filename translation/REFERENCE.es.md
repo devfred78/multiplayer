@@ -131,7 +131,9 @@ Inicia el servidor de registros autónomo.
     *   `level`: Colorea los registros según su criticidad (ej. INFO es verde, ERROR es rojo). Este es el modo predeterminado.
     *   `origin`: Colorea los registros según el nombre del registrador (ej. `GameServer`, `GameClient`, `GameAdmin`, etc.). Esto ayuda a diferenciar los mensajes de diferentes fuentes.
 
-#### `multiplayer-server [OPTIONS]`
+## Servidor de Juegos Autónomo
+
+### `multiplayer-server [OPTIONS]`
 Inicia un servidor de juegos autónomo.
 
 *   **`--host`** (`str`): Dirección del host en la que escuchar. Por defecto es `0.0.0.0`.

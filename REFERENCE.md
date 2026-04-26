@@ -160,7 +160,9 @@ Starts the standalone logging server.
     *   `level`: Colors logs based on their criticality (e.g., INFO is green, ERROR is red). This is the default.
     *   `origin`: Colors logs based on the name of the logger (e.g., `GameServer`, `GameClient`, `GameAdmin`, etc.). This helps differentiate messages from different sources.
 
-#### `multiplayer-server [OPTIONS]`
+## Standalone Game Server
+
+### `multiplayer-server [OPTIONS]`
 Starts a standalone game server.
 
 *   **`--host`** (`str`): Host address to listen on. Defaults to `0.0.0.0`.

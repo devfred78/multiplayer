@@ -141,7 +141,9 @@ Démarre le serveur de logging autonome.
     *   `level` : Colore les logs en fonction de leur criticité (ex: INFO est vert, ERROR est rouge). C'est le mode par défaut.
     *   `origin` : Colore les logs en fonction du nom du logger (ex: `GameServer`, `GameClient`, `GameAdmin`, etc.). Cela aide à différencier les messages provenant de différentes sources.
 
-#### `multiplayer-server [OPTIONS]`
+## Serveur de Jeu Autonome
+
+### `multiplayer-server [OPTIONS]`
 Démarre un serveur de jeu autonome.
 
 *   **`--host`** (`str`) : Adresse de l'hôte sur laquelle écouter. Par défaut `0.0.0.0`.

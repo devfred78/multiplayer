@@ -129,5 +129,5 @@ jobs:
           files: dist/*.whl
           body_path: release_description.txt
           tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
+          name: multiplayer ${{ github.ref_name }}
           prerelease: ${{ steps.prepare_release.outputs.is_prerelease == 'true' }}

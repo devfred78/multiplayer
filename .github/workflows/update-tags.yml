@@ -11,7 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      actions: write
 
     steps:
       - name: Checkout code
@@ -36,30 +35,25 @@ jobs:
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
           echo "options_string=$OPTIONS_STRING" >> $GITHUB_OUTPUT
 
-      - name: Update workflows
+      - name: Update config file
         shell: bash
         run: |
           LATEST_TAG_VAL="${{ steps.get_tags.outputs.latest_tag }}"
           OPTIONS_VAL="${{ steps.get_tags.outputs.options_string }}"
           
-          FILES=(".github/workflows/docker-build.yml" ".github/workflows/synology-docker-build.yml")
+          # Convert OPTIONS_VAL back to proper YAML format
+          CLEAN_OPTIONS=$(echo -e "${OPTIONS_VAL//%0A/\\n}" | sed 's/^[[:space:]]*//')
           
-          for file in "${FILES[@]}"; do
-            echo "Updating $file..."
-            
-            # Export variables to environment for Python
-            export CURRENT_FILE="$file"
-            export LATEST_TAG="$LATEST_TAG_VAL"
-            export OPTIONS_TEXT="$OPTIONS_VAL"
-            
-            # Use python for reliable multiline replacement in YAML
-            python3 -c "import re, os; f_path=os.environ['CURRENT_FILE']; l_tag=os.environ['LATEST_TAG']; o_text=os.environ['OPTIONS_TEXT'].replace('%0A', '\n').strip(); content=open(f_path).read(); content=re.sub(r'(image_tag:.*?options:)\n(\s+- v.*\n?)+', r'\1\n' + o_text + '\n', content, flags=re.DOTALL); content=re.sub(r'(image_tag:.*?default:)\s+\'v.*\'', r'\1 \'' + l_tag + '\'', content, flags=re.DOTALL); open(f_path, 'w').write(content)"
-          done
+          cat > .github/image-tags.yml << EOF
+          latest_tag: $LATEST_TAG_VAL
+          image_tags:
+          $(echo -e "$CLEAN_OPTIONS")
+          EOF
 
       - name: Commit and push changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add .github/workflows/docker-build.yml .github/workflows/synology-docker-build.yml
-          git commit -m "docs: update image_tag options in workflows [skip ci]" || echo "No changes to commit"
+          git add .github/image-tags.yml
+          git commit -m "docs: update image tags config [skip ci]" || echo "No changes to commit"
           git push origin main

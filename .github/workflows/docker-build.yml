@@ -19,9 +19,22 @@ on:
         required: false
         default: '5000'
       image_tag:
-        description: 'Docker image tag'
-        required: true
-        default: 'latest'
+        description: 'Version tag to build'
+        type: choice
+        options:
+          - v0.9.3
+          - v0.9.2
+          - v0.9.1
+          - v0.9.0
+          - v0.8.0
+          - v0.7.0
+          - v0.6.0
+          - v0.1.0
+        default: 'v0.9.3'
+      push_latest:
+        description: 'Also tag as latest'
+        type: boolean
+        default: true
 
 jobs:
   build:
@@ -51,7 +64,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/multiplayer-server:${{ github.event.inputs.image_tag }}
-            ghcr.io/${{ github.repository_owner }}/multiplayer-server:latest
+            ${{ github.event.inputs.push_latest == 'true' && format('ghcr.io/{0}/multiplayer-server:latest', github.repository_owner) || '' }}
 
       - name: Verify image and Show Run Command
         run: |

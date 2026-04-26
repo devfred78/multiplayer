@@ -1,0 +1,88 @@
+name: Update Tags in Workflows
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  update-tags:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get sorted tags
+        id: get_tags
+        run: |
+          # Get tags starting with v, sorted by version descending
+          TAGS=$(git tag --list 'v*' --sort=-v:refname | head -n 15)
+          LATEST_TAG=$(echo "$TAGS" | head -n 1)
+          
+          # Escape newlines for GITHUB_OUTPUT
+          OPTIONS_STRING=""
+          for tag in $TAGS; do
+            OPTIONS_STRING="${OPTIONS_STRING}          - $tag%0A"
+          done
+          
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "options_string=$OPTIONS_STRING" >> $GITHUB_OUTPUT
+
+      - name: Update workflows
+        run: |
+          LATEST_TAG="${{ steps.get_tags.outputs.latest_tag }}"
+          OPTIONS="${{ steps.get_tags.outputs.options_string }}"
+          
+          FILES=(".github/workflows/docker-build.yml" ".github/workflows/synology-docker-build.yml")
+          
+          for file in "${FILES[@]}"; do
+            echo "Updating $file..."
+            
+            # Use python for reliable multiline replacement in YAML
+            python3 -c "
+            import re
+            import sys
+            
+            file_path = '$file'
+            latest_tag = '$LATEST_TAG'
+            # Decode URL encoded newlines
+            options_text = '''$OPTIONS'''.replace('%0A', '\n').strip()
+            
+            with open(file_path, 'r') as f:
+                content = f.read()
+            
+            # Update options list for image_tag
+            # This regex looks for image_tag:, then options:, and replaces the list following it
+            new_content = re.sub(
+                r'(image_tag:.*?options:)\n(\s+- v.*\n?)+',
+                r'\1\n' + options_text + '\n',
+                content,
+                flags=re.DOTALL
+            )
+            
+            # Update default value for image_tag
+            new_content = re.sub(
+                r'(image_tag:.*?default:)\s+\'v.*\'',
+                r'\1 \'' + latest_tag + '\'',
+                new_content,
+                flags=re.DOTALL
+            )
+            
+            with open(file_path, 'w') as f:
+                f.write(new_content)
+            "
+          done
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .github/workflows/docker-build.yml .github/workflows/synology-docker-build.yml
+          git commit -m "docs: update image_tag options in workflows [skip ci]" || echo "No changes to commit"
+          git push

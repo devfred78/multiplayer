@@ -92,15 +92,25 @@ game.start()
 ```python
 from multiplayer import GameServer
 
-# Start a secure server with admin support
+# Start a secure server with a custom domain and self-signed certificate
 server = GameServer(
     host='0.0.0.0',
     port=12345,
     password="my_server_password",
     admin_password="my_admin_password",
-    use_tls=True
+    use_tls=True,
+    tls_domain="example.com",
+    tls_self_signed=True
 )
 server.start()
+
+# Or use existing certificate files
+server = GameServer(
+    use_tls=True,
+    tls_cert="path/to/cert.pem",
+    tls_key="path/to/key.pem",
+    tls_self_signed=False
+)
 ```
 
 #### Administrator Usage
@@ -118,6 +128,10 @@ admin = GameAdmin(
 # Manage the server
 info = admin.get_server_info()
 print(f"Active games: {info['games_count']}")
+
+# Check certificate expiration
+expiration = admin.get_cert_expiration()
+print(f"Certificate expires on: {expiration}")
 
 # Kick a player if necessary
 # admin.kick_player(game_id, "player_name")
@@ -191,8 +205,3 @@ Then, you can run the tests from the root of the project:
 
 ```sh
 pytest
-```
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.

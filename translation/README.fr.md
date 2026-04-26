@@ -55,6 +55,24 @@ print(f"Tour actuel : {etat_complet['custom']['tour']}")
 # > Tour actuel : joueur2
 ```
 
+### Environnement de Test Complet
+
+Un script est disponible pour lancer un environnement de test complet avec :
+- Un serveur de log IPC (`IPClogging`) dans une fenêtre séparée.
+- Un serveur de jeu.
+- Plusieurs instances de clients séparées (2 par défaut) simulant une partie, chacune dans sa propre fenêtre de terminal.
+
+Pour le lancer :
+```bash
+uv run python scripts/full_test_env.py
+```
+
+Pour spécifier le nombre de joueurs :
+```bash
+uv run python scripts/full_test_env.py --players 3
+```
+Cela ouvrira plusieurs fenêtres Windows Terminal : une pour le serveur de log et une pour chaque instance de client, vous permettant de voir les interactions et les logs en temps réel.
+
 ### Utilisation Locale
 
 Vous pouvez utiliser la classe `Game` directement, y compris avec un mot de passe pour la validation locale.
@@ -65,4 +83,125 @@ from multiplayer import Game, Player, suggest_game_name
 game = Game(name="Ma Super Partie", password="local_game_pass")
 game.add_player(Player("Alice"), password="local_game_pass")
 game.start()
+```
+
+### Utilisation en Réseau (Client-Serveur)
+
+#### Configuration du Serveur
+```python
+from multiplayer import GameServer
+
+# Démarrer un serveur sécurisé avec un domaine personnalisé et un certificat auto-signé
+server = GameServer(
+    host='0.0.0.0',
+    port=12345,
+    password="mon_mot_de_passe_serveur",
+    admin_password="mon_mot_de_passe_admin",
+    use_tls=True,
+    tls_domain="exemple.com",
+    tls_self_signed=True
+)
+server.start()
+
+# Ou utiliser des fichiers de certificat existants
+server = GameServer(
+    use_tls=True,
+    tls_cert="chemin/vers/cert.pem",
+    tls_key="chemin/vers/key.pem",
+    tls_self_signed=False
+)
+```
+
+#### Utilisation Administrateur
+```python
+from multiplayer import GameAdmin
+
+# Se connecter en tant qu'administrateur
+admin = GameAdmin(
+    host='localhost',
+    port=12345,
+    admin_password="mon_mot_de_passe_admin",
+    use_tls=True
+)
+
+# Gérer le serveur
+info = admin.get_server_info()
+print(f"Parties actives : {info['games_count']}")
+
+# Vérifier l'expiration du certificat
+expiration = admin.get_cert_expiration()
+print(f"Le certificat expire le : {expiration}")
+
+# Expulser un joueur si nécessaire
+# admin.kick_player(game_id, "nom_du_joueur")
+
+# Arrêter le serveur à distance
+# admin.stop_server()
+```
+
+#### Utilisation Client
+```python
+from multiplayer import GameClient, Player, suggest_game_name
+
+# 1. Découvrir et se connecter au serveur
+servers = GameClient.discover_servers()
+if not servers:
+    print("Aucun serveur trouvé.")
+else:
+    host, port = servers[0]
+    client = GameClient(
+        host=host,
+        port=port,
+        password="mon_mot_de_passe_serveur",
+        use_tls=True
+    )
+
+    # 2. Créer une partie privée
+    private_game = client.create_game(
+        name=suggest_game_name(),
+        password="mon_mot_de_passe_partie"
+    )
+
+    # 3. Un joueur rejoint et définit l'état initial
+    private_game.add_player(Player("Charlie"), password="mon_mot_de_passe_partie")
+    private_game.set_state({"score": 0})
+    private_game.start()
+```
+
+## Gestion des Erreurs
+
+Le module fournit un ensemble d'exceptions personnalisées, incluant `AuthenticationError` pour les mots de passe du serveur et des parties.
+
+```python
+from multiplayer import GameClient
+from multiplayer.exceptions import ConnectionError, AuthenticationError
+
+try:
+    # ... connexion au client ...
+
+    # Essayer de rejoindre une partie avec le mauvais mot de passe
+    game.add_player(Player("Eve"), password="mauvais_mot_de_passe")
+
+except AuthenticationError as e:
+    print(f"L'authentification a échoué comme prévu : {e}")
+except ConnectionError as e:
+    print(f"Une erreur de connexion ou de découverte s'est produite : {e}")
+```
+
+## Contribution
+
+Les contributions sont les bienvenues ! Veuillez consulter nos [Directives de contribution](CONTRIBUTING.md) pour plus de détails sur la façon de commencer.
+
+## Exécution des Tests
+
+Pour exécuter les tests unitaires, vous devrez avoir `pytest` installé.
+
+```sh
+pip install pytest
+```
+
+Ensuite, vous pouvez lancer les tests depuis la racine du projet :
+
+```sh
+pytest
 ```

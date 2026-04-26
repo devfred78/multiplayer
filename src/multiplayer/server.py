@@ -35,11 +35,11 @@ DISCOVERY_PORT = 5007
 DISCOVERY_MESSAGE = b'multiplayer_game_discovery_request'
 RESPONSE_MESSAGE_FORMAT = b'!15sH' # 15-char IP, unsigned short port
 
-def _generate_self_signed_cert():
+def _generate_self_signed_cert(domain="localhost"):
     """Generates a temporary self-signed certificate and key."""
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     subject = issuer = x509.Name([
-        x509.NameAttribute(NameOID.COMMON_NAME, u"multiplayer.games"),
+        x509.NameAttribute(NameOID.COMMON_NAME, domain),
     ])
     cert = x509.CertificateBuilder().subject_name(
         subject
@@ -52,13 +52,13 @@ def _generate_self_signed_cert():
     ).not_valid_before(
         datetime.now(timezone.utc)
     ).not_valid_after(
-        datetime.now(timezone.utc) + timedelta(days=1)
+        datetime.now(timezone.utc) + timedelta(days=365)
     ).add_extension(
-        x509.SubjectAlternativeName([x509.DNSName(u"localhost")]),
+        x509.SubjectAlternativeName([x509.DNSName(domain)]),
         critical=False,
     ).sign(key, hashes.SHA256())
-    key_file = tempfile.NamedTemporaryFile(delete=False)
-    cert_file = tempfile.NamedTemporaryFile(delete=False)
+    key_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pem")
+    cert_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pem")
     key_file.write(key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.TraditionalOpenSSL,
@@ -68,6 +68,16 @@ def _generate_self_signed_cert():
     key_file.close()
     cert_file.close()
     return cert_file.name, key_file.name
+
+def get_cert_expiration(cert_path):
+    """Returns the expiration date of a PEM certificate."""
+    try:
+        with open(cert_path, "rb") as f:
+            cert_data = f.read()
+        cert = x509.load_pem_x509_certificate(cert_data)
+        return cert.not_valid_after_utc.isoformat()
+    except Exception as e:
+        return f"Error reading certificate: {e}"
 
 def _run_server_process(host, port, password, admin_password, use_tls, certfile, keyfile, logging_host=None, logging_port=None, logger_name="GameServer", name=None):
     """The main server loop that listens for and handles connections."""
@@ -107,7 +117,7 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
                 continue
             try:
                 conn = context.wrap_socket(newsocket, server_side=True) if use_tls else newsocket
-                thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, games_lock, password, admin_password, logger_name, name))
+                thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, games_lock, password, admin_password, logger_name, name, use_tls, certfile))
                 thread.daemon = True
                 thread.start()
             except (ssl.SSLError, OSError) as e:
@@ -115,11 +125,14 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
                 newsocket.close()
     finally:
         bindsocket.close()
-        if use_tls:
-            os.remove(certfile)
-            os.remove(keyfile)
+        if use_tls and certfile and "tmp" in certfile.lower(): # Basic check to see if it's a temp file
+             try:
+                if os.path.exists(certfile): os.remove(certfile)
+                if os.path.exists(keyfile): os.remove(keyfile)
+             except Exception:
+                 pass
 
-def _handle_client(conn, addr, games, lock, server_password, admin_password, logger_name="GameServer", server_name=None):
+def _handle_client(conn, addr, games, lock, server_password, admin_password, logger_name="GameServer", server_name=None, use_tls=False, certfile=None):
     """Handles a single client connection."""
     logger = logging.getLogger(logger_name)
     logger.info(f"Connected by {addr}")
@@ -135,7 +148,7 @@ def _handle_client(conn, addr, games, lock, server_password, admin_password, log
                 params = command.get('params', {})
 
                 # Check if it's an admin action
-                is_admin_action = action in ['stop_server', 'restart_server', 'kick_player', 'kick_observer', 'get_server_info', 'set_logging_config', 'set_logging_enabled', 'list_all_players']
+                is_admin_action = action in ['stop_server', 'restart_server', 'kick_player', 'kick_observer', 'get_server_info', 'set_logging_config', 'set_logging_enabled', 'list_all_players', 'get_cert_expiration']
                 
                 if is_admin_action:
                     if admin_password is None:
@@ -146,7 +159,7 @@ def _handle_client(conn, addr, games, lock, server_password, admin_password, log
                     raise AuthenticationError("Invalid server password")
 
                 with lock:
-                    response = _execute_command(games, action, params, server_name=server_name)
+                    response = _execute_command(games, action, params, server_name=server_name, use_tls=use_tls, certfile=certfile)
                 conn.sendall(json.dumps(response, cls=EnumEncoder).encode('utf-8'))
             except (json.JSONDecodeError, TypeError, AuthenticationError) as e:
                 error_response = {'status': 'error', 'type': type(e).__name__, 'message': str(e)}
@@ -154,7 +167,7 @@ def _handle_client(conn, addr, games, lock, server_password, admin_password, log
     finally:
         logger.info(f"Disconnected from {addr}")
 
-def _execute_command(games, action, params, server_name=None):
+def _execute_command(games, action, params, server_name=None, use_tls=False, certfile=None):
     """Executes a command on the game objects and returns a response."""
     try:
         # Server-level actions
@@ -233,6 +246,12 @@ def _execute_command(games, action, params, server_name=None):
                         'game_name': game_name
                     })
             return {'status': 'success', 'data': all_players}
+
+        elif action == 'get_cert_expiration':
+            if not use_tls or not certfile:
+                return {'status': 'error', 'message': 'TLS is not enabled or no certificate provided'}
+            expiration = get_cert_expiration(certfile)
+            return {'status': 'success', 'expiration': expiration}
 
         # Game-specific actions
         game_id = params.get('game_id')
@@ -319,12 +338,16 @@ class GameServer:
     """
     Manages multiple Game instances and handles network requests from clients.
     """
-    def __init__(self, host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, logging_host=None, logging_port=None, logger_name="GameServer", name=None):
+    def __init__(self, host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, logger_name="GameServer", name=None):
         self.host = host
         self.port = port
         self.password = password
         self.admin_password = admin_password
         self.use_tls = use_tls
+        self.tls_domain = tls_domain
+        self.tls_cert = tls_cert
+        self.tls_key = tls_key
+        self.tls_self_signed = tls_self_signed
         self.logging_host = logging_host
         self.logging_port = logging_port
         self.logger_name = logger_name
@@ -332,15 +355,27 @@ class GameServer:
         self._server_process = None
         self._discovery_thread = None
         self._stop_discovery = threading.Event()
+        self._temp_certs = False
 
     def start(self):
         """Starts the game server and discovery service in separate processes/threads."""
         if self._server_process and self._server_process.is_alive():
             print("Server is already running.")
             return
-        certfile, keyfile = (None, None)
+        
+        certfile, keyfile = (self.tls_cert, self.tls_key)
+        self._temp_certs = False
+        
         if self.use_tls:
-            certfile, keyfile = _generate_self_signed_cert()
+            if self.tls_self_signed or not certfile or not keyfile:
+                print(f"Generating self-signed certificate for {self.tls_domain}...")
+                certfile, keyfile = _generate_self_signed_cert(self.tls_domain)
+                self._temp_certs = True
+            else:
+                if not os.path.exists(certfile) or not os.path.exists(keyfile):
+                    print(f"Error: Certificate file {certfile} or key file {keyfile} not found.")
+                    return
+
         self._server_process = Process(target=_run_server_process, args=(self.host, self.port, self.password, self.admin_password, self.use_tls, certfile, keyfile, self.logging_host, self.logging_port, self.logger_name, self.name))
         self._server_process.daemon = True
         self._server_process.start()

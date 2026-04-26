@@ -62,12 +62,18 @@ Représente un observateur.
 
 ## Classes Réseau
 
-### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, logging_host=None, logging_port=None, name=None)`
+### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, name=None)`
 Gère les sessions de jeu et les requêtes réseau.
 
+*   **`host`** (`str`) : L'adresse de l'hôte sur laquelle s'écouter. Utilisez `'0.0.0.0'` pour le rendre accessible sur le réseau local.
+*   **`port`** (`int`) : Le port TCP sur lequel écouter les commandes de jeu.
 *   **`password`** (`str`, optionnel) : Un mot de passe global pour protéger le serveur.
 *   **`admin_password`** (`str`, optionnel) : Un mot de passe pour l'accès administrateur.
-*   **`use_tls`** (`bool`, optionnel) : Si `True`, active le chiffrement TLS v1.3.
+*   **`use_tls`** (`bool`, optionnel) : Si `True`, active le chiffrement TLS v1.3 pour toutes les communications. Par défaut `False`.
+*   **`tls_domain`** (`str`, optionnel) : Nom de domaine à inclure dans le certificat généré. Par défaut `"localhost"`.
+*   **`tls_cert`** (`str`, optionnel) : Chemin vers un fichier de certificat PEM.
+*   **`tls_key`** (`str`, optionnel) : Chemin vers un fichier de clé privée PEM.
+*   **`tls_self_signed`** (`bool`, optionnel) : Si `True`, génère un certificat auto-signé si `tls_cert` et `tls_key` ne sont pas fournis. Par défaut `True`.
 *   **`logging_host`** (`str`, optionnel) : L'adresse de l'hôte d'un serveur de logging.
 *   **`logging_port`** (`int`, optionnel) : Le port du serveur de logging.
 *   **`name`** (`str`, optionnel) : Un nom pour l'instance du serveur.
@@ -93,6 +99,7 @@ Une classe client pour les administrateurs pour gérer un `GameServer`.
 *   `stop_server()` : Demande l'arrêt du serveur.
 *   `restart_server()` : Demande le redémarrage du serveur (efface toutes les parties en cours).
 *   `set_logging_config(host, port)` : Configure le serveur pour envoyer ses logs à un serveur de logging distant à l'adresse et au port spécifiés.
+*   `get_cert_expiration()` : Retourne la date d'expiration du certificat TLS du serveur au format ISO.
 *   `set_logging_enabled(enabled)` : Active (`True`) ou désactive (`False`) les logs sur le serveur.
 
 ---

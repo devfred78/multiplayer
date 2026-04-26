@@ -56,13 +56,19 @@ Representa a un observador.
 
 ## Clases de Red
 
-### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, logging_host=None, logging_port=None, name=None)`
+### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, name=None)`
 Gestiona las sesiones de juego y las peticiones de red.
 
+*   **`host`** (`str`): La dirección del host a la que vincularse. Usa `'0.0.0.0'` para que sea accesible en la red local.
+*   **`port`** (`int`): El puerto TCP en el que escuchar los comandos del juego.
 *   **`password`** (`str`, opcional): Una contraseña global para proteger el servidor.
 *   **`admin_password`** (`str`, opcional): Una contraseña para acceso administrativo.
-*   **`use_tls`** (`bool`, opcional): Si es `True`, habilita el cifrado TLS v1.3.
-*   **`logging_host`** (`str`, opcional): La dirección del host de un servidor de logging.
+*   **`use_tls`** (`bool`, opcional): Si es `True`, habilita el cifrado TLS v1.3 para todas las comunicaciones. Por defecto es `False`.
+*   **`tls_domain`** (`str`, opcional): Nombre de dominio a incluir en el certificado generado. Por defecto es `"localhost"`.
+*   **`tls_cert`** (`str`, opcional): Ruta a un archivo de certificado PEM.
+*   **`tls_key`** (`str`, opcional): Ruta a un archivo de clave privada PEM.
+*   **`tls_self_signed`** (`bool`, opcional): Si es `True`, genera un certificado auto-firmado si no se proporcionan `tls_cert` y `tls_key`. Por defecto es `True`.
+*   **`logging_host`** (`str`, opcional): La dirección del host de un serveur de logging.
 *   **`logging_port`** (`int`, opcional): El puerto del servidor de logging.
 *   **`name`** (`str`, opcional): Un nombre para la instancia del servidor.
 
@@ -83,7 +89,8 @@ Una clase de cliente para que los administradores gestionen un `GameServer`.
 *   `stop_server()`: Solicita que el servidor se apague.
 *   `restart_server()`: Solicita que el servidor se reinicie (borra todos los juegos actuales).
 *   `set_logging_config(host, port)`: Configura el servidor para enviar sus registros a un servidor de registros remoto en la dirección y el puerto especificados.
-*   `set_logging_enabled(enabled)`: Activa (`True`) o desactiva (`False`) los registros en el servidor.
+*   `get_cert_expiration()`: Devuelve la fecha de expiración del certificado TLS del servidor en formato ISO.
+*   `set_logging_enabled(enabled)`: Activa (`True`) ou desactiva (`False`) los registros en el servidor.
 
 ---
 

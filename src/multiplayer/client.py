@@ -233,6 +233,11 @@ class GameAdmin:
         """Enables or disables logging on the server."""
         return self._client._send_command('set_logging_enabled', {'enabled': enabled})
 
+    def get_cert_expiration(self):
+        """Returns the expiration date of the server's TLS certificate."""
+        response = self._client._send_command('get_cert_expiration')
+        return response.get('expiration')
+
 class RemoteGame:
     """
     A proxy for a Game object on a remote server.

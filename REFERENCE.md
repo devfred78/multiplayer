@@ -74,7 +74,7 @@ An enumeration for the state of the game.
 
 These classes manage the client-server architecture.
 
-### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, logging_host=None, logging_port=None, name=None)`
+### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, name=None)`
 Manages game sessions and handles network requests.
 
 *   **`host`** (`str`): The host address to bind to. Use `'0.0.0.0'` to make it accessible on the local network.
@@ -82,6 +82,10 @@ Manages game sessions and handles network requests.
 *   **`password`** (`str`, optional): A global password to protect the server.
 *   **`admin_password`** (`str`, optional): A password for administrative access.
 *   **`use_tls`** (`bool`, optional): If `True`, enables TLS v1.3 encryption for all communications. Defaults to `False`.
+*   **`tls_domain`** (`str`, optional): Domain name to include in the generated certificate. Defaults to `"localhost"`.
+*   **`tls_cert`** (`str`, optional): Path to a PEM certificate file.
+*   **`tls_key`** (`str`, optional): Path to a PEM private key file.
+*   **`tls_self_signed`** (`bool`, optional): If `True`, generates a self-signed certificate if `tls_cert` and `tls_key` are not provided. Defaults to `True`.
 *   **`logging_host`** (`str`, optional): The host address of a logging server to send logs to.
 *   **`logging_port`** (`int`, optional): The port of the logging server.
 *   **`name`** (`str`, optional): A name for the server instance.
@@ -109,6 +113,7 @@ A client class for administrators to manage a `GameServer`.
 *   `stop_server()`: Requests the server to shut down.
 *   `restart_server()`: Requests the server to restart (clears all current games).
 *   `set_logging_config(host, port)`: Configures the server to send its logs to a remote logging server at the specified address and port.
+*   `get_cert_expiration()`: Returns the expiration date of the server's TLS certificate in ISO format.
 *   `set_logging_enabled(enabled)`: Enables (`True`) or disables (`False`) logging on the server.
 
 ---

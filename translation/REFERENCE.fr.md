@@ -71,9 +71,9 @@ Gère les sessions de jeu et les requêtes réseau.
 *   **`admin_password`** (`str`, optionnel) : Un mot de passe pour l'accès administrateur.
 *   **`use_tls`** (`bool`, optionnel) : Si `True`, active le chiffrement TLS v1.3 pour toutes les communications. Par défaut `False`.
 *   **`tls_domain`** (`str`, optionnel) : Nom de domaine à inclure dans le certificat généré. Par défaut `"localhost"`.
-*   **`tls_cert`** (`str`, optionnel) : Chemin vers un fichier de certificat PEM.
-*   **`tls_key`** (`str`, optionnel) : Chemin vers un fichier de clé privée PEM.
-*   **`tls_self_signed`** (`bool`, optionnel) : Si `True`, génère un certificat auto-signé si `tls_cert` et `tls_key` ne sont pas fournis. Par défaut `True`.
+*   **`tls_cert`** (`str`, optionnel) : Chemin vers un fichier de certificat PEM. Ce fichier doit soit être une "chaîne complète" (incluant le certificat de domaine et les certificats intermédiaires), soit être accompagné d'un fichier de "chaîne" correspondant dans le même répertoire (ex: `cert.pem` et `chain.pem`, ou `ECC-cert.pem` et `ECC-chain.pem`). Si seulement l'un des paramètres `tls_cert` ou `tls_key` est fourni alors que `tls_self_signed` est `False`, le démarrage du serveur échouera.
+*   **`tls_key`** (`str`, optionnel) : Chemin vers un fichier de clé privée PEM. Si seulement l'un des paramètres `tls_cert` ou `tls_key` est fourni alors que `tls_self_signed` est `False`, le démarrage du serveur échouera.
+*   **`tls_self_signed`** (`bool`, optionnel) : Si `True`, génère un certificat auto-signé si `tls_cert` ou `tls_key` est manquant. Si `False`, `tls_cert` et `tls_key` doivent tous deux être fournis. Par défaut `True`.
 *   **`logging_host`** (`str`, optionnel) : L'adresse de l'hôte d'un serveur de logging.
 *   **`logging_port`** (`int`, optionnel) : Le port du serveur de logging.
 *   **`name`** (`str`, optionnel) : Un nom pour l'instance du serveur.

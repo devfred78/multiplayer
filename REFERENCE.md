@@ -83,9 +83,9 @@ Manages game sessions and handles network requests.
 *   **`admin_password`** (`str`, optional): A password for administrative access.
 *   **`use_tls`** (`bool`, optional): If `True`, enables TLS v1.3 encryption for all communications. Defaults to `False`.
 *   **`tls_domain`** (`str`, optional): Domain name to include in the generated certificate. Defaults to `"localhost"`.
-*   **`tls_cert`** (`str`, optional): Path to a PEM certificate file.
-*   **`tls_key`** (`str`, optional): Path to a PEM private key file.
-*   **`tls_self_signed`** (`bool`, optional): If `True`, generates a self-signed certificate if `tls_cert` and `tls_key` are not provided. Defaults to `True`.
+*   **`tls_cert`** (`str`, optional): Path to a PEM certificate file. This file must either be a "Full Chain" (including the domain certificate and intermediate certificates) or have a corresponding "chain" file in the same directory (e.g., `cert.pem` and `chain.pem`, or `ECC-cert.pem` and `ECC-chain.pem`). If only one of `tls_cert` or `tls_key` is provided while `tls_self_signed` is `False`, the server will fail to start.
+*   **`tls_key`** (`str`, optional): Path to a PEM private key file. If only one of `tls_cert` or `tls_key` is provided while `tls_self_signed` is `False`, the server will fail to start.
+*   **`tls_self_signed`** (`bool`, optional): If `True`, generates a self-signed certificate if `tls_cert` or `tls_key` is missing. If `False`, both `tls_cert` and `tls_key` must be provided. Defaults to `True`.
 *   **`logging_host`** (`str`, optional): The host address of a logging server to send logs to.
 *   **`logging_port`** (`int`, optional): The port of the logging server.
 *   **`name`** (`str`, optional): A name for the server instance.

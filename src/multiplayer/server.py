@@ -371,8 +371,17 @@ class GameServer:
         self._temp_certs = False
         
         if self.use_tls:
-            if self.tls_self_signed or not certfile or not keyfile:
+            if self.tls_self_signed:
                 print(f"Generating self-signed certificate for {self.tls_domain}...")
+                certfile, keyfile = _generate_self_signed_cert(self.tls_domain)
+                self._temp_certs = True
+            elif not certfile or not keyfile:
+                # If one is provided but not the other, and self_signed is False, it's an error
+                if certfile or keyfile:
+                    print(f"Error: Both tls_cert and tls_key must be provided if tls_self_signed is False.")
+                    return
+                # If neither is provided, fallback to self-signed but warn
+                print(f"Warning: No certificate provided and tls_self_signed is False. Generating self-signed certificate anyway for {self.tls_domain}...")
                 certfile, keyfile = _generate_self_signed_cert(self.tls_domain)
                 self._temp_certs = True
             else:

@@ -129,7 +129,8 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
         # Note: self._temp_certs from GameServer is not available here, so we rely on path indicators or naming.
         if use_tls and certfile and ("tmp" in certfile.lower() or "multiplayer_fullchain" in certfile.lower()): 
              try:
-                if os.path.exists(certfile): os.remove(certfile)
+                if os.path.exists(certfile):
+                    os.remove(certfile)
                 # Only remove keyfile if it's also a temp file (like in self-signed case)
                 if keyfile and "tmp" in keyfile.lower() and os.path.exists(keyfile): 
                     os.remove(keyfile)
@@ -378,7 +379,7 @@ class GameServer:
             elif not certfile or not keyfile:
                 # If one is provided but not the other, and self_signed is False, it's an error
                 if certfile or keyfile:
-                    print(f"Error: Both tls_cert and tls_key must be provided if tls_self_signed is False.")
+                    print("Error: Both tls_cert and tls_key must be provided if tls_self_signed is False.")
                     return
                 # If neither is provided, fallback to self-signed but warn
                 print(f"Warning: No certificate provided and tls_self_signed is False. Generating self-signed certificate anyway for {self.tls_domain}...")

@@ -88,9 +88,9 @@ jobs:
           fi
           
           # Run Junie to generate the description
-          # Use --non-interactive to avoid prompts
-          # Use --brave-mode to allow Junie to explore the repo
-          junie --task "$TASK" --output-format text --non-interactive --brave-mode > release_description.txt
+          # Use --auth with the API key
+          # Remove --non-interactive and --brave-mode which are not supported or recognized
+          junie --auth "$JUNIE_API_KEY" --task "$TASK" --output-format text > release_description.txt
 
       - name: Download all wheels
         uses: actions/download-artifact@v4

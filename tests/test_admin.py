@@ -105,3 +105,24 @@ def test_admin_list_all_players():
         assert charlie['game_name'] == 'Game2'
     finally:
         server.stop()
+
+def test_admin_get_cert_expiration():
+    """Tests retrieving the TLS certificate expiration date."""
+    server = GameServer(
+        port=65447, 
+        admin_password="admin_secret", 
+        use_tls=True, 
+        tls_self_signed=True
+    )
+    server.start()
+    time.sleep(1)
+    try:
+        admin = GameAdmin(port=65447, admin_password="admin_secret", use_tls=True)
+        expiration = admin.get_cert_expiration()
+        assert expiration is not None
+        # Should be a date string, e.g., "2027-04-26 12:00:00"
+        # We just check it's a non-empty string for now
+        assert isinstance(expiration, str)
+        assert len(expiration) > 10
+    finally:
+        server.stop()

@@ -18,7 +18,7 @@ TEST_PORT = 65433
 TEST_SERVER_PASSWORD = "test_server_password"
 TEST_GAME_PASSWORD = "test_game_password"
 
-def wait_for_server(port, timeout=5, use_tls=False):
+def wait_for_server(port, timeout=5, use_tls=False, server_hostname='localhost'):
     """Wait for the server to be ready by trying to connect to it."""
     start_time = time.time()
     while time.time() - start_time < timeout:
@@ -28,7 +28,7 @@ def wait_for_server(port, timeout=5, use_tls=False):
                 context.check_hostname = False
                 context.verify_mode = ssl.CERT_NONE
                 with socket.create_connection(('127.0.0.1', port), timeout=0.5) as sock:
-                    with context.wrap_socket(sock, server_hostname='localhost'):
+                    with context.wrap_socket(sock, server_hostname=server_hostname):
                         return True
             else:
                 with socket.create_connection(('127.0.0.1', port), timeout=0.5):
@@ -69,6 +69,18 @@ def tls_game_server():
     if not wait_for_server(port, use_tls=True):
         server.stop()
         pytest.fail("TLS server failed to start in time")
+    yield server
+    server.stop()
+
+@pytest.fixture(scope="module")
+def tls_custom_game_server():
+    """Fixture to start and stop a server with TLS encryption and custom domain."""
+    port = TEST_PORT + 3
+    server = GameServer(host='0.0.0.0', port=port, use_tls=True, tls_domain="test.local", tls_self_signed=True)
+    server.start()
+    if not wait_for_server(port, use_tls=True, server_hostname="test.local"):
+        server.stop()
+        pytest.fail("Custom TLS server failed to start in time")
     yield server
     server.stop()
 
@@ -180,6 +192,33 @@ def test_tls_server_connection_failure_mismatch(tls_game_server):
     client = GameClient(port=TEST_PORT + 2, use_tls=False)
     with pytest.raises(ConnectionError):
         client.list_games()
+
+def test_tls_data_exchange(tls_custom_game_server):
+    """Tests complex data exchange over a TLS-encrypted connection."""
+    port = TEST_PORT + 3
+    client = GameClient(port=port, use_tls=True)
+    
+    # Create a game
+    game = client.create_game(name="TLS Game", turn_based=True)
+    assert game.game_id is not None
+    
+    # Add a player
+    game.add_player(Player("TLS_Alice", score=100))
+    
+    # Check state
+    state = game.state
+    assert state['status'] == 'pending'
+    
+    # List games
+    games = client.list_games()
+    assert game.game_id in games
+    
+    # Verify player in state
+    players = game.players
+    assert len(players) == 1
+    assert players[0].name == "TLS_Alice"
+    
+    game.stop()
 
 def test_observer_network(game_server):
     """Tests adding and listing observers over the network."""

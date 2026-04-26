@@ -75,6 +75,7 @@ jobs:
         run: curl -fsSL https://raw.githubusercontent.com/JetBrains/junie/main/install.sh | bash
 
       - name: Generate Release Description with Junie
+        id: prepare_release
         env:
           JUNIE_API_KEY: ${{ secrets.JUNIE_API_KEY }}
         run: |
@@ -88,17 +89,9 @@ jobs:
           fi
           
           # Run Junie to generate the description
-          # Use --auth with the API key
-          # Use --output-format text
-          # We use a temporary file to capture output and then extract only the last part if needed,
-          # but normally --task should return the result.
-          # To avoid junk characters and extra logs, we'll try to use a more specific prompt
-          # and ensure we're not capturing the TTY artifacts if any.
           junie --auth "$JUNIE_API_KEY" --task "$TASK" --output-format text > raw_output.txt
           
-          # Clean the output: Junie text output might contain the full trace.
-          # We extract everything after "TASK RESULT:" if it exists, otherwise use the whole cleaned file.
-          # Also, removing non-printable characters with tr.
+          # Clean the output
           tr -cd '\11\12\15\40-\176' < raw_output.txt > cleaned_output.txt
           
           if grep -q "TASK RESULT:" cleaned_output.txt; then
@@ -110,6 +103,17 @@ jobs:
           # Final check: if the file is still empty or too short, use a fallback
           if [ ! -s release_description.txt ]; then
              echo "Release $GITHUB_REF_NAME" > release_description.txt
+          fi
+
+          # Determine if it is a pre-release (version starts with 0)
+          # Tag is usually vX.Y.Z, so we check if the part after 'v' starts with '0.'
+          VERSION_NAME=${GITHUB_REF_NAME#v}
+          if [[ $VERSION_NAME == 0.* ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "Version $VERSION_NAME detected as pre-release"
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "Version $VERSION_NAME detected as stable release"
           fi
 
       - name: Download all wheels
@@ -126,3 +130,4 @@ jobs:
           body_path: release_description.txt
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
+          prerelease: ${{ steps.prepare_release.outputs.is_prerelease == 'true' }}

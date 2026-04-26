@@ -95,6 +95,7 @@ from multiplayer import GameServer
 server = GameServer(
     host='0.0.0.0',
     port=12345,
+    name="Mi Servidor de Producción",
     password="mi_contraseña_de_servidor",
     admin_password="mi_contraseña_de_admin",
     use_tls=True,
@@ -121,6 +122,7 @@ docker run -d \
   -p 65432:65432 \
   -v /ruta/a/tus/certificados:/app/certs \
   ghcr.io/tu_usuario/multiplayer-server:latest \
+  --name "Mi Servidor Docker" \
   --use-tls --no-self-signed
 ```
 

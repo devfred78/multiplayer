@@ -174,6 +174,7 @@ Starts a standalone game server.
 *   **`--tls-cert-dir`** (`str`): Path to a directory containing PEM certificates (`cert.pem`, `RSA-cert.pem`, or `ECC-cert.pem`) and keys. This is particularly useful for Docker volumes.
 *   **`--tls-self-signed`**: Generates a self-signed certificate if files are missing (default).
 *   **`--no-self-signed`**: Disables automatic generation of self-signed certificates.
+*   **`--name`** (`str`): Human-readable name for the server instance.
 
 ## Utility Functions
 

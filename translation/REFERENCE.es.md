@@ -145,6 +145,7 @@ Inicia un servidor de juegos autónomo.
 *   **`--tls-cert-dir`** (`str`): Ruta a un directorio que contenga certificados PEM (`cert.pem`, `RSA-cert.pem` o `ECC-cert.pem`) y claves. Esto es particularmente útil para volúmenes Docker.
 *   **`--tls-self-signed`**: Genera un certificado auto-firmado si faltan los archivos (comportamiento predeterminado).
 *   **`--no-self-signed`**: Desactiva la generación automática de certificados auto-firmados.
+*   **`--name`** (`str`): Nombre legible por humanos para la instancia del servidor.
 
 ## Funciones de Utilidad
 

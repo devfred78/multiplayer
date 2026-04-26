@@ -131,6 +131,21 @@ Inicia el servidor de registros autónomo.
     *   `level`: Colorea los registros según su criticidad (ej. INFO es verde, ERROR es rojo). Este es el modo predeterminado.
     *   `origin`: Colorea los registros según el nombre del registrador (ej. `GameServer`, `GameClient`, `GameAdmin`, etc.). Esto ayuda a diferenciar los mensajes de diferentes fuentes.
 
+#### `multiplayer-server [OPTIONS]`
+Inicia un servidor de juegos autónomo.
+
+*   **`--host`** (`str`): Dirección del host en la que escuchar. Por defecto es `0.0.0.0`.
+*   **`--port`** (`int`): Puerto en el que escuchar. Por defecto es `65432`.
+*   **`--password`** (`str`): Contraseña global del servidor.
+*   **`--admin-password`** (`str`): Contraseña de administración.
+*   **`--use-tls`**: Habilita el cifrado TLS v1.3.
+*   **`--tls-domain`** (`str`): Nombre de dominio para el certificado. Por defecto es `localhost`.
+*   **`--tls-cert`** (`str`): Ruta a un archivo de certificado PEM.
+*   **`--tls-key`** (`str`): Ruta a un archivo de clave privada PEM.
+*   **`--tls-cert-dir`** (`str`): Ruta a un directorio que contenga certificados PEM (`cert.pem`, `RSA-cert.pem` o `ECC-cert.pem`) y claves. Esto es particularmente útil para volúmenes Docker.
+*   **`--tls-self-signed`**: Genera un certificado auto-firmado si faltan los archivos (comportamiento predeterminado).
+*   **`--no-self-signed`**: Desactiva la generación automática de certificados auto-firmados.
+
 ## Funciones de Utilidad
 
 ### Sugerencias de Nombres

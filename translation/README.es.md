@@ -112,6 +112,20 @@ server = GameServer(
 )
 ```
 
+#### Uso con Docker
+
+Puedes ejecutar el servidor de juegos usando Docker. Para usar tus propios certificados TLS, mapea un directorio local que contenga `cert.pem` y `privkey.pem` a `/app/certs` en el contenedor.
+
+```bash
+docker run -d \
+  -p 65432:65432 \
+  -v /ruta/a/tus/certificados:/app/certs \
+  ghcr.io/tu_usuario/multiplayer-server:latest \
+  --use-tls --no-self-signed
+```
+
+El servidor buscará automáticamente los archivos `cert.pem`, `RSA-cert.pem` o `ECC-cert.pem` (y sus correspondientes claves) en el directorio `/app/certs`.
+
 #### Uso para el Administrador
 ```python
 from multiplayer import GameAdmin

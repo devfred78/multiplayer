@@ -160,6 +160,21 @@ Starts the standalone logging server.
     *   `level`: Colors logs based on their criticality (e.g., INFO is green, ERROR is red). This is the default.
     *   `origin`: Colors logs based on the name of the logger (e.g., `GameServer`, `GameClient`, `GameAdmin`, etc.). This helps differentiate messages from different sources.
 
+#### `multiplayer-server [OPTIONS]`
+Starts a standalone game server.
+
+*   **`--host`** (`str`): Host address to listen on. Defaults to `0.0.0.0`.
+*   **`--port`** (`int`): Port to listen on. Defaults to `65432`.
+*   **`--password`** (`str`): Global server password.
+*   **`--admin-password`** (`str`): Administrative password.
+*   **`--use-tls`**: Enables TLS v1.3 encryption.
+*   **`--tls-domain`** (`str`): Domain name for the certificate. Defaults to `localhost`.
+*   **`--tls-cert`** (`str`): Path to a PEM certificate file.
+*   **`--tls-key`** (`str`): Path to a PEM private key file.
+*   **`--tls-cert-dir`** (`str`): Path to a directory containing PEM certificates (`cert.pem`, `RSA-cert.pem`, or `ECC-cert.pem`) and keys. This is particularly useful for Docker volumes.
+*   **`--tls-self-signed`**: Generates a self-signed certificate if files are missing (default).
+*   **`--no-self-signed`**: Disables automatic generation of self-signed certificates.
+
 ## Utility Functions
 
 ### Name Suggestions

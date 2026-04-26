@@ -34,4 +34,4 @@ EXPOSE 65432
 
 # Set the entrypoint to the game server script
 ENTRYPOINT ["multiplayer-server"]
-CMD ["--host", "0.0.0.0", "--port", "65432"]
+CMD ["--host", "0.0.0.0", "--port", "65432", "--tls-cert-dir", "/app/certs"]

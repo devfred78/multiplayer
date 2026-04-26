@@ -141,6 +141,21 @@ Démarre le serveur de logging autonome.
     *   `level` : Colore les logs en fonction de leur criticité (ex: INFO est vert, ERROR est rouge). C'est le mode par défaut.
     *   `origin` : Colore les logs en fonction du nom du logger (ex: `GameServer`, `GameClient`, `GameAdmin`, etc.). Cela aide à différencier les messages provenant de différentes sources.
 
+#### `multiplayer-server [OPTIONS]`
+Démarre un serveur de jeu autonome.
+
+*   **`--host`** (`str`) : Adresse de l'hôte sur laquelle écouter. Par défaut `0.0.0.0`.
+*   **`--port`** (`int`) : Port sur lequel écouter. Par défaut `65432`.
+*   **`--password`** (`str`) : Mot de passe global du serveur.
+*   **`--admin-password`** (`str`) : Mot de passe d'administration.
+*   **`--use-tls`** : Active le chiffrement TLS v1.3.
+*   **`--tls-domain`** (`str`) : Nom de domaine pour le certificat. Par défaut `localhost`.
+*   **`--tls-cert`** (`str`) : Chemin vers un fichier de certificat PEM.
+*   **`--tls-key`** (`str`) : Chemin vers un fichier de clé privée PEM.
+*   **`--tls-cert-dir`** (`str`) : Chemin vers un répertoire contenant des certificats PEM (`cert.pem`, `RSA-cert.pem`, ou `ECC-cert.pem`) et des clés. Particulièrement utile pour les volumes Docker.
+*   **`--tls-self-signed`** : Génère un certificat auto-signé si les fichiers sont manquants (comportement par défaut).
+*   **`--no-self-signed`** : Désactive la génération automatique de certificats auto-signés.
+
 ## Fonctions Utilitaires
 
 ### Suggestions de Noms

@@ -15,6 +15,14 @@ on:
         description: 'Enable sending logs to a centralized server'
         type: boolean
         default: false
+      enable_tls:
+        description: 'Enable TLS encryption (generates a self-signed certificate)'
+        type: boolean
+        default: false
+      tls_domain:
+        description: 'Domain name for TLS (if enabled, default is localhost)'
+        required: false
+        default: 'localhost'
       logging_host:
         description: 'Log server address (if enabled)'
         required: false
@@ -101,6 +109,10 @@ jobs:
           
           if [ "${{ github.event.inputs.enable_logging }}" = "true" ]; then
             CMD="$CMD --logging-host ${{ github.event.inputs.logging_host }} --logging-port ${{ github.event.inputs.logging_port }}"
+          fi
+          
+          if [ "${{ github.event.inputs.enable_tls }}" = "true" ]; then
+            CMD="$CMD --tls-self-signed --tls-domain ${{ github.event.inputs.tls_domain }}"
           fi
           
           echo "To run the server on your Synology NAS, pull the image and use:"

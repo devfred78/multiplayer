@@ -17,6 +17,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: main
 
       - name: Get sorted tags
         id: get_tags
@@ -60,4 +61,4 @@ jobs:
           git config --local user.name "GitHub Action"
           git add .github/workflows/docker-build.yml .github/workflows/synology-docker-build.yml
           git commit -m "docs: update image_tag options in workflows [skip ci]" || echo "No changes to commit"
-          git push
+          git push origin main

@@ -7,6 +7,10 @@ on:
         description: 'Game server listening port'
         required: true
         default: '65432'
+      server_name:
+        description: 'Name of the game server'
+        required: false
+        default: 'Multiplayer Server'
       enable_logging:
         description: 'Enable sending logs to a centralized server'
         type: boolean
@@ -72,6 +76,10 @@ jobs:
           echo "Image built and pushed successfully: $IMAGE"
           
           CMD="docker run -d -p ${{ github.event.inputs.port }}:${{ github.event.inputs.port }} $IMAGE --port ${{ github.event.inputs.port }}"
+          
+          if [ "${{ github.event.inputs.server_name }}" != "" ]; then
+            CMD="$CMD --name \"${{ github.event.inputs.server_name }}\""
+          fi
           
           if [ "${{ github.event.inputs.enable_logging }}" = "true" ]; then
             CMD="$CMD --logging-host ${{ github.event.inputs.logging_host }} --logging-port ${{ github.event.inputs.logging_port }}"

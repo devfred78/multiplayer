@@ -72,7 +72,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install Junie CLI
-        run: curl -fsSL https://raw.githubusercontent.com/JetBrains/junie-cli/main/install.sh | bash
+        run: curl -fsSL https://raw.githubusercontent.com/JetBrains/junie/main/install.sh | bash
 
       - name: Generate Release Description with Junie
         env:
@@ -90,7 +90,7 @@ jobs:
           # Run Junie to generate the description
           # Use --non-interactive to avoid prompts
           # Use --brave-mode to allow Junie to explore the repo
-          ~/.local/bin/junie --task "$TASK" --output-format text --non-interactive --brave-mode > release_description.txt
+          junie --task "$TASK" --output-format text --non-interactive --brave-mode > release_description.txt
 
       - name: Download all wheels
         uses: actions/download-artifact@v4

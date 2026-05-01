@@ -18,6 +18,7 @@ For a detailed technical description of all classes and functions, see the [API 
 *   **Combined Game State:** A flexible system for synchronizing both the core game status (e.g., `in_progress`) and any custom game data.
 *   **Observer Support:** Ability to add observers who can view the game state without participating as players.
 *   **Administrator Role:** New `GameAdmin` class to manage the server, kick players/observers, and monitor server status.
+*   **Game Grouping:** Organize several game sessions within the same server using the `GameGroup` class.
 *   **Multi-Layered Security:** Supports server passwords, admin passwords, and per-game passwords, with optional TLS v1.3 encryption.
 *   **Automatic Server Discovery:** Clients can automatically find running servers on the local network.
 *   **Extensible Name Suggestions:** Includes a utility function to suggest creative names for games and players.
@@ -53,6 +54,27 @@ print(f"Game status: {full_state['status']}")
 
 print(f"Current turn: {full_state['custom']['turn']}")
 # > Current turn: player2
+```
+
+
+### Game Grouping
+
+You can group games together for better organization.
+
+```python
+from multiplayer import Game, GameGroup
+
+# Create a group
+group = GameGroup("Tournament A", priority="high")
+
+# Add games to the group
+game1 = Game("Match 1")
+game2 = Game("Match 2")
+group.add_game(game1)
+group.add_game(game2)
+
+print(f"Group '{group.name}' has {len(group.games)} games.")
+# > Group 'Tournament A' has 2 games.
 ```
 
 

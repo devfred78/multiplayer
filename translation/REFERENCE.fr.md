@@ -57,6 +57,23 @@ Représente un observateur.
 
 ---
 
+### `GameGroup(name, **kwargs)`
+Représente un groupe de parties sur un serveur.
+
+*   **`name`** (`str`) : Le nom du groupe.
+*   **`**kwargs`** : Attributs supplémentaires pour le groupe.
+
+#### Méthodes
+*   `add_game(game)` : Ajoute un objet `Game` au groupe.
+*   `remove_game(game)` : Retire un objet `Game` du groupe.
+
+#### Propriétés
+*   **`name`**: Le nom du groupe.
+*   **`games`**: Une liste d'objets `Game` actuellement dans le groupe.
+*   **`attributes`**: Un dictionnaire d'attributs personnalisés pour le groupe.
+
+---
+
 ### `GameState` (Enum)
 *   `GameState.PENDING`, `GameState.IN_PROGRESS`, `GameState.FINISHED`
 

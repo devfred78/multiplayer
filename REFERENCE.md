@@ -63,6 +63,23 @@ Represents an observer.
 
 ---
 
+### `GameGroup(name, **kwargs)`
+Represents a group of games on a server.
+
+*   **`name`** (`str`): The name of the group.
+*   **`**kwargs`**: Additional attributes for the group.
+
+#### Methods
+*   `add_game(game)`: Adds a `Game` object to the group.
+*   `remove_game(game)`: Removes a `Game` object from the group.
+
+#### Properties
+*   **`name`**: The name of the group.
+*   **`games`**: A list of `Game` objects currently in the group.
+*   **`attributes`**: A dictionary of custom attributes for the group.
+
+---
+
 ### `GameState` (Enum)
 An enumeration for the state of the game.
 

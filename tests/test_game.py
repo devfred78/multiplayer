@@ -2,8 +2,39 @@
 Unit tests for the local multiplayer game module.
 """
 import pytest
-from multiplayer import Game, Player, GameState
+from multiplayer import Game, Player, GameState, GameGroup
 from multiplayer.exceptions import GameLogicError, PlayerLimitReachedError, AuthenticationError
+
+def test_game_group():
+    """
+    Tests that a game group can be created and managed.
+    """
+    group = GameGroup("Action Games", genre="action")
+    assert group.name == "Action Games"
+    assert group.attributes["genre"] == "action"
+    assert len(group.games) == 0
+
+    game1 = Game("Quake")
+    game2 = Game("Doom")
+    
+    group.add_game(game1)
+    assert len(group.games) == 1
+    assert group.games[0] == game1
+
+    group.add_game(game2)
+    assert len(group.games) == 2
+    
+    # Check that we can't add the same game twice
+    group.add_game(game1)
+    assert len(group.games) == 2
+
+    group.remove_game(game1)
+    assert len(group.games) == 1
+    assert group.games[0] == game2
+
+    # Remove non-existent game should not raise error
+    group.remove_game(game1)
+    assert len(group.games) == 1
 
 def test_create_game():
     """

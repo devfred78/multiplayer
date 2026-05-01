@@ -1,7 +1,7 @@
 """
 This package provides classes for managing a multiplayer game, both locally and over a network.
 """
-from .game import Game, Player, Observer, GameState
+from .game import Game, Player, Observer, GameState, GameGroup
 from .server import GameServer
 from .client import GameClient, RemoteGame, GameAdmin
 
@@ -29,6 +29,7 @@ __all__ = [
     'Player',
     'Observer',
     'GameState',
+    'GameGroup',
     'GameServer',
     'GameClient',
     'RemoteGame',

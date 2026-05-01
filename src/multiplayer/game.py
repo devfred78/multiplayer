@@ -25,6 +25,39 @@ class Player:
         self.name = name
         self.attributes = kwargs
 
+class GameGroup:
+    """
+    Represents a group of games on a server.
+
+    Args:
+        name (str): The name of the group.
+        **kwargs: Additional attributes for the group.
+    """
+    def __init__(self, name, **kwargs):
+        self.name = name
+        self.attributes = kwargs
+        self.games = []
+
+    def add_game(self, game):
+        """
+        Adds a game to the group.
+
+        Args:
+            game (Game): The game to add.
+        """
+        if game not in self.games:
+            self.games.append(game)
+
+    def remove_game(self, game):
+        """
+        Removes a game from the group.
+
+        Args:
+            game (Game): The game to remove.
+        """
+        if game in self.games:
+            self.games.remove(game)
+
 class Observer:
     """
     Represents an observer in the game.

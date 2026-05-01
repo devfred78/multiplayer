@@ -18,6 +18,7 @@ Para una descripción técnica detallada de todas las clases y funciones, consul
 *   **Estado de Juego Combinado:** Un sistema flexible para sincronizar tanto el estado principal del jeu (ej: `in_progress`) como datos de juego personalizados.
 *   **Soporte de Observadores:** Capacidad de añadir observadores que pueden ver el estado del juego sin participar como jugadores.
 *   **Rol de Administrador:** Nueva clase `GameAdmin` para gestionar el servidor, expulsar jugadores/observadores y supervisar el estado del servidor.
+*   **Agrupación de Juegos:** Organiza varias sesiones de juego dentro del mismo servidor utilizando la clase `GameGroup`.
 *   **Seguridad Multinivel:** Soporta contraseñas de servidor, administrador y por partida, con cifrado opcional TLS v1.3.
 *   **Descubrimiento Automático de Servidores:** Los clientes pueden encontrar automáticamente servidores en funcionamiento en la red local.
 *   **Sugerencias de Nombres Extensibles:** Incluye una función de utilidad para sugerir nombres creativos para juegos y jugadores.
@@ -54,6 +55,28 @@ print(f"Estado de la partida: {estado_completo['status']}")
 print(f"Turno actual: {estado_completo['custom']['turno']}")
 # > Turno actual: jugador2
 ```
+
+
+### Agrupación de Juegos
+
+Puedes agrupar juegos para una mejor organización.
+
+```python
+from multiplayer import Game, GameGroup
+
+# Crear un grupo
+group = GameGroup("Torneo A", priority="high")
+
+# Añadir juegos al grupo
+game1 = Game("Match 1")
+game2 = Game("Match 2")
+group.add_game(game1)
+group.add_game(game2)
+
+print(f"El grupo '{group.name}' tiene {len(group.games)} juegos.")
+# > El grupo 'Torneo A' tiene 2 juegos.
+```
+
 
 ### Entorno de Prueba Completo
 

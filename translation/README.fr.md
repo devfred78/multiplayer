@@ -18,6 +18,7 @@ Pour une description technique détaillée de toutes les classes et fonctions, c
 *   **État de Jeu Combiné :** Un système flexible pour synchroniser à la fois le statut de base du jeu (ex: `in_progress`) et des données de jeu personnalisées.
 *   **Support des Observateurs :** Possibilité d'ajouter des observateurs qui peuvent voir l'état du jeu sans y participer en tant que joueurs.
 *   **Rôle d'Administrateur :** Nouvelle classe `GameAdmin` pour gérer le serveur, expulser des joueurs/observateurs et surveiller l'état du serveur.
+*   **Groupement de Parties :** Organisez plusieurs sessions de jeu au sein du même serveur grâce à la classe `GameGroup`.
 *   **Sécurité à Plusieurs Niveaux :** Supporte les mots de passe serveur, administrateur et par partie, avec un chiffrement TLS v1.3 optionnel.
 *   **Découverte Automatique de Serveurs :** Les clients peuvent trouver automatiquement les serveurs en cours d'exécution sur le réseau local.
 *   **Suggestions de Noms Extensibles :** Inclut une fonction utilitaire pour suggérer des noms créatifs pour les parties et les joueurs.
@@ -54,6 +55,28 @@ print(f"Statut de la partie : {etat_complet['status']}")
 print(f"Tour actuel : {etat_complet['custom']['tour']}")
 # > Tour actuel : joueur2
 ```
+
+
+### Groupement de Parties
+
+Vous pouvez regrouper des parties pour une meilleure organisation.
+
+```python
+from multiplayer import Game, GameGroup
+
+# Créer un groupe
+group = GameGroup("Tournoi A", priority="high")
+
+# Ajouter des parties au groupe
+game1 = Game("Match 1")
+game2 = Game("Match 2")
+group.add_game(game1)
+group.add_game(game2)
+
+print(f"Le groupe '{group.name}' contient {len(group.games)} parties.")
+# > Le groupe 'Tournoi A' contient 2 parties.
+```
+
 
 ### Environnement de Test Complet
 

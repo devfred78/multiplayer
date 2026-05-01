@@ -31,10 +31,12 @@ class GameGroup:
 
     Args:
         name (str): The name of the group.
+        admin_password (str, optional): A password for administrative actions on this group.
         **kwargs: Additional attributes for the group.
     """
-    def __init__(self, name, **kwargs):
+    def __init__(self, name, admin_password=None, **kwargs):
         self.name = name
+        self.admin_password = admin_password
         self.attributes = kwargs
         self.games = []
 

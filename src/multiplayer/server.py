@@ -108,6 +108,7 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
     bindsocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     bindsocket.bind((host, port))
     bindsocket.listen()
+    groups = {} # Store GameGroup objects
     try:
         bindsocket.settimeout(1.0)
         while True:
@@ -117,7 +118,7 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
                 continue
             try:
                 conn = context.wrap_socket(newsocket, server_side=True) if use_tls else newsocket
-                thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, games_lock, password, admin_password, logger_name, name, use_tls, certfile))
+                thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, groups, games_lock, password, admin_password, logger_name, name, use_tls, certfile))
                 thread.daemon = True
                 thread.start()
             except (ssl.SSLError, OSError) as e:
@@ -137,7 +138,7 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
              except Exception:
                  pass
 
-def _handle_client(conn, addr, games, lock, server_password, admin_password, logger_name="GameServer", server_name=None, use_tls=False, certfile=None):
+def _handle_client(conn, addr, games, groups, lock, server_password, admin_password, logger_name="GameServer", server_name=None, use_tls=False, certfile=None):
     """Handles a single client connection."""
     logger = logging.getLogger(logger_name)
     logger.info(f"Connected by {addr}")
@@ -153,9 +154,31 @@ def _handle_client(conn, addr, games, lock, server_password, admin_password, log
                 params = command.get('params', {})
 
                 # Check if it's an admin action
-                is_admin_action = action in ['stop_server', 'restart_server', 'kick_player', 'kick_observer', 'get_server_info', 'set_logging_config', 'set_logging_enabled', 'list_all_players', 'get_cert_expiration']
+                is_server_admin_action = action in ['stop_server', 'restart_server', 'get_server_info', 'set_logging_config', 'set_logging_enabled', 'list_all_players', 'get_cert_expiration']
+                is_group_admin_action = action in ['list_group_games', 'kick_player', 'kick_observer']
                 
-                if is_admin_action:
+                # If it's a kick action, it could be server admin OR group admin
+                # If group_name is provided, we check group admin rights.
+                # If not, we check server admin rights.
+                group_name = params.get('group_name')
+                
+                if is_server_admin_action:
+                    if admin_password is None:
+                         raise AuthenticationError("Admin actions are disabled on this server")
+                    if client_password != admin_password:
+                        raise AuthenticationError("Invalid admin password")
+                elif is_group_admin_action and group_name:
+                    with lock:
+                        group = groups.get(group_name)
+                        if not group:
+                            raise GameLogicError(f"Group '{group_name}' not found")
+                        if group.admin_password is None:
+                            raise AuthenticationError(f"Group admin actions are disabled for group '{group_name}'")
+                        if client_password != group.admin_password:
+                            # Allow server admin to also act as group admin
+                            if admin_password is None or client_password != admin_password:
+                                raise AuthenticationError("Invalid group admin password")
+                elif is_group_admin_action: # Kick without group_name -> must be server admin
                     if admin_password is None:
                          raise AuthenticationError("Admin actions are disabled on this server")
                     if client_password != admin_password:
@@ -164,25 +187,63 @@ def _handle_client(conn, addr, games, lock, server_password, admin_password, log
                     raise AuthenticationError("Invalid server password")
 
                 with lock:
-                    response = _execute_command(games, action, params, server_name=server_name, use_tls=use_tls, certfile=certfile)
+                    response = _execute_command(games, groups, action, params, server_name=server_name, use_tls=use_tls, certfile=certfile)
                 conn.sendall(json.dumps(response, cls=EnumEncoder).encode('utf-8'))
-            except (json.JSONDecodeError, TypeError, AuthenticationError) as e:
+            except (json.JSONDecodeError, TypeError, AuthenticationError, GameLogicError) as e:
                 error_response = {'status': 'error', 'type': type(e).__name__, 'message': str(e)}
                 conn.sendall(json.dumps(error_response, cls=EnumEncoder).encode('utf-8'))
     finally:
         logger.info(f"Disconnected from {addr}")
 
-def _execute_command(games, action, params, server_name=None, use_tls=False, certfile=None):
+def _execute_command(games, groups, action, params, server_name=None, use_tls=False, certfile=None):
     """Executes a command on the game objects and returns a response."""
+    from .game import GameGroup
     try:
         # Server-level actions
         if action == 'create_game':
             game_id = str(uuid.uuid4())
-            games[game_id] = Game(**params)
-            return {'status': 'success', 'data': {'game_id': game_id}}
+            # Ensure name is in params so it's part of attributes
+            game = Game(**params)
+            games[game_id] = game
+            
+            # If group_name is provided, add game to group
+            group_name = params.get('group_name')
+            if group_name:
+                if group_name not in groups:
+                    groups[group_name] = GameGroup(group_name)
+                groups[group_name].add_game(game)
+                
+            return {'status': 'success', 'data': {'game_id': game_id, 'name': game.name}}
+
+        elif action == 'create_group':
+            group_name = params.get('name')
+            if not group_name:
+                return {'status': 'error', 'message': 'Missing group name'}
+            admin_password = params.get('admin_password')
+            groups[group_name] = GameGroup(group_name, admin_password=admin_password, **params.get('attributes', {}))
+            return {'status': 'success'}
+
+        elif action == 'list_group_games':
+            group_name = params.get('group_name')
+            group = groups.get(group_name)
+            if not group:
+                return {'status': 'error', 'message': f'Group {group_name} not found'}
+            # We need to find the GIDs for the games in the group
+            group_games = {}
+            for gid, g in games.items():
+                if g in group.games and g.state != GameState.FINISHED:
+                    attrs = g.attributes.copy()
+                    attrs['name'] = g.name
+                    group_games[gid] = attrs
+            return {'status': 'success', 'data': group_games}
         
         elif action == 'list_games':
-            game_list = {gid: g.attributes for gid, g in games.items() if g.state != GameState.FINISHED}
+            game_list = {}
+            for gid, g in games.items():
+                if g.state != GameState.FINISHED:
+                    attrs = g.attributes.copy()
+                    attrs['name'] = g.name
+                    game_list[gid] = attrs
             return {'status': 'success', 'data': game_list}
         
         elif action == 'stop_server':
@@ -200,6 +261,7 @@ def _execute_command(games, action, params, server_name=None, use_tls=False, cer
                 import time
                 time.sleep(0.5)
                 games.clear()
+                groups.clear()
             threading.Thread(target=delayed_restart).start()
             return result
         
@@ -323,11 +385,21 @@ def _execute_command(games, action, params, server_name=None, use_tls=False, cer
         
         elif action == 'kick_player':
             player_name = params.get('player_name')
+            group_name = params.get('group_name')
+            if group_name:
+                group = groups.get(group_name)
+                if not group or game not in group.games:
+                     return {'status': 'error', 'message': f'Game {game_id} does not belong to group {group_name}'}
             game.remove_player(player_name)
             return {'status': 'success'}
         
         elif action == 'kick_observer':
             observer_name = params.get('observer_name')
+            group_name = params.get('group_name')
+            if group_name:
+                group = groups.get(group_name)
+                if not group or game not in group.games:
+                     return {'status': 'error', 'message': f'Game {game_id} does not belong to group {group_name}'}
             game.remove_observer(observer_name)
             return {'status': 'success'}
         

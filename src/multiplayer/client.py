@@ -238,6 +238,45 @@ class GameAdmin:
         response = self._client._send_command('get_cert_expiration')
         return response.get('expiration')
 
+class GroupAdmin:
+    """
+    A client class for group administrators to manage games within a specific GameGroup.
+    """
+    def __init__(self, group_name, host='127.0.0.1', port=65432, group_admin_password=None, use_tls=False):
+        self.group_name = group_name
+        self.host = host
+        self.port = port
+        self.group_admin_password = group_admin_password
+        self.use_tls = use_tls
+        self._client = GameClient(host, port, group_admin_password, use_tls)
+        self._logger = logging.getLogger(f"GroupAdmin.{group_name}")
+        self._logger.setLevel(logging.INFO)
+
+    def configure_logging(self, host, port):
+        """Configures the group admin client to send logs to a logging server."""
+        self._client.configure_logging(host, port, f"GroupAdmin.{self.group_name}")
+        self._logger = self._client._logger
+
+    def list_games(self):
+        """Retrieves a list of games belonging to this group."""
+        return self._client._send_command('list_group_games', {'group_name': self.group_name})
+
+    def kick_player(self, game_id, player_name):
+        """Kicks a player from a specific game in the group."""
+        return self._client._send_command('kick_player', {
+            'game_id': game_id, 
+            'player_name': player_name,
+            'group_name': self.group_name
+        })
+
+    def kick_observer(self, game_id, observer_name):
+        """Kicks an observer from a specific game in the group."""
+        return self._client._send_command('kick_observer', {
+            'game_id': game_id, 
+            'observer_name': observer_name,
+            'group_name': self.group_name
+        })
+
 class RemoteGame:
     """
     A proxy for a Game object on a remote server.

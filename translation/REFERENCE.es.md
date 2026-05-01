@@ -51,10 +51,11 @@ Representa a un observador.
 
 ---
 
-### `GameGroup(name, **kwargs)`
+### `GameGroup(name, admin_password=None, **kwargs)`
 Representa un grupo de juegos en un servidor.
 
 *   **`name`** (`str`): El nombre del grupo.
+*   **`admin_password`** (`str`, opcional): Una contraseña para acciones administrativas en este grupo.
 *   **`**kwargs`**: Atributos adicionales para el grupo.
 
 #### Métodos
@@ -108,6 +109,22 @@ Una clase de cliente para que los administradores gestionen un `GameServer`.
 *   `set_logging_config(host, port)`: Configura el servidor para enviar sus registros a un servidor de registros remoto en la dirección y el puerto especificados.
 *   `get_cert_expiration()`: Devuelve la fecha de expiración del certificado TLS del servidor en formato ISO.
 *   `set_logging_enabled(enabled)`: Activa (`True`) ou desactiva (`False`) los registros en el servidor.
+
+---
+
+### `GroupAdmin(group_name, host='127.0.0.1', port=65432, group_admin_password=None, use_tls=False)`
+Una clase de cliente para que los administradores de grupo gestionen los juegos dentro de un `GameGroup` específico.
+
+*   **`group_name`** (`str`): El nombre del grupo a gestionar.
+*   **`host`** (`str`): La dirección IP del servidor.
+*   **`port`** (`int`): El puerto TCP del servidor.
+*   **`group_admin_password`** (`str`, opcional): La contraseña administrativa para este grupo.
+*   **`use_tls`** (`bool`, opcional): Si es `True`, el cliente se conectará mediante TLS. Por defecto es `False`.
+
+#### Métodos
+*   `list_games()`: Devuelve una lista de juegos pertenecientes a este grupo.
+*   `kick_player(game_id, player_name)`: Elimina a un jugador de un juego específico en el grupo.
+*   `kick_observer(game_id, observer_name)`: Elimina a un observador de un juego específico en el grupo.
 
 ---
 

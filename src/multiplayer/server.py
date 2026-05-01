@@ -10,7 +10,7 @@ import ssl
 import tempfile
 import os
 import logging
-from multiprocessing import Process
+from multiprocessing import get_context
 from datetime import datetime, timedelta, timezone
 from cryptography import x509
 from cryptography.x509.oid import NameOID
@@ -419,7 +419,9 @@ class GameServer:
                         except Exception as e:
                             print(f"Warning: Failed to create temporary full chain file: {e}. Using original certificate.")
 
-        self._server_process = Process(target=_run_server_process, args=(self.host, self.port, self.password, self.admin_password, self.use_tls, certfile, keyfile, self.logging_host, self.logging_port, self.logger_name, self.name))
+        # Use 'spawn' start method to avoid DeprecationWarning and potential deadlocks when forking from a multi-threaded process.
+        ctx = get_context('spawn')
+        self._server_process = ctx.Process(target=_run_server_process, args=(self.host, self.port, self.password, self.admin_password, self.use_tls, certfile, keyfile, self.logging_host, self.logging_port, self.logger_name, self.name))
         self._server_process.daemon = True
         self._server_process.start()
         self._stop_discovery.clear()

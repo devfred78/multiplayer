@@ -119,7 +119,7 @@ Une classe client pour les administrateurs pour gérer un `GameServer`.
 
 #### Méthodes
 *   `get_server_info()` : Retourne les infos du serveur (nom, nombre de parties, IDs actifs).
-*   `list_games()` : Liste toutes les parties actives.
+*   `list_games()` : Retourne un dictionnaire des parties actives sous forme d'objets `RemoteGame`, indexé par leur ID.
 *   `kick_player(game_id, player_id)` : Expulse un joueur d'une partie par son ID.
 *   `kick_observer(game_id, observer_id)` : Expulse un observateur d'une partie par son ID.
 *   `list_all_players()` : Liste tous les joueurs actuellement connectés au serveur, incluant l'ID et le nom de leur partie respective.
@@ -146,7 +146,7 @@ Une classe cliente pour que les administrateurs de groupe puissent gérer les pa
 *   **`use_tls`** (`bool`, optionnel) : Si `True`, le client se connectera en utilisant TLS. Par défaut à `False`.
 
 #### Méthodes
-*   `list_games()` : Retourne une liste des parties appartenant à ce groupe.
+*   `list_games()` : Retourne un dictionnaire des parties appartenant à ce groupe sous forme d'objets `RemoteGame`, indexé par leur ID.
 *   `kick_player(game_id, player_id)` : Supprime un joueur d'une partie spécifique du groupe par son ID.
 *   `kick_observer(game_id, observer_id)` : Supprime un observateur d'une partie spécifique du groupe par son ID.
 *   `set_group_admin_password(new_password)` : Définit un nouveau mot de passe administrateur pour ce groupe.
@@ -162,7 +162,7 @@ Le point d'entrée pour qu'un client se connecte à un `GameServer`.
 #### Méthodes
 *   `discover_servers(timeout=2)` (méthode statique) : Scanne le réseau local à la recherche d'instances de `GameServer`.
 *   `create_game(group_id=None, **game_options)` : Demande au serveur de créer une nouvelle partie. Retourne un objet proxy `RemoteGame`. Peut inclure un `group_id` pour associer la partie à un groupe.
-*   `list_games()` : Retourne un dictionnaire de toutes les parties actives (non terminées).
+*   `list_games()` : Retourne un dictionnaire des parties actives sous forme d'objets `RemoteGame`, indexé par leur ID.
 
 ---
 

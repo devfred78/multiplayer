@@ -179,8 +179,20 @@ class GameClient:
         return remote_game
 
     def list_games(self):
-        """Retrieves a list of available games from the server."""
-        return self._send_command('list_games')
+        """Retrieves a dictionary of active games as RemoteGame objects, indexed by ID."""
+        games_data = self._send_command('list_games')
+        
+        remote_games = {}
+        for gid in games_data:
+            remote_games[gid] = RemoteGame(gid, self.host, self.port, self.password, self.use_tls)
+            
+            # Propagate logging configuration if any
+            for h in self._logger.handlers:
+                if isinstance(h, SocketHandler):
+                    remote_games[gid].configure_logging(h.host, h.port)
+                    break
+                    
+        return remote_games
 
 class ServerAdmin:
     """
@@ -285,8 +297,20 @@ class GroupAdmin:
         self._logger = self._client._logger
 
     def list_games(self):
-        """Retrieves a list of games belonging to this group."""
-        return self._client._send_command('list_group_games', {'group_id': self.group_id})
+        """Retrieves a dictionary of games belonging to this group as RemoteGame objects, indexed by ID."""
+        games_data = self._client._send_command('list_group_games', {'group_id': self.group_id})
+        
+        remote_games = {}
+        for gid in games_data:
+            remote_games[gid] = RemoteGame(gid, self.host, self.port, self.group_admin_password, self.use_tls)
+            
+            # Propagate logging configuration if any
+            for h in self._logger.handlers:
+                if isinstance(h, SocketHandler):
+                    remote_games[gid].configure_logging(h.host, h.port)
+                    break
+                    
+        return remote_games
 
     def kick_player(self, game_id, player_id):
         """Kicks a player from a specific game in the group."""

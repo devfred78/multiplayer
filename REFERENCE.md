@@ -129,7 +129,7 @@ A client class for administrators to manage a `GameServer`.
 
 #### Methods
 *   `get_server_info()`: Returns information about the server (name, number of games, active game IDs).
-*   `list_games()`: Returns a list of all active games on the server.
+*   `list_games()`: Returns a dictionary of active games as `RemoteGame` objects, keyed by their ID.
 *   `kick_player(game_id, player_id)`: Removes a player from a specific game by their ID.
 *   `kick_observer(game_id, observer_id)`: Removes an observer from a specific game by their ID.
 *   `list_all_players()`: Returns a list of all players currently connected to the server, including their associated game ID and name.
@@ -156,7 +156,7 @@ A client class for group administrators to manage games within a specific `GameG
 *   **`use_tls`** (`bool`, optional): If `True`, the client will connect using TLS. Defaults to `False`.
 
 #### Methods
-*   `list_games()`: Returns a list of games belonging to this group.
+*   `list_games()`: Returns a dictionary of games belonging to this group as `RemoteGame` objects, keyed by their ID.
 *   `kick_player(game_id, player_id)`: Removes a player from a specific game in the group by their ID.
 *   `kick_observer(game_id, observer_id)`: Removes an observer from a specific game in the group by their ID.
 *   `set_group_admin_password(new_password)`: Sets a new administrator password for this group.
@@ -174,7 +174,7 @@ The main entry point for a client to connect to a `GameServer`.
 #### Methods
 *   `discover_servers(timeout=2)` (static method): Scans the local network for running `GameServer` instances. Returns a list of `(host, port)` tuples.
 *   `create_game(group_id=None, **game_options)`: Requests the server to create a new game. Returns a `RemoteGame` proxy object. Can include a `group_id` to associate the game with a group.
-*   `list_games()`: Returns a dictionary of all active (non-finished) games on the server.
+*   `list_games()`: Returns a dictionary of active games as `RemoteGame` objects, keyed by their ID.
 
 ---
 

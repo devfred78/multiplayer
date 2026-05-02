@@ -109,7 +109,7 @@ Una clase de cliente para que los administradores gestionen un `GameServer`.
 
 #### Métodos
 *   `get_server_info()`: Devuelve información sobre el servidor (nombre, número de juegos, IDs activos).
-*   `list_games()`: Devuelve una lista de todos los juegos activos.
+*   `list_games()`: Devuelve un diccionario de juegos activos como objetos `RemoteGame`, indexado por su ID.
 *   `kick_player(game_id, player_id)`: Elimina a un jugador de un juego específico por su ID.
 *   `kick_observer(game_id, observer_id)`: Elimina a un observador de un juego específico por su ID.
 *   `list_all_players()`: Devuelve una lista de todos los jugadores conectados actualmente al servidor, incluyendo su ID y nombre de juego asociados.
@@ -136,7 +136,7 @@ Una clase de cliente para que los administradores de grupo gestionen los juegos 
 *   **`use_tls`** (`bool`, opcional): Si es `True`, el cliente se conectará mediante TLS. Por defecto es `False`.
 
 #### Métodos
-*   `list_games()`: Devuelve una lista de juegos pertenecientes a este grupo.
+*   `list_games()`: Devuelve un diccionario de juegos pertenecientes a este grupo como objetos `RemoteGame`, indexado por su ID.
 *   `kick_player(game_id, player_id)`: Elimina a un jugador de un juego específico en el grupo por su ID.
 *   `kick_observer(game_id, observer_id)`: Elimina a un observador de un juego específico en el grupo por su ID.
 *   `set_group_admin_password(new_password)`: Establece una nueva contraseña de administrador para este grupo.
@@ -152,7 +152,7 @@ El punto de entrada principal para que un cliente se conecte a un `GameServer`.
 #### Métodos
 *   `discover_servers(timeout=2)` (método estático): Escanea la red local en busca de instancias de `GameServer`.
 *   `create_game(group_id=None, **game_options)`: Solicita al servidor que cree una nueva partida. Devuelve un objeto proxy `RemoteGame`. Puede incluir un `group_id` para asociar la partida a un grupo.
-*   `list_games()`: Devuelve un diccionario de todas las partidas activas (no finalizadas) en el servidor.
+*   `list_games()`: Devuelve un diccionario de juegos activos como objetos `RemoteGame`, indexado por su ID.
 
 ---
 

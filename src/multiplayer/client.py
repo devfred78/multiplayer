@@ -250,6 +250,18 @@ class ServerAdmin:
             self._client.password = new_password
         return result
 
+    def create_group(self, name, admin_password=None, **attributes):
+        """Creates a new game group on the server."""
+        return self._client._send_command('create_group', {'name': name, 'admin_password': admin_password, 'attributes': attributes})
+
+    def delete_group(self, group_name):
+        """Deletes a game group from the server."""
+        return self._client._send_command('delete_group', {'group_name': group_name})
+
+    def list_groups(self):
+        """Retrieves a list of all game groups on the server."""
+        return self._client._send_command('list_groups')
+
 class GroupAdmin:
     """
     A client class for group administrators to manage games within a specific GameGroup.

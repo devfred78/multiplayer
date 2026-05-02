@@ -120,6 +120,9 @@ Una clase de cliente para que los administradores gestionen un `GameServer`.
 *   `set_logging_enabled(enabled)`: Activa (`True`) ou desactiva (`False`) los registros en el servidor.
 *   `set_server_password(new_password)`: Establece una nueva contraseña para el servidor.
 *   `set_admin_password(new_password)`: Establece una nueva contraseña de administrador para el servidor.
+*   `create_group(name, admin_password=None, **attributes)`: Crea un nuevo grupo de juegos en el servidor.
+*   `delete_group(group_name)`: Elimina un grupo de juegos del servidor.
+*   `list_groups()`: Devuelve un diccionario de todos los grupos de juegos en el servidor.
 
 ---
 

@@ -158,7 +158,7 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                 admin_password = server_passwords.get('admin')
 
                 # Check if it's an admin action
-                is_server_admin_action = action in ['stop_server', 'restart_server', 'get_server_info', 'set_logging_config', 'set_logging_enabled', 'list_all_players', 'get_cert_expiration', 'set_server_password', 'set_admin_password', 'create_group']
+                is_server_admin_action = action in ['stop_server', 'restart_server', 'get_server_info', 'set_logging_config', 'set_logging_enabled', 'list_all_players', 'get_cert_expiration', 'set_server_password', 'set_admin_password', 'create_group', 'delete_group', 'list_groups']
                 is_group_admin_action = action in ['list_group_games', 'kick_player', 'kick_observer', 'set_group_admin_password']
                 
                 # If it's a kick action, it could be server admin OR group admin
@@ -223,9 +223,30 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             group_name = params.get('name')
             if not group_name:
                 return {'status': 'error', 'message': 'Missing group name'}
+            if group_name in groups:
+                return {'status': 'error', 'message': f'Group {group_name} already exists'}
             admin_password = params.get('admin_password')
             groups[group_name] = GameGroup(group_name, admin_password=admin_password, **params.get('attributes', {}))
             return {'status': 'success'}
+
+        elif action == 'delete_group':
+            group_name = params.get('group_name')
+            if not group_name:
+                return {'status': 'error', 'message': 'Missing group name'}
+            if group_name not in groups:
+                return {'status': 'error', 'message': f'Group {group_name} not found'}
+            del groups[group_name]
+            return {'status': 'success', 'message': f'Group {group_name} deleted'}
+
+        elif action == 'list_groups':
+            group_list = {}
+            for name, group in groups.items():
+                group_list[name] = {
+                    'name': group.name,
+                    'attributes': group.attributes,
+                    'games_count': len(group.games)
+                }
+            return {'status': 'success', 'data': group_list}
 
         elif action == 'set_server_password':
             new_password = params.get('new_password')

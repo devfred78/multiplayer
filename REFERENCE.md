@@ -140,6 +140,9 @@ A client class for administrators to manage a `GameServer`.
 *   `set_logging_enabled(enabled)`: Enables (`True`) or disables (`False`) logging on the server.
 *   `set_server_password(new_password)`: Sets a new password for the server.
 *   `set_admin_password(new_password)`: Sets a new administrator password for the server.
+*   `create_group(name, admin_password=None, **attributes)`: Creates a new game group on the server.
+*   `delete_group(group_name)`: Deletes a game group from the server.
+*   `list_groups()`: Returns a dictionary of all game groups on the server.
 
 ---
 

@@ -6,20 +6,21 @@ Este documento proporciona una referencia detallada de la API pública del módu
 
 ## Clases Principales
 
-### `Game(name=None, max_players=None, turn_based=False, password=None, max_observers=None, **kwargs)`
+### `Game(name=None, max_players=None, turn_based=False, password=None, observer_password=None, max_observers=None, **kwargs)`
 Representa una única sesión de juego.
 
 *   **`name`** (`str`, opcional): El nombre de la sesión de juego. Por defecto es `None`.
 *   **`max_players`** (`int`, opcional): El número máximo de jugadores.
 *   **`max_observers`** (`int`, opcional): El número máximo de observadores.
 *   **`turn_based`** (`bool`, opcional): `True` si el juego es por turnos.
-*   **`password`** (`str`, opcional): Una contraseña para proteger esta partida.
+*   **`password`** (`str`, opcional): Una contraseña para proteger esta partida (se usa para los jugadores, y para los observadores si no se define `observer_password`).
+*   **`observer_password`** (`str`, opcional): Una contraseña específicamente para los observadores de esta partida.
 *   **`**kwargs`**: Atributos personalizados para la partida (ej: `difficulty="hard"`).
 
 #### Métodos
-*   `add_player(player, password=None)`: Añade un objeto `Player` a la partida.
+*   `add_player(player, password=None)`: Añade un objeto `Player` a la partida. La contraseña es obligatoria si la partida está protegida.
 *   `remove_player(player_name)`: Elimina un jugador de la partida por su nombre.
-*   `add_observer(observer)`: Añade un objeto `Observer` a la partida.
+*   `add_observer(observer, password=None)`: Añade un objeto `Observer` a la partida. La contraseña es obligatoria si se define `observer_password` (o `password`).
 *   `remove_observer(observer_name)`: Elimina un observador de la partida por su nombre.
 *   `start()`: Inicia la partida.
 
@@ -148,8 +149,8 @@ El punto de entrada principal para que un cliente se conecte a un `GameServer`.
 Un objeto proxy que representa una partida en el servidor.
 
 #### Métodos
-*   `add_player(player, password=None)`: Añade un `Player` a la partida remota.
-*   `add_observer(observer)`: Añade un `Observer` a la partida remota.
+*   `add_player(player, password=None)`: Añade un `Player` a la partida remota. La contraseña es obligatoria si la partida está protegida.
+*   `add_observer(observer, password=None)`: Añade un `Observer` a la partida remota. La contraseña es obligatoria si se ha definido `observer_password` (o `password`) para la partida.
 *   `set_state(new_state)`: Sobrescribe el diccionario `custom_state` de la partida en el servidor.
 
 #### Propiedades

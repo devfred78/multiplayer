@@ -8,20 +8,21 @@ This document provides a detailed reference for the public API of the `multiplay
 
 These classes are used for managing game logic, whether locally or on the server.
 
-### `Game(name=None, max_players=None, turn_based=False, password=None, max_observers=None, **kwargs)`
+### `Game(name=None, max_players=None, turn_based=False, password=None, observer_password=None, max_observers=None, **kwargs)`
 Represents a single game session.
 
 *   **`name`** (`str`, optional): The name of the game session. Defaults to `None`.
 *   **`max_players`** (`int`, optional): The maximum number of players that can join. Defaults to `None` (unlimited).
 *   **`max_observers`** (`int`, optional): The maximum number of observers that can join. Defaults to `None` (unlimited).
 *   **`turn_based`** (`bool`, optional): `True` if the game is turn-based, `False` for simultaneous play. Defaults to `False`.
-*   **`password`** (`str`, optional): A password to protect this specific game.
+*   **`password`** (`str`, optional): A password to protect this specific game (used for players, and for observers if `observer_password` is not set).
+*   **`observer_password`** (`str`, optional): A password specifically for observers to join this game.
 *   **`**kwargs`**: Custom attributes for the game (e.g., `difficulty="hard"`).
 
 #### Methods
 *   `add_player(player, password=None)`: Adds a `Player` object to the game. The `password` is required if the game is password-protected.
 *   `remove_player(player_name)`: Removes a player from the game by their name.
-*   `add_observer(observer)`: Adds an `Observer` object to the game.
+*   `add_observer(observer, password=None)`: Adds an `Observer` object to the game. The `password` is required if `observer_password` (or `password`) is set.
 *   `remove_observer(observer_name)`: Removes an observer from the game by their name.
 *   `start()`: Starts the game.
 *   `pause()`: Pauses the game.
@@ -177,7 +178,7 @@ A proxy object representing a game running on the server.
 
 #### Methods
 *   `add_player(player, password=None)`: Adds a `Player` to the remote game. The `password` is required if the game is password-protected.
-*   `add_observer(observer)`: Adds an `Observer` to the remote game.
+*   `add_observer(observer, password=None)`: Adds an `Observer` to the remote game. The `password` is required if `observer_password` (or `password`) is set for the game.
 *   `set_state(new_state)`: Overwrites the game's `custom_state` dictionary on the server.
 *   (Other methods are the same as the local `Game` class.)
 

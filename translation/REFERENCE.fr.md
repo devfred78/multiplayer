@@ -6,20 +6,21 @@ Ce document fournit une référence détaillée de l'API publique du module `mul
 
 ## Classes Principales
 
-### `Game(name=None, max_players=None, turn_based=False, password=None, max_observers=None, **kwargs)`
+### `Game(name=None, max_players=None, turn_based=False, password=None, observer_password=None, max_observers=None, **kwargs)`
 Représente une session de jeu unique.
 
 *   **`name`** (`str`, optionnel) : Le nom de la session de jeu. Par défaut `None`.
 *   **`max_players`** (`int`, optionnel) : Le nombre maximum de joueurs.
 *   **`max_observers`** (`int`, optionnel) : Le nombre maximum d'observateurs.
 *   **`turn_based`** (`bool`, optionnel) : `True` si le jeu est au tour par tour.
-*   **`password`** (`str`, optionnel) : Un mot de passe pour protéger cette partie.
+*   **`password`** (`str`, optionnel) : Un mot de passe pour protéger cette partie (utilisé pour les joueurs, et pour les observateurs si `observer_password` n'est pas défini).
+*   **`observer_password`** (`str`, optionnel) : Un mot de passe spécifiquement pour les observateurs de cette partie.
 *   **`**kwargs`** : Attributs personnalisés pour la partie (ex: `difficulty="hard"`).
 
 #### Méthodes
-*   `add_player(player, password=None)` : Ajoute un objet `Player` à la partie.
+*   `add_player(player, password=None)` : Ajoute un objet `Player` à la partie. Le mot de passe est requis si la partie est protégée.
 *   `remove_player(player_name)` : Retire un joueur de la partie par son nom.
-*   `add_observer(observer)` : Ajoute un objet `Observer` à la partie.
+*   `add_observer(observer, password=None)` : Ajoute un objet `Observer` à la partie. Le mot de passe est requis si `observer_password` (ou `password`) est défini.
 *   `remove_observer(observer_name)` : Retire un observateur de la partie par son nom.
 *   `start()` : Démarre la partie.
 *   `pause()` : Met la partie en pause.
@@ -158,8 +159,8 @@ Le point d'entrée pour qu'un client se connecte à un `GameServer`.
 Un objet proxy représentant une partie exécutée sur le serveur.
 
 #### Méthodes
-*   `add_player(player, password=None)` : Ajoute un `Player` à la partie distante.
-*   `add_observer(observer)` : Ajoute un `Observer` à la partie distante.
+*   `add_player(player, password=None)` : Ajoute un `Player` à la partie distante. Le mot de passe est requis si la partie est protégée.
+*   `add_observer(observer, password=None)` : Ajoute un `Observer` à la partie distante. Le mot de passe est requis si `observer_password` (ou `password`) est défini pour la partie.
 *   `set_state(new_state)` : Écrase le dictionnaire `custom_state` de la partie sur le serveur.
 
 #### Propriétés

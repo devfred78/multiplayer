@@ -350,11 +350,11 @@ class RemoteGame:
 
         Args:
             observer (Observer): The observer to add.
-            password (str, optional): The password for this specific game.
+            password (str, optional): The password for observers of this game.
         """
         params = {
             'observer': {'name': observer.name, 'attributes': observer.attributes},
-            'game_password': password,
+            'observer_password': password,
         }
         self._send_command('add_observer', params)
 

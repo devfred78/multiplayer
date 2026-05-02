@@ -84,12 +84,13 @@ class Game:
         password (str, optional): A password to protect this specific game.
         **kwargs: Additional attributes for the game.
     """
-    def __init__(self, name=None, max_players=None, max_observers=None, turn_based=False, password=None, **kwargs):
+    def __init__(self, name=None, max_players=None, max_observers=None, turn_based=False, password=None, observer_password=None, **kwargs):
         self.name = name
         self.max_players = max_players
         self.max_observers = max_observers
         self.turn_based = turn_based
         self.password = password
+        self.observer_password = observer_password
         self.attributes = kwargs
         self.players = []
         self.observers = []
@@ -121,13 +122,14 @@ class Game:
 
         Args:
             observer (Observer): The observer to add.
-            password (str, optional): The password required to join the game.
+            password (str, optional): The password required to join the game as an observer.
 
         Raises:
-            AuthenticationError: If the provided password does not match the game's password.
+            AuthenticationError: If the provided password does not match the observer password (or game password if no observer password is set).
             ObserverLimitReachedError: If the maximum number of observers has been reached.
         """
-        if self.password is not None and self.password != password:
+        required_password = self.observer_password if self.observer_password is not None else self.password
+        if required_password is not None and required_password != password:
             raise AuthenticationError("Invalid password for this game")
         if self.max_observers is not None and len(self.observers) >= self.max_observers:
             raise ObserverLimitReachedError("Maximum number of observers reached")

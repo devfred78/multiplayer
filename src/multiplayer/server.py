@@ -364,8 +364,8 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
         elif action == 'add_observer':
             observer_data = params['observer']
             observer = Observer(observer_data['name'], **observer_data.get('attributes', {}))
-            game_password = params.get('game_password')
-            game.add_observer(observer, password=game_password)
+            observer_password = params.get('observer_password')
+            game.add_observer(observer, password=observer_password)
             return {'status': 'success'}
         
         elif action == 'start':

@@ -284,4 +284,6 @@ Suggests a random name for a player.
 *   **`NetworkError`**: Base exception for network-related issues.
 *   **`ConnectionError`**: Raised when a client fails to connect to the server.
 *   **`ServerError`**: Raised for generic errors reported by the server.
-*   **`AuthenticationError`**: Raised for both server and game password authentication failu
+*   **`AuthenticationError`**: Raised for both server and game password authentication failures.
+*   **`GroupNotFoundError`**: Raised when a group `id` is not found on the server.
+*   **`AccessDeniedError`**: Raised when an administrative action is attempted with incorrect or missing credentials.

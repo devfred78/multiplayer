@@ -73,6 +73,9 @@ game2 = Game("Match 2")
 group.add_game(game1)
 group.add_game(game2)
 
+print(f"ID del Match 1: {game1.ID}")
+# > ID del Match 1: 550e8400-e29b-41d4-a716-446655440000
+
 print(f"El grupo '{group.name}' tiene {len(group.games)} juegos.")
 # > El grupo 'Torneo A' tiene 2 juegos.
 ```
@@ -201,8 +204,14 @@ else:
         name=suggest_game_name(),
         password="mi_contraseña_de_partida"
     )
+    print(f"Partida creada con ID: {private_game.ID}")
 
-    # 3. Un jugador se une y establece el estado inicial
+    # 3. Crear y usar un grupo de juegos
+    group = client.create_group("Torneo A")
+    game_in_group = group.create_game(name="Match Final")
+    print(f"La partida en el grupo '{group.name}' tiene el ID: {game_in_group.ID}")
+
+    # 4. Un jugador se une y establece el estado inicial
     private_game.add_player(Player("Charlie"), password="mi_contraseña_de_partida")
     private_game.set_state({"score": 0})
     private_game.start()

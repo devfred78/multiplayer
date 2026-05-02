@@ -1,13 +1,13 @@
 import pytest
 import time
-from multiplayer import GameServer, GameClient, GameAdmin, Player, AuthenticationError
+from multiplayer import GameServer, GameClient, ServerAdmin, Player, AuthenticationError
 
 def test_admin_authentication_success():
     server = GameServer(port=65440, admin_password="admin_secret")
     server.start()
     time.sleep(1)
     try:
-        admin = GameAdmin(port=65440, admin_password="admin_secret")
+        admin = ServerAdmin(port=65440, admin_password="admin_secret")
         info = admin.get_server_info()
         assert 'games_count' in info
     finally:
@@ -18,7 +18,7 @@ def test_admin_authentication_failure():
     server.start()
     time.sleep(1)
     try:
-        admin = GameAdmin(port=65441, admin_password="wrong_password")
+        admin = ServerAdmin(port=65441, admin_password="wrong_password")
         with pytest.raises(AuthenticationError):
             admin.get_server_info()
     finally:
@@ -31,12 +31,18 @@ def test_admin_kick_player():
     try:
         client = GameClient(port=65442)
         remote_game = client.create_game(name="KickTest")
-        remote_game.add_player(Player("Victim"))
+        victim = Player("Victim")
+        remote_game.add_player(victim)
+        
+        # We need to get the actual ID assigned by the server (if it changed)
+        # but here we are using RemoteGame.players which returns fresh objects.
+        # Let's get the ID from the players list.
+        victim_id = remote_game.players[0].ID
         
         assert len(remote_game.players) == 1
         
-        admin = GameAdmin(port=65442, admin_password="admin_secret")
-        admin.kick_player(remote_game.game_id, "Victim")
+        admin = ServerAdmin(port=65442, admin_password="admin_secret")
+        admin.kick_player(remote_game.game_id, victim_id)
         
         assert len(remote_game.players) == 0
     finally:
@@ -47,7 +53,7 @@ def test_admin_stop_server():
     server.start()
     time.sleep(1)
     
-    admin = GameAdmin(port=65443, admin_password="admin_secret")
+    admin = ServerAdmin(port=65443, admin_password="admin_secret")
     admin.stop_server()
     
     time.sleep(1)
@@ -63,7 +69,7 @@ def test_admin_restart_server():
         client = GameClient(port=65444)
         client.create_game(name="GameToClear")
         
-        admin = GameAdmin(port=65444, admin_password="admin_secret")
+        admin = ServerAdmin(port=65444, admin_password="admin_secret")
         info = admin.get_server_info()
         assert info['games_count'] == 1
         
@@ -91,7 +97,7 @@ def test_admin_list_all_players():
         g2 = client.create_game(name="Game2")
         g2.add_player(Player("Charlie"))
         
-        admin = GameAdmin(port=65446, admin_password="admin_secret")
+        admin = ServerAdmin(port=65446, admin_password="admin_secret")
         players_info = admin.list_all_players()
         
         assert len(players_info) == 3
@@ -117,7 +123,7 @@ def test_admin_get_cert_expiration():
     server.start()
     time.sleep(1)
     try:
-        admin = GameAdmin(port=65447, admin_password="admin_secret", use_tls=True)
+        admin = ServerAdmin(port=65447, admin_password="admin_secret", use_tls=True)
         expiration = admin.get_cert_expiration()
         assert expiration is not None
         # Should be a date string, e.g., "2027-04-26 12:00:00"

@@ -17,7 +17,7 @@ Para una descripción técnica detallada de todas las clases y funciones, consul
 *   **Local y en Red:** Úsalo en un solo proceso o en una arquitectura cliente-servidor.
 *   **Estado de Juego Combinado:** Un sistema flexible para sincronizar tanto el estado principal del jeu (ej: `in_progress`) como datos de juego personalizados.
 *   **Soporte de Observadores:** Capacidad de añadir observadores que pueden ver el estado del juego sin participar como jugadores.
-*   **Rol de Administrador:** Nueva clase `GameAdmin` para gestionar el servidor, expulsar jugadores/observadores y supervisar el estado del servidor.
+*   **Rol de Administrador:** Nueva clase `ServerAdmin` para gestionar el servidor, expulsar jugadores/observadores y supervisar el estado del servidor.
 *   **Agrupación de Juegos:** Organiza varias sesiones de juego dentro del mismo servidor utilizando la clase `GameGroup`.
 *   **Seguridad Multinivel:** Soporta contraseñas de servidor, administrador y por partida, con cifrado opcional TLS v1.3. Los administradores pueden actualizar las contraseñas dinámicamente.
 *   **Descubrimiento Automático de Servidores:** Los clientes pueden encontrar automáticamente servidores en funcionamiento en la red local.
@@ -152,11 +152,12 @@ docker run -d \
 El servidor buscará automáticamente los archivos `cert.pem`, `RSA-cert.pem` o `ECC-cert.pem` (y sus correspondientes claves) en el directorio `/app/certs`.
 
 #### Uso para el Administrador
+
 ```python
-from multiplayer import GameAdmin
+from multiplayer import ServerAdmin
 
 # Conectarse comme administrador
-admin = GameAdmin(
+admin = ServerAdmin(
     host='localhost',
     port=12345,
     admin_password="mi_contraseña_de_admin",
@@ -172,7 +173,7 @@ expiration = admin.get_cert_expiration()
 print(f"El certificado expira el: {expiration}")
 
 # Expulsar a un jugador si es necesario
-# admin.kick_player(game_id, "nombre_del_jugador")
+# admin.kick_player(game_id, player_id)
 
 # Detener el servidor de forma remota
 # admin.stop_server()

@@ -179,7 +179,7 @@ class GameClient:
         """Retrieves a list of available games from the server."""
         return self._send_command('list_games')
 
-class GameAdmin:
+class ServerAdmin:
     """
     A client class for administrators to connect to and manage a GameServer.
     """
@@ -189,12 +189,12 @@ class GameAdmin:
         self.admin_password = admin_password
         self.use_tls = use_tls
         self._client = GameClient(host, port, admin_password, use_tls)
-        self._logger = logging.getLogger("GameAdmin")
+        self._logger = logging.getLogger("ServerAdmin")
         self._logger.setLevel(logging.INFO)
 
     def configure_logging(self, host, port):
         """Configures the admin client to send logs to a logging server."""
-        self._client.configure_logging(host, port, "GameAdmin")
+        self._client.configure_logging(host, port, "ServerAdmin")
         self._logger = self._client._logger
 
     def stop_server(self):
@@ -397,13 +397,13 @@ class RemoteGame:
     def players(self):
         """Gets the list of players in the remote game."""
         data = self._send_command('get_players')
-        return [Player(p['name'], **p['attributes']) for p in data]
+        return [Player(p['name'], id=p['id'], **p['attributes']) for p in data]
 
     @property
     def observers(self):
         """Gets the list of observers in the remote game."""
         data = self._send_command('get_observers')
-        return [Observer(o['name'], **o['attributes']) for o in data]
+        return [Observer(o['name'], id=o['id'], **o['attributes']) for o in data]
 
     def set_state(self, state):
         """Sets the state of the remote game."""

@@ -17,7 +17,7 @@ For a detailed technical description of all classes and functions, see the [API 
 *   **Local & Networked:** Use in a single process or in a client-server architecture.
 *   **Combined Game State:** A flexible system for synchronizing both the core game status (e.g., `in_progress`) and any custom game data.
 *   **Observer Support:** Ability to add observers who can view the game state without participating as players.
-*   **Administrator Role:** New `GameAdmin` class to manage the server, kick players/observers, and monitor server status.
+*   **Administrator Role:** New `ServerAdmin` class to manage the server, kick players/observers, and monitor server status.
 *   **Game Grouping:** Organize several game sessions within the same server using the `GameGroup` class.
 *   **Multi-Layered Security:** Supports server passwords, admin passwords, and per-game passwords, with optional TLS v1.3 encryption. Passwords can be updated dynamically by administrators.
 *   **Automatic Server Discovery:** Clients can automatically find running servers on the local network.
@@ -152,11 +152,12 @@ docker run -d \
 The server will automatically look for `cert.pem`, `RSA-cert.pem`, or `ECC-cert.pem` (and their corresponding keys) in the `/app/certs` directory.
 
 #### Administrator Usage
+
 ```python
-from multiplayer import GameAdmin
+from multiplayer import ServerAdmin
 
 # Connect as administrator
-admin = GameAdmin(
+admin = ServerAdmin(
     host='localhost',
     port=12345,
     admin_password="my_admin_password",
@@ -172,7 +173,7 @@ expiration = admin.get_cert_expiration()
 print(f"Certificate expires on: {expiration}")
 
 # Kick a player if necessary
-# admin.kick_player(game_id, "player_name")
+# admin.kick_player(game_id, player_id)
 
 # Stop the server remotely
 # admin.stop_server()

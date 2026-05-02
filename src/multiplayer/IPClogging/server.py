@@ -37,7 +37,7 @@ class OriginColoredFormatter(ColoredFormatter):
         self.origin_colors = {
             "GameServer": "purple",
             "GameClient": "green",
-            "GameAdmin": "red",
+            "ServerAdmin": "red",
             "RemoteGame": "blue",
             "Observer": "cyan",
         }

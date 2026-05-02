@@ -101,7 +101,7 @@ Gestiona las sesiones de juego y las peticiones de red.
 
 ---
 
-### `GameAdmin(host='127.0.0.1', port=65432, admin_password=None, use_tls=False)`
+### `ServerAdmin(host='127.0.0.1', port=65432, admin_password=None, use_tls=False)`
 Una clase de cliente para que los administradores gestionen un `GameServer`.
 
 *   **`admin_password`** (`str`, opcional): La contraseña de administrador para el servidor.
@@ -175,7 +175,7 @@ Inicia el servidor de registros autónomo.
 *   **`--port`** (`int`, opcional): El puerto TCP en el que escuchar. Por defecto es `5000`.
 *   **`--color-mode`** (`str`, opcional): El modo de coloración para los registros. Las opciones son:
     *   `level`: Colorea los registros según su criticidad (ej. INFO es verde, ERROR es rojo). Este es el modo predeterminado.
-    *   `origin`: Colorea los registros según el nombre del registrador (ej. `GameServer`, `GameClient`, `GameAdmin`, etc.). Esto ayuda a diferenciar los mensajes de diferentes fuentes.
+    *   `origin`: Colorea los registros según el nombre del registrador (ej. `GameServer`, `GameClient`, `ServerAdmin`, etc.). Esto ayuda a diferenciar los mensajes de diferentes fuentes.
 
 ## Servidor de Juegos Autónomo
 

@@ -1,6 +1,6 @@
 import time
 from multiplayer.server import GameServer
-from multiplayer.client import GameAdmin
+from multiplayer.client import ServerAdmin
 
 def test_admin_set_logging_config():
     """Tests that the administrator can set the logging configuration."""
@@ -12,7 +12,7 @@ def test_admin_set_logging_config():
     time.sleep(1)
     
     try:
-        admin = GameAdmin(port=65440, admin_password=admin_password)
+        admin = ServerAdmin(port=65440, admin_password=admin_password)
         
         # Set logging config
         logging_host = "127.0.0.1"
@@ -40,7 +40,7 @@ def test_admin_set_logging_config_init():
     
     try:
         # Check if server is running
-        admin = GameAdmin(port=65441, admin_password=admin_password)
+        admin = ServerAdmin(port=65441, admin_password=admin_password)
         info = admin.get_server_info()
         # get_server_info returns data, so if it succeeded, we got a dict with 'games_count'
         assert 'games_count' in info

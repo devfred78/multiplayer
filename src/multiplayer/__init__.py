@@ -3,7 +3,7 @@ This package provides classes for managing a multiplayer game, both locally and 
 """
 from .game import Game, Player, Observer, GameState, GameGroup
 from .server import GameServer
-from .client import GameClient, RemoteGame, GameAdmin, GroupAdmin
+from .client import GameClient, RemoteGame, ServerAdmin, GroupAdmin
 
 from .utils import (
     suggest_game_name,
@@ -33,7 +33,7 @@ __all__ = [
     'GameServer',
     'GameClient',
     'RemoteGame',
-    'GameAdmin',
+    'ServerAdmin',
     'GroupAdmin',
     'suggest_game_name',
     'suggest_player_name',

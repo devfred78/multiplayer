@@ -111,7 +111,7 @@ Gère les sessions de jeu et les requêtes réseau.
 
 ---
 
-### `GameAdmin(host='127.0.0.1', port=65432, admin_password=None, use_tls=False)`
+### `ServerAdmin(host='127.0.0.1', port=65432, admin_password=None, use_tls=False)`
 Une classe client pour les administrateurs pour gérer un `GameServer`.
 
 *   **`admin_password`** (`str`, optionnel) : Le mot de passe administrateur du serveur.
@@ -185,7 +185,7 @@ Démarre le serveur de logging autonome.
 *   **`--port`** (`int`, optionnel) : Le port TCP sur lequel écouter. Par défaut `5000`.
 *   **`--color-mode`** (`str`, optionnel) : Le mode de coloration des logs. Les options sont :
     *   `level` : Colore les logs en fonction de leur criticité (ex: INFO est vert, ERROR est rouge). C'est le mode par défaut.
-    *   `origin` : Colore les logs en fonction du nom du logger (ex: `GameServer`, `GameClient`, `GameAdmin`, etc.). Cela aide à différencier les messages provenant de différentes sources.
+    *   `origin` : Colore les logs en fonction du nom du logger (ex: `GameServer`, `GameClient`, `ServerAdmin`, etc.). Cela aide à différencier les messages provenant de différentes sources.
 
 ## Serveur de Jeu Autonome
 

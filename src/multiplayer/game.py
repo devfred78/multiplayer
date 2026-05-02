@@ -20,12 +20,13 @@ class Player:
 
     Args:
         name (str): The name of the player.
+        id (str, optional): The player's ID.
         **kwargs: Additional attributes for the player.
     """
-    def __init__(self, name, **kwargs):
+    def __init__(self, name, id=None, **kwargs):
         self.name = name
         self.attributes = kwargs
-        self._id = str(uuid.uuid4())
+        self._id = id or str(uuid.uuid4())
 
     @property
     def ID(self):
@@ -84,12 +85,13 @@ class Observer:
 
     Args:
         name (str): The name of the observer.
+        id (str, optional): The observer's ID.
         **kwargs: Additional attributes for the observer.
     """
-    def __init__(self, name, **kwargs):
+    def __init__(self, name, id=None, **kwargs):
         self.name = name
         self.attributes = kwargs
-        self._id = str(uuid.uuid4())
+        self._id = id or str(uuid.uuid4())
 
     @property
     def ID(self):

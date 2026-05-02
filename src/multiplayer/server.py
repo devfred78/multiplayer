@@ -399,11 +399,11 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             return {'status': 'success', 'data': {'status': game.state, 'custom': game.custom_state}}
         
         elif action == 'get_players':
-            player_list = [{'name': p.name, 'attributes': p.attributes} for p in game.players]
+            player_list = [{'id': p.ID, 'name': p.name, 'attributes': p.attributes} for p in game.players]
             return {'status': 'success', 'data': player_list}
         
         elif action == 'get_observers':
-            observer_list = [{'name': o.name, 'attributes': o.attributes} for o in game.observers]
+            observer_list = [{'id': o.ID, 'name': o.name, 'attributes': o.attributes} for o in game.observers]
             return {'status': 'success', 'data': observer_list}
         
         elif action == 'set_game_state':

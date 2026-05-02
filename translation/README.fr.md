@@ -17,7 +17,7 @@ Pour une description technique détaillée de toutes les classes et fonctions, c
 *   **Local et Réseau :** Utilisez-le dans un seul processus ou dans une architecture client-serveur.
 *   **État de Jeu Combiné :** Un système flexible pour synchroniser à la fois le statut de base du jeu (ex: `in_progress`) et des données de jeu personnalisées.
 *   **Support des Observateurs :** Possibilité d'ajouter des observateurs qui peuvent voir l'état du jeu sans y participer en tant que joueurs.
-*   **Rôle d'Administrateur :** Nouvelle classe `GameAdmin` pour gérer le serveur, expulser des joueurs/observateurs et surveiller l'état du serveur.
+*   **Rôle d'Administrateur :** Nouvelle classe `ServerAdmin` pour gérer le serveur, expulser des joueurs/observateurs et surveiller l'état du serveur.
 *   **Groupement de Parties :** Organisez plusieurs sessions de jeu au sein du même serveur grâce à la classe `GameGroup`.
 *   **Sécurité à Plusieurs Niveaux :** Supporte les mots de passe serveur, administrateur et par partie, avec un chiffrement TLS v1.3 optionnel. Les mots de passe peuvent être mis à jour dynamiquement par les administrateurs.
 *   **Découverte Automatique de Serveurs :** Les clients peuvent trouver automatiquement les serveurs en cours d'exécution sur le réseau local.
@@ -152,11 +152,12 @@ docker run -d \
 Le serveur cherchera automatiquement les fichiers `cert.pem`, `RSA-cert.pem` ou `ECC-cert.pem` (et leurs clés correspondantes) dans le répertoire `/app/certs`.
 
 #### Utilisation Administrateur
+
 ```python
-from multiplayer import GameAdmin
+from multiplayer import ServerAdmin
 
 # Se connecter en tant qu'administrateur
-admin = GameAdmin(
+admin = ServerAdmin(
     host='localhost',
     port=12345,
     admin_password="mon_mot_de_passe_admin",
@@ -172,7 +173,7 @@ expiration = admin.get_cert_expiration()
 print(f"Le certificat expire le : {expiration}")
 
 # Expulser un joueur si nécessaire
-# admin.kick_player(game_id, "nom_du_joueur")
+# admin.kick_player(game_id, player_id)
 
 # Arrêter le serveur à distance
 # admin.stop_server()

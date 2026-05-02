@@ -194,6 +194,35 @@ class GameClient:
                     
         return remote_games
 
+    def create_group(self, name, admin_password=None, **attributes):
+        """Requests the server to create a new game group and returns a proxy to it."""
+        data = self._send_command('create_group', {'name': name, 'admin_password': admin_password, 'attributes': attributes})
+        remote_group = RemoteGroup(data['group_id'], self.host, self.port, self.password, self.use_tls)
+        
+        # Propagate logging configuration if any
+        for h in self._logger.handlers:
+            if isinstance(h, SocketHandler):
+                remote_group.configure_logging(h.host, h.port)
+                break
+                
+        return remote_group
+
+    def list_groups(self):
+        """Retrieves a dictionary of game groups as RemoteGroup objects, indexed by ID."""
+        groups_data = self._send_command('list_groups')
+        
+        remote_groups = {}
+        for gid in groups_data:
+            remote_groups[gid] = RemoteGroup(gid, self.host, self.port, self.password, self.use_tls)
+            
+            # Propagate logging configuration if any
+            for h in self._logger.handlers:
+                if isinstance(h, SocketHandler):
+                    remote_groups[gid].configure_logging(h.host, h.port)
+                    break
+                    
+        return remote_groups
+
 class ServerAdmin:
     """
     A client class for administrators to connect to and manage a GameServer.
@@ -267,15 +296,15 @@ class ServerAdmin:
 
     def create_group(self, name, admin_password=None, **attributes):
         """Creates a new game group on the server."""
-        return self._client._send_command('create_group', {'name': name, 'admin_password': admin_password, 'attributes': attributes})
+        return self._client.create_group(name, admin_password, **attributes)
 
     def remove_group(self, group_id):
         """Removes a game group from the server by its ID."""
         return self._client._send_command('remove_group', {'group_id': group_id})
 
     def list_groups(self):
-        """Retrieves a list of all game groups on the server."""
-        return self._client._send_command('list_groups')
+        """Retrieves a list of all game groups on the server as RemoteGroup objects."""
+        return self._client.list_groups()
 
 class GroupAdmin:
     """
@@ -298,19 +327,15 @@ class GroupAdmin:
 
     def list_games(self):
         """Retrieves a dictionary of games belonging to this group as RemoteGame objects, indexed by ID."""
-        games_data = self._client._send_command('list_group_games', {'group_id': self.group_id})
+        remote_group = RemoteGroup(self.group_id, self.host, self.port, self.group_admin_password, self.use_tls)
         
-        remote_games = {}
-        for gid in games_data:
-            remote_games[gid] = RemoteGame(gid, self.host, self.port, self.group_admin_password, self.use_tls)
-            
-            # Propagate logging configuration if any
-            for h in self._logger.handlers:
-                if isinstance(h, SocketHandler):
-                    remote_games[gid].configure_logging(h.host, h.port)
-                    break
-                    
-        return remote_games
+        # Propagate logging configuration if any
+        for h in self._logger.handlers:
+            if isinstance(h, SocketHandler):
+                remote_group.configure_logging(h.host, h.port)
+                break
+                
+        return remote_group.list_games()
 
     def kick_player(self, game_id, player_id):
         """Kicks a player from a specific game in the group."""
@@ -447,3 +472,60 @@ class RemoteGame:
     def set_state(self, state):
         """Sets the state of the remote game."""
         return self._send_command('set_game_state', {'state': state})
+
+class RemoteGroup:
+    """
+    A proxy for a GameGroup object on a remote server.
+    """
+    def __init__(self, group_id, host='127.0.0.1', port=65432, password=None, use_tls=False):
+        self.group_id = group_id
+        self.host = host
+        self.port = port
+        self._client = GameClient(host, port, password, use_tls)
+        self._logger = logging.getLogger(f"RemoteGroup.{group_id}")
+        self._logger.setLevel(logging.INFO)
+        self._logger.propagate = True
+
+    def configure_logging(self, host, port, name=None):
+        """Configures the remote group proxy to send logs to a logging server."""
+        if name is None:
+            name = f"RemoteGroup.{self.group_id[:8]}"
+        self._client.configure_logging(host, port, name)
+        self._logger = self._client._logger
+
+    def _send_command(self, action, params=None):
+        """Sends a command to the server for a specific group and returns the response."""
+        full_params = {'group_id': self.group_id}
+        if params:
+            full_params.update(params)
+        return self._client._send_command(action, full_params)
+
+    def create_game(self, **game_options):
+        """Creates a new game within this group."""
+        return self._client.create_game(group_id=self.group_id, **game_options)
+
+    def list_games(self):
+        """Lists all games in this group."""
+        games_data = self._client._send_command('list_group_games', {'group_id': self.group_id})
+        
+        remote_games = {}
+        for gid in games_data:
+            remote_games[gid] = RemoteGame(gid, self.host, self.port, self._client.password, self._client.use_tls)
+            
+            # Propagate logging configuration if any
+            for h in self._logger.handlers:
+                if isinstance(h, SocketHandler):
+                    remote_games[gid].configure_logging(h.host, h.port)
+                    break
+                    
+        return remote_games
+
+    @property
+    def name(self):
+        """Gets the name of the group."""
+        return self._send_command('get_group_info').get('name')
+
+    @property
+    def attributes(self):
+        """Gets the attributes of the group."""
+        return self._send_command('get_group_info').get('attributes', {})

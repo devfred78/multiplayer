@@ -10,7 +10,7 @@ def test_group_admin_access():
         admin = ServerAdmin(port=65450, admin_password="server_admin")
         # Create a group via a command
         res = admin.create_group('WarGames', admin_password='group_secret')
-        group_id = res['group_id']
+        group_id = res.group_id
         
         # Create games in that group
         client = GameClient(port=65450)
@@ -18,7 +18,7 @@ def test_group_admin_access():
         # Note: Chess will be in a group named "OtherGroup" (created automatically by server for backward compat?)
         # Actually server now uses group_id.
         res2 = admin.create_group("OtherGroup")
-        other_group_id = res2['group_id']
+        other_group_id = res2.group_id
         client.create_game(name="Chess", group_id=other_group_id)
         
         # Group Admin for WarGames
@@ -49,14 +49,14 @@ def test_group_admin_kick():
     try:
         admin = ServerAdmin(port=65451, admin_password="server_admin")
         res = admin.create_group('WarGames', admin_password='group_secret')
-        group_id = res['group_id']
+        group_id = res.group_id
         
         client = GameClient(port=65451)
         rem1 = client.create_game(name="Battlefield", group_id=group_id)
         g1_id = rem1.game_id
         
         res2 = admin.create_group('Other')
-        other_group_id = res2['group_id']
+        other_group_id = res2.group_id
         rem2 = client.create_game(name="Peace", group_id=other_group_id)
         g2_id = rem2.game_id
         
@@ -98,7 +98,7 @@ def test_server_admin_as_group_admin():
     try:
         admin = ServerAdmin(port=65452, admin_password="server_admin")
         res = admin.create_group('WarGames', admin_password='group_secret')
-        group_id = res['group_id']
+        group_id = res.group_id
         
         # Server admin should be able to act as group admin using their own password
         server_acting_as_group = GroupAdmin(group_id=group_id, port=65452, group_admin_password="server_admin")

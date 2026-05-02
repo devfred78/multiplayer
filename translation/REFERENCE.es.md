@@ -120,9 +120,9 @@ Una clase de cliente para que los administradores gestionen un `GameServer`.
 *   `set_logging_enabled(enabled)`: Activa (`True`) ou desactiva (`False`) los registros en el servidor.
 *   `set_server_password(new_password)`: Establece una nueva contraseña para el servidor.
 *   `set_admin_password(new_password)`: Establece una nueva contraseña de administrador para el servidor.
-*   `create_group(name, admin_password=None, **attributes)`: Crea un nuevo grupo de juegos en el servidor. Devuelve un diccionario con el `group_id`.
+*   `create_group(name, admin_password=None, **attributes)`: Crea un nuevo grupo de juegos en el serveur. Devuelve un objeto proxy `RemoteGroup`.
 *   `remove_group(group_id)`: Elimina un grupo de juegos del servidor por su ID.
-*   `list_groups()`: Devuelve un diccionario de todos los grupos de juegos en el servidor, indexado por su `group_id`.
+*   `list_groups()`: Devuelve un diccionario de todos los grupos de juegos en el servidor como objetos `RemoteGroup`, indexado por su `group_id`.
 
 ---
 
@@ -153,6 +153,24 @@ El punto de entrada principal para que un cliente se conecte a un `GameServer`.
 *   `discover_servers(timeout=2)` (método estático): Escanea la red local en busca de instancias de `GameServer`.
 *   `create_game(group_id=None, **game_options)`: Solicita al servidor que cree una nueva partida. Devuelve un objeto proxy `RemoteGame`. Puede incluir un `group_id` para asociar la partida a un grupo.
 *   `list_games()`: Devuelve un diccionario de juegos activos como objetos `RemoteGame`, indexado por su ID.
+*   `create_group(name, admin_password=None, **attributes)`: Solicita al servidor que cree un nuevo grupo de juegos. Devuelve un objeto proxy `RemoteGroup`.
+*   `list_groups()`: Devuelve un diccionario de los grupos de juegos como objetos `RemoteGroup`, indexado por su ID.
+
+---
+
+### `RemoteGroup`
+Un objeto proxy que representa un grupo de juegos en el servidor.
+
+*Normalmente no se crea este objeto directamente, sino que se obtiene a través de `client.create_group()` o `client.list_groups()`.*
+
+#### Métodos
+*   `create_game(**game_options)`: Crea una nueva partida dentro de este grupo. Devuelve un objeto proxy `RemoteGame`.
+*   `list_games()`: Devuelve un diccionario de juegos pertenecientes a este grupo como objetos `RemoteGame`, indexado por su ID.
+
+#### Propiedades
+*   **`group_id`**: El ID único del grupo.
+*   **`name`**: El nombre del grupo.
+*   **`attributes`**: Un dictionnaire de atributos personalizados para el grupo.
 
 ---
 

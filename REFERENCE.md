@@ -140,9 +140,9 @@ A client class for administrators to manage a `GameServer`.
 *   `set_logging_enabled(enabled)`: Enables (`True`) or disables (`False`) logging on the server.
 *   `set_server_password(new_password)`: Sets a new password for the server.
 *   `set_admin_password(new_password)`: Sets a new administrator password for the server.
-*   `create_group(name, admin_password=None, **attributes)`: Creates a new game group on the server. Returns a dictionary containing the `group_id`.
+*   `create_group(name, admin_password=None, **attributes)`: Creates a new game group on the server. Returns a `RemoteGroup` proxy object.
 *   `remove_group(group_id)`: Removes a game group from the server by its ID.
-*   `list_groups()`: Returns a dictionary of all game groups on the server, keyed by their `group_id`.
+*   `list_groups()`: Returns a dictionary of all game groups on the server as `RemoteGroup` objects, keyed by their `group_id`.
 
 ---
 
@@ -175,6 +175,24 @@ The main entry point for a client to connect to a `GameServer`.
 *   `discover_servers(timeout=2)` (static method): Scans the local network for running `GameServer` instances. Returns a list of `(host, port)` tuples.
 *   `create_game(group_id=None, **game_options)`: Requests the server to create a new game. Returns a `RemoteGame` proxy object. Can include a `group_id` to associate the game with a group.
 *   `list_games()`: Returns a dictionary of active games as `RemoteGame` objects, keyed by their ID.
+*   `create_group(name, admin_password=None, **attributes)`: Requests the server to create a new game group. Returns a `RemoteGroup` proxy object.
+*   `list_groups()`: Returns a dictionary of game groups as `RemoteGroup` objects, keyed by their ID.
+
+---
+
+### `RemoteGroup`
+A proxy object representing a game group running on the server.
+
+*You typically do not create this object directly, but get it from `client.create_group()` or `client.list_groups()`.*
+
+#### Methods
+*   `create_game(**game_options)`: Creates a new game within this group. Returns a `RemoteGame` proxy object.
+*   `list_games()`: Returns a dictionary of games belonging to this group as `RemoteGame` objects, keyed by their ID.
+
+#### Properties
+*   **`group_id`**: The unique ID of the group.
+*   **`name`**: The name of the group.
+*   **`attributes`**: A dictionary of custom attributes for the group.
 
 ---
 

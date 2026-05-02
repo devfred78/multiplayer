@@ -159,7 +159,7 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
 
                 # Check if it's an admin action
                 is_server_admin_action = action in ['stop_server', 'restart_server', 'get_server_info', 'set_logging_config', 'set_logging_enabled', 'list_all_players', 'get_cert_expiration', 'set_server_password', 'set_admin_password', 'create_group', 'remove_group', 'list_groups']
-                is_group_admin_action = action in ['list_group_games', 'kick_player', 'kick_observer', 'set_group_admin_password']
+                is_group_admin_action = action in ['list_group_games', 'kick_player', 'kick_observer', 'set_group_admin_password', 'get_group_info']
                 
                 # If it's a kick action, it could be server admin OR group admin
                 # If group_id is provided, we check group admin rights.
@@ -310,6 +310,24 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
                     group_games[gid] = attrs
             return {'status': 'success', 'data': group_games}
         
+        elif action == 'get_group_info':
+            group_id = params.get('group_id')
+            group = None
+            for g in groups.values():
+                if g.ID == group_id:
+                    group = g
+                    break
+            if not group:
+                return {'status': 'error', 'message': f'Group with ID {group_id} not found'}
+            return {
+                'status': 'success', 
+                'data': {
+                    'name': group.name,
+                    'attributes': group.attributes,
+                    'games_count': len(group.games)
+                }
+            }
+
         elif action == 'list_games':
             game_list = {}
             for gid, g in games.items():

@@ -130,9 +130,9 @@ Une classe client pour les administrateurs pour gérer un `GameServer`.
 *   `set_logging_enabled(enabled)` : Active (`True`) ou désactive (`False`) les logs sur le serveur.
 *   `set_server_password(new_password)` : Définit un nouveau mot de passe pour le serveur.
 *   `set_admin_password(new_password)` : Définit un nouveau mot de passe administrateur pour le serveur.
-*   `create_group(name, admin_password=None, **attributes)` : Crée un nouveau groupe de jeux sur le serveur. Retourne un dictionnaire contenant le `group_id`.
+*   `create_group(name, admin_password=None, **attributes)` : Crée un nouveau groupe de jeux sur le serveur. Retourne un objet proxy `RemoteGroup`.
 *   `remove_group(group_id)` : Supprime un groupe de jeux du serveur par son ID.
-*   `list_groups()` : Renvoie un dictionnaire de tous les groupes de jeux sur le serveur, indexé par leur `group_id`.
+*   `list_groups()` : Renvoie un dictionnaire de tous les groupes de jeux sur le serveur sous forme d'objets `RemoteGroup`, indexé par leur `group_id`.
 
 ---
 
@@ -161,8 +161,26 @@ Le point d'entrée pour qu'un client se connecte à un `GameServer`.
 
 #### Méthodes
 *   `discover_servers(timeout=2)` (méthode statique) : Scanne le réseau local à la recherche d'instances de `GameServer`.
-*   `create_game(group_id=None, **game_options)` : Demande au serveur de créer une nouvelle partie. Retourne un objet proxy `RemoteGame`. Peut inclure un `group_id` pour associer la partie à un groupe.
+*   `create_game(group_id=None, **game_options)` : Demande au serveur de créer une nouvelle partie. Retourne un objet proxy `RemoteGame`. Peut inclure un `group_id` para associer la partie à un groupe.
 *   `list_games()` : Retourne un dictionnaire des parties actives sous forme d'objets `RemoteGame`, indexé par leur ID.
+*   `create_group(name, admin_password=None, **attributes)` : Demande au serveur de créer un nouveau groupe de jeux. Retourne un objet proxy `RemoteGroup`.
+*   `list_groups()` : Retourne un dictionnaire des groupes de jeux sous forme d'objets `RemoteGroup`, indexé par leur ID.
+
+---
+
+### `RemoteGroup`
+Un objet proxy représentant un groupe de jeux s'exécutant sur le serveur.
+
+*Généralement, vous ne créez pas cet objet directement, mais vous l'obtenez via `client.create_group()` ou `client.list_groups()`.*
+
+#### Méthodes
+*   `create_game(**game_options)` : Crée une nouvelle partie au sein de ce groupe. Retourne un objet proxy `RemoteGame`.
+*   `list_games()` : Retourne un dictionnaire des parties appartenant à ce groupe sous forme d'objets `RemoteGame`, indexé par leur ID.
+
+#### Propriétés
+*   **`group_id`** : L'ID unique du groupe.
+*   **`name`** : Le nom du groupe.
+*   **`attributes`** : Un dictionnaire d'attributs personnalisés pour le groupe.
 
 ---
 

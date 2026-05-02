@@ -19,7 +19,7 @@ For a detailed technical description of all classes and functions, see the [API 
 *   **Observer Support:** Ability to add observers who can view the game state without participating as players.
 *   **Administrator Role:** New `GameAdmin` class to manage the server, kick players/observers, and monitor server status.
 *   **Game Grouping:** Organize several game sessions within the same server using the `GameGroup` class.
-*   **Multi-Layered Security:** Supports server passwords, admin passwords, and per-game passwords, with optional TLS v1.3 encryption.
+*   **Multi-Layered Security:** Supports server passwords, admin passwords, and per-game passwords, with optional TLS v1.3 encryption. Passwords can be updated dynamically by administrators.
 *   **Automatic Server Discovery:** Clients can automatically find running servers on the local network.
 *   **Extensible Name Suggestions:** Includes a utility function to suggest creative names for games and players.
 *   **Multiple Games:** The server can manage multiple game sessions simultaneously, and the game list is now filtered to hide finished games.

@@ -133,6 +133,8 @@ A client class for administrators to manage a `GameServer`.
 *   `set_logging_config(host, port)`: Configures the server to send its logs to a remote logging server at the specified address and port.
 *   `get_cert_expiration()`: Returns the expiration date of the server's TLS certificate in ISO format.
 *   `set_logging_enabled(enabled)`: Enables (`True`) or disables (`False`) logging on the server.
+*   `set_server_password(new_password)`: Sets a new password for the server.
+*   `set_admin_password(new_password)`: Sets a new administrator password for the server.
 
 ---
 
@@ -149,6 +151,7 @@ A client class for group administrators to manage games within a specific `GameG
 *   `list_games()`: Returns a list of games belonging to this group.
 *   `kick_player(game_id, player_name)`: Removes a player from a specific game in the group.
 *   `kick_observer(game_id, observer_name)`: Removes an observer from a specific game in the group.
+*   `set_group_admin_password(new_password)`: Sets a new administrator password for this group.
 
 ---
 

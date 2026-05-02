@@ -109,6 +109,8 @@ Una clase de cliente para que los administradores gestionen un `GameServer`.
 *   `set_logging_config(host, port)`: Configura el servidor para enviar sus registros a un servidor de registros remoto en la dirección y el puerto especificados.
 *   `get_cert_expiration()`: Devuelve la fecha de expiración del certificado TLS del servidor en formato ISO.
 *   `set_logging_enabled(enabled)`: Activa (`True`) ou desactiva (`False`) los registros en el servidor.
+*   `set_server_password(new_password)`: Establece una nueva contraseña para el servidor.
+*   `set_admin_password(new_password)`: Establece una nueva contraseña de administrador para el servidor.
 
 ---
 
@@ -125,6 +127,7 @@ Una clase de cliente para que los administradores de grupo gestionen los juegos 
 *   `list_games()`: Devuelve una lista de juegos pertenecientes a este grupo.
 *   `kick_player(game_id, player_name)`: Elimina a un jugador de un juego específico en el grupo.
 *   `kick_observer(game_id, observer_name)`: Elimina a un observador de un juego específico en el grupo.
+*   `set_group_admin_password(new_password)`: Establece una nueva contraseña de administrador para este grupo.
 
 ---
 

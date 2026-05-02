@@ -19,7 +19,7 @@ Pour une description technique détaillée de toutes les classes et fonctions, c
 *   **Support des Observateurs :** Possibilité d'ajouter des observateurs qui peuvent voir l'état du jeu sans y participer en tant que joueurs.
 *   **Rôle d'Administrateur :** Nouvelle classe `GameAdmin` pour gérer le serveur, expulser des joueurs/observateurs et surveiller l'état du serveur.
 *   **Groupement de Parties :** Organisez plusieurs sessions de jeu au sein du même serveur grâce à la classe `GameGroup`.
-*   **Sécurité à Plusieurs Niveaux :** Supporte les mots de passe serveur, administrateur et par partie, avec un chiffrement TLS v1.3 optionnel.
+*   **Sécurité à Plusieurs Niveaux :** Supporte les mots de passe serveur, administrateur et par partie, avec un chiffrement TLS v1.3 optionnel. Les mots de passe peuvent être mis à jour dynamiquement par les administrateurs.
 *   **Découverte Automatique de Serveurs :** Les clients peuvent trouver automatiquement les serveurs en cours d'exécution sur le réseau local.
 *   **Suggestions de Noms Extensibles :** Inclut une fonction utilitaire pour suggérer des noms créatifs pour les parties et les joueurs.
 *   **Parties Multiples :** Le serveur peut gérer plusieurs sessions de jeu simultanément, et la liste des parties est maintenant filtrée pour cacher les parties terminées.

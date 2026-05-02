@@ -19,7 +19,7 @@ Para una descripción técnica detallada de todas las clases y funciones, consul
 *   **Soporte de Observadores:** Capacidad de añadir observadores que pueden ver el estado del juego sin participar como jugadores.
 *   **Rol de Administrador:** Nueva clase `GameAdmin` para gestionar el servidor, expulsar jugadores/observadores y supervisar el estado del servidor.
 *   **Agrupación de Juegos:** Organiza varias sesiones de juego dentro del mismo servidor utilizando la clase `GameGroup`.
-*   **Seguridad Multinivel:** Soporta contraseñas de servidor, administrador y por partida, con cifrado opcional TLS v1.3.
+*   **Seguridad Multinivel:** Soporta contraseñas de servidor, administrador y por partida, con cifrado opcional TLS v1.3. Los administradores pueden actualizar las contraseñas dinámicamente.
 *   **Descubrimiento Automático de Servidores:** Los clientes pueden encontrar automáticamente servidores en funcionamiento en la red local.
 *   **Sugerencias de Nombres Extensibles:** Incluye una función de utilidad para sugerir nombres creativos para juegos y jugadores.
 *   **Múltiples Partidas:** El servidor puede gestionar múltiples sesiones de juego simultáneamente, y la lista de partidas ahora se filtra para ocultar las partidas finalizadas.

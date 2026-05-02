@@ -109,6 +109,7 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
     bindsocket.bind((host, port))
     bindsocket.listen()
     groups = {} # Store GameGroup objects
+    server_passwords = {'server': password, 'admin': admin_password}
     try:
         bindsocket.settimeout(1.0)
         while True:
@@ -118,7 +119,7 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
                 continue
             try:
                 conn = context.wrap_socket(newsocket, server_side=True) if use_tls else newsocket
-                thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, groups, games_lock, password, admin_password, logger_name, name, use_tls, certfile))
+                thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, groups, games_lock, server_passwords, logger_name, name, use_tls, certfile))
                 thread.daemon = True
                 thread.start()
             except (ssl.SSLError, OSError) as e:
@@ -138,7 +139,7 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
              except Exception:
                  pass
 
-def _handle_client(conn, addr, games, groups, lock, server_password, admin_password, logger_name="GameServer", server_name=None, use_tls=False, certfile=None):
+def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_name="GameServer", server_name=None, use_tls=False, certfile=None):
     """Handles a single client connection."""
     logger = logging.getLogger(logger_name)
     logger.info(f"Connected by {addr}")
@@ -152,10 +153,13 @@ def _handle_client(conn, addr, games, groups, lock, server_password, admin_passw
                 client_password = command.get('password')
                 action = command.get('action')
                 params = command.get('params', {})
+                
+                server_password = server_passwords.get('server')
+                admin_password = server_passwords.get('admin')
 
                 # Check if it's an admin action
-                is_server_admin_action = action in ['stop_server', 'restart_server', 'get_server_info', 'set_logging_config', 'set_logging_enabled', 'list_all_players', 'get_cert_expiration']
-                is_group_admin_action = action in ['list_group_games', 'kick_player', 'kick_observer']
+                is_server_admin_action = action in ['stop_server', 'restart_server', 'get_server_info', 'set_logging_config', 'set_logging_enabled', 'list_all_players', 'get_cert_expiration', 'set_server_password', 'set_admin_password', 'create_group']
+                is_group_admin_action = action in ['list_group_games', 'kick_player', 'kick_observer', 'set_group_admin_password']
                 
                 # If it's a kick action, it could be server admin OR group admin
                 # If group_name is provided, we check group admin rights.
@@ -187,7 +191,7 @@ def _handle_client(conn, addr, games, groups, lock, server_password, admin_passw
                     raise AuthenticationError("Invalid server password")
 
                 with lock:
-                    response = _execute_command(games, groups, action, params, server_name=server_name, use_tls=use_tls, certfile=certfile)
+                    response = _execute_command(games, groups, action, params, server_name=server_name, use_tls=use_tls, certfile=certfile, server_passwords=server_passwords)
                 conn.sendall(json.dumps(response, cls=EnumEncoder).encode('utf-8'))
             except (json.JSONDecodeError, TypeError, AuthenticationError, GameLogicError) as e:
                 error_response = {'status': 'error', 'type': type(e).__name__, 'message': str(e)}
@@ -195,7 +199,7 @@ def _handle_client(conn, addr, games, groups, lock, server_password, admin_passw
     finally:
         logger.info(f"Disconnected from {addr}")
 
-def _execute_command(games, groups, action, params, server_name=None, use_tls=False, certfile=None):
+def _execute_command(games, groups, action, params, server_name=None, use_tls=False, certfile=None, server_passwords=None):
     """Executes a command on the game objects and returns a response."""
     from .game import GameGroup
     try:
@@ -222,6 +226,29 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             admin_password = params.get('admin_password')
             groups[group_name] = GameGroup(group_name, admin_password=admin_password, **params.get('attributes', {}))
             return {'status': 'success'}
+
+        elif action == 'set_server_password':
+            new_password = params.get('new_password')
+            if server_passwords is not None:
+                server_passwords['server'] = new_password
+                return {'status': 'success', 'message': 'Server password updated'}
+            return {'status': 'error', 'message': 'Server passwords dictionary not available'}
+
+        elif action == 'set_admin_password':
+            new_password = params.get('new_password')
+            if server_passwords is not None:
+                server_passwords['admin'] = new_password
+                return {'status': 'success', 'message': 'Admin password updated'}
+            return {'status': 'error', 'message': 'Server passwords dictionary not available'}
+
+        elif action == 'set_group_admin_password':
+            group_name = params.get('group_name')
+            new_password = params.get('new_password')
+            group = groups.get(group_name)
+            if not group:
+                return {'status': 'error', 'message': f'Group {group_name} not found'}
+            group.admin_password = new_password
+            return {'status': 'success', 'message': f'Admin password for group {group_name} updated'}
 
         elif action == 'list_group_games':
             group_name = params.get('group_name')

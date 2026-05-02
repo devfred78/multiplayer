@@ -238,6 +238,18 @@ class GameAdmin:
         response = self._client._send_command('get_cert_expiration')
         return response.get('expiration')
 
+    def set_server_password(self, new_password):
+        """Sets a new password for the server."""
+        return self._client._send_command('set_server_password', {'new_password': new_password})
+
+    def set_admin_password(self, new_password):
+        """Sets a new administrator password for the server."""
+        result = self._client._send_command('set_admin_password', {'new_password': new_password})
+        if result.get('status') == 'success':
+            self.admin_password = new_password
+            self._client.password = new_password
+        return result
+
 class GroupAdmin:
     """
     A client class for group administrators to manage games within a specific GameGroup.
@@ -276,6 +288,17 @@ class GroupAdmin:
             'observer_name': observer_name,
             'group_name': self.group_name
         })
+
+    def set_group_admin_password(self, new_password):
+        """Sets a new administrator password for this group."""
+        result = self._client._send_command('set_group_admin_password', {
+            'group_name': self.group_name,
+            'new_password': new_password
+        })
+        if result.get('status') == 'success':
+            self.group_admin_password = new_password
+            self._client.password = new_password
+        return result
 
 class RemoteGame:
     """

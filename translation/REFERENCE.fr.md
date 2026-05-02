@@ -19,9 +19,9 @@ Représente une session de jeu unique.
 
 #### Méthodes
 *   `add_player(player, password=None)` : Ajoute un objet `Player` à la partie. Le mot de passe est requis si la partie est protégée.
-*   `remove_player(player_name)` : Retire un joueur de la partie par son nom.
+*   `remove_player(player_id)` : Retire un joueur de la partie par son ID.
 *   `add_observer(observer, password=None)` : Ajoute un objet `Observer` à la partie. Le mot de passe est requis si `observer_password` (ou `password`) est défini.
-*   `remove_observer(observer_name)` : Retire un observateur de la partie par son nom.
+*   `remove_observer(observer_id)` : Retire un observateur de la partie par son ID.
 *   `start()` : Démarre la partie.
 *   `pause()` : Met la partie en pause.
 *   `resume()` : Reprend une partie en pause.
@@ -74,7 +74,7 @@ Représente un groupe de parties sur un serveur.
 
 #### Méthodes
 *   `add_game(game)` : Ajoute un objet `Game` au groupe.
-*   `remove_game(game)` : Retire un objet `Game` du groupe.
+*   `remove_game(game_id)` : Retire un objet `Game` du groupe par son ID.
 
 #### Propriétés
 *   **`ID`**: L'ID unique du groupe (lecture seule).
@@ -120,8 +120,8 @@ Une classe client pour les administrateurs pour gérer un `GameServer`.
 #### Méthodes
 *   `get_server_info()` : Retourne les infos du serveur (nom, nombre de parties, IDs actifs).
 *   `list_games()` : Liste toutes les parties actives.
-*   `kick_player(game_id, player_name)` : Expulse un joueur d'une partie.
-*   `kick_observer(game_id, observer_name)` : Expulse un observateur d'une partie.
+*   `kick_player(game_id, player_id)` : Expulse un joueur d'une partie par son ID.
+*   `kick_observer(game_id, observer_id)` : Expulse un observateur d'une partie par son ID.
 *   `list_all_players()` : Liste tous les joueurs actuellement connectés au serveur, incluant l'ID et le nom de leur partie respective.
 *   `stop_server()` : Demande l'arrêt du serveur.
 *   `restart_server()` : Demande le redémarrage du serveur (efface toutes les parties en cours).
@@ -144,8 +144,8 @@ Une classe cliente pour que les administrateurs de groupe puissent gérer les pa
 
 #### Méthodes
 *   `list_games()` : Retourne une liste des parties appartenant à ce groupe.
-*   `kick_player(game_id, player_name)` : Supprime un joueur d'une partie spécifique du groupe.
-*   `kick_observer(game_id, observer_name)` : Supprime un observateur d'une partie spécifique du groupe.
+*   `kick_player(game_id, player_id)` : Supprime un joueur d'une partie spécifique du groupe par son ID.
+*   `kick_observer(game_id, observer_id)` : Supprime un observateur d'une partie spécifique du groupe par son ID.
 *   `set_group_admin_password(new_password)` : Définit un nouveau mot de passe administrateur pour ce groupe.
 
 ---

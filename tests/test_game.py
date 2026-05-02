@@ -28,12 +28,12 @@ def test_game_group():
     group.add_game(game1)
     assert len(group.games) == 2
 
-    group.remove_game(game1)
+    group.remove_game(game1.ID)
     assert len(group.games) == 1
     assert group.games[0] == game2
-
+    
     # Remove non-existent game should not raise error
-    group.remove_game(game1)
+    group.remove_game(game1.ID)
     assert len(group.games) == 1
 
 def test_create_game():
@@ -193,9 +193,10 @@ def test_game_resume_not_paused():
 
 def test_game_next_turn_no_players():
     game = Game(turn_based=True)
-    game.add_player(Player("Alice"))
+    alice = Player("Alice")
+    game.add_player(alice)
     game.start()
-    game.remove_player("Alice")
+    game.remove_player(alice.ID)
     # Now the game is back to PENDING because of remove_player logic
     assert game.state == GameState.PENDING
     with pytest.raises(GameLogicError, match="Game is not in progress"):
@@ -272,7 +273,7 @@ def test_remove_player():
     game.start()
     
     assert len(game.players) == 2
-    game.remove_player("Alice")
+    game.remove_player(alice.ID)
     assert len(game.players) == 1
     assert game.players[0] == bob
     assert game.current_player == bob

@@ -21,9 +21,9 @@ Represents a single game session.
 
 #### Methods
 *   `add_player(player, password=None)`: Adds a `Player` object to the game. The `password` is required if the game is password-protected.
-*   `remove_player(player_name)`: Removes a player from the game by their name.
+*   `remove_player(player_id)`: Removes a player from the game by their ID.
 *   `add_observer(observer, password=None)`: Adds an `Observer` object to the game. The `password` is required if `observer_password` (or `password`) is set.
-*   `remove_observer(observer_name)`: Removes an observer from the game by their name.
+*   `remove_observer(observer_id)`: Removes an observer from the game by their ID.
 *   `start()`: Starts the game.
 *   `pause()`: Pauses the game.
 *   `resume()`: Resumes a paused game.
@@ -76,7 +76,7 @@ Represents a group of games on a server.
 
 #### Methods
 *   `add_game(game)`: Adds a `Game` object to the group.
-*   `remove_game(game)`: Removes a `Game` object from the group.
+*   `remove_game(game_id)`: Removes a game from the group by its ID.
 
 #### Properties
 *   **`ID`**: The unique ID of the group (read-only).
@@ -130,8 +130,8 @@ A client class for administrators to manage a `GameServer`.
 #### Methods
 *   `get_server_info()`: Returns information about the server (name, number of games, active game IDs).
 *   `list_games()`: Returns a list of all active games on the server.
-*   `kick_player(game_id, player_name)`: Removes a player from a specific game.
-*   `kick_observer(game_id, observer_name)`: Removes an observer from a specific game.
+*   `kick_player(game_id, player_id)`: Removes a player from a specific game by their ID.
+*   `kick_observer(game_id, observer_id)`: Removes an observer from a specific game by their ID.
 *   `list_all_players()`: Returns a list of all players currently connected to the server, including their associated game ID and name.
 *   `stop_server()`: Requests the server to shut down.
 *   `restart_server()`: Requests the server to restart (clears all current games).
@@ -154,8 +154,8 @@ A client class for group administrators to manage games within a specific `GameG
 
 #### Methods
 *   `list_games()`: Returns a list of games belonging to this group.
-*   `kick_player(game_id, player_name)`: Removes a player from a specific game in the group.
-*   `kick_observer(game_id, observer_name)`: Removes an observer from a specific game in the group.
+*   `kick_player(game_id, player_id)`: Removes a player from a specific game in the group by their ID.
+*   `kick_observer(game_id, observer_id)`: Removes an observer from a specific game in the group by their ID.
 *   `set_group_admin_password(new_password)`: Sets a new administrator password for this group.
 
 ---

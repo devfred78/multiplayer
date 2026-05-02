@@ -411,23 +411,23 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             return {'status': 'success'}
         
         elif action == 'kick_player':
-            player_name = params.get('player_name')
+            player_id = params.get('player_id')
             group_name = params.get('group_name')
             if group_name:
                 group = groups.get(group_name)
                 if not group or game not in group.games:
                      return {'status': 'error', 'message': f'Game {game_id} does not belong to group {group_name}'}
-            game.remove_player(player_name)
+            game.remove_player(player_id)
             return {'status': 'success'}
         
         elif action == 'kick_observer':
-            observer_name = params.get('observer_name')
+            observer_id = params.get('observer_id')
             group_name = params.get('group_name')
             if group_name:
                 group = groups.get(group_name)
                 if not group or game not in group.games:
                      return {'status': 'error', 'message': f'Game {game_id} does not belong to group {group_name}'}
-            game.remove_observer(observer_name)
+            game.remove_observer(observer_id)
             return {'status': 'success'}
         
         else:

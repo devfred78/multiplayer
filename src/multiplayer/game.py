@@ -67,15 +67,16 @@ class GameGroup:
         if game not in self.games:
             self.games.append(game)
 
-    def remove_game(self, game):
+    def remove_game(self, game_id):
         """
-        Removes a game from the group.
+        Removes a game from the group by ID.
 
         Args:
-            game (Game): The game to remove.
+            game_id (str): The ID of the game to remove.
         """
-        if game in self.games:
-            self.games.remove(game)
+        game_to_remove = next((g for g in self.games if g.ID == game_id), None)
+        if game_to_remove:
+            self.games.remove(game_to_remove)
 
 class Observer:
     """
@@ -168,14 +169,14 @@ class Game:
             raise ObserverLimitReachedError("Maximum number of observers reached")
         self.observers.append(observer)
 
-    def remove_player(self, player_name):
+    def remove_player(self, player_id):
         """
-        Removes a player from the game by name.
+        Removes a player from the game by ID.
 
         Args:
-            player_name (str): The name of the player to remove.
+            player_id (str): The ID of the player to remove.
         """
-        player_to_remove = next((p for p in self.players if p.name == player_name), None)
+        player_to_remove = next((p for p in self.players if p.ID == player_id), None)
         if player_to_remove:
             removed_player_index = self.players.index(player_to_remove)
             self.players.remove(player_to_remove)
@@ -186,14 +187,14 @@ class Game:
                 elif self.current_player_index >= removed_player_index:
                     self.current_player_index = self.current_player_index % len(self.players)
 
-    def remove_observer(self, observer_name):
+    def remove_observer(self, observer_id):
         """
-        Removes an observer from the game by name.
+        Removes an observer from the game by ID.
 
         Args:
-            observer_name (str): The name of the observer to remove.
+            observer_id (str): The ID of the observer to remove.
         """
-        observer_to_remove = next((o for o in self.observers if o.name == observer_name), None)
+        observer_to_remove = next((o for o in self.observers if o.ID == observer_id), None)
         if observer_to_remove:
             self.observers.remove(observer_to_remove)
 

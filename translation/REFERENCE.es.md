@@ -19,9 +19,9 @@ Representa una única sesión de juego.
 
 #### Métodos
 *   `add_player(player, password=None)`: Añade un objeto `Player` a la partida. La contraseña es obligatoria si la partida está protegida.
-*   `remove_player(player_name)`: Elimina un jugador de la partida por su nombre.
+*   `remove_player(player_id)`: Elimina un jugador de la partida por su ID.
 *   `add_observer(observer, password=None)`: Añade un objeto `Observer` a la partida. La contraseña es obligatoria si se define `observer_password` (o `password`).
-*   `remove_observer(observer_name)`: Elimina un observador de la partida por su nombre.
+*   `remove_observer(observer_id)`: Elimina un observador de la partida por su ID.
 *   `start()`: Inicia la partida.
 
 #### Propiedades
@@ -68,7 +68,7 @@ Representa un grupo de juegos en un servidor.
 
 #### Métodos
 *   `add_game(game)`: Añade un objeto `Game` al grupo.
-*   `remove_game(game)`: Elimina un objeto `Game` del grupo.
+*   `remove_game(game_id)`: Elimina un objeto `Game` del grupo por su ID.
 
 #### Propiedades
 *   **`ID`**: El ID único del grupo (solo lectura).
@@ -110,8 +110,8 @@ Una clase de cliente para que los administradores gestionen un `GameServer`.
 #### Métodos
 *   `get_server_info()`: Devuelve información sobre el servidor (nombre, número de juegos, IDs activos).
 *   `list_games()`: Devuelve una lista de todos los juegos activos.
-*   `kick_player(game_id, player_name)`: Elimina a un jugador de un juego específico.
-*   `kick_observer(game_id, observer_name)`: Elimina a un observador de un juego específico.
+*   `kick_player(game_id, player_id)`: Elimina a un jugador de un juego específico por su ID.
+*   `kick_observer(game_id, observer_id)`: Elimina a un observador de un juego específico por su ID.
 *   `list_all_players()`: Devuelve una lista de todos los jugadores conectados actualmente al servidor, incluyendo su ID y nombre de juego asociados.
 *   `stop_server()`: Solicita que el servidor se apague.
 *   `restart_server()`: Solicita que el servidor se reinicie (borra todos los juegos actuales).
@@ -134,8 +134,8 @@ Una clase de cliente para que los administradores de grupo gestionen los juegos 
 
 #### Métodos
 *   `list_games()`: Devuelve una lista de juegos pertenecientes a este grupo.
-*   `kick_player(game_id, player_name)`: Elimina a un jugador de un juego específico en el grupo.
-*   `kick_observer(game_id, observer_name)`: Elimina a un observador de un juego específico en el grupo.
+*   `kick_player(game_id, player_id)`: Elimina a un jugador de un juego específico en el grupo por su ID.
+*   `kick_observer(game_id, observer_id)`: Elimina a un observador de un juego específico en el grupo por su ID.
 *   `set_group_admin_password(new_password)`: Establece una nueva contraseña de administrador para este grupo.
 
 ---

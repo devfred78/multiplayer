@@ -213,13 +213,13 @@ class GameAdmin:
         """Retrieves a list of available games from the server."""
         return self._client.list_games()
 
-    def kick_player(self, game_id, player_name):
+    def kick_player(self, game_id, player_id):
         """Kicks a player from a specific game."""
-        return self._client._send_command('kick_player', {'game_id': game_id, 'player_name': player_name})
+        return self._client._send_command('kick_player', {'game_id': game_id, 'player_id': player_id})
 
-    def kick_observer(self, game_id, observer_name):
+    def kick_observer(self, game_id, observer_id):
         """Kicks an observer from a specific game."""
-        return self._client._send_command('kick_observer', {'game_id': game_id, 'observer_name': observer_name})
+        return self._client._send_command('kick_observer', {'game_id': game_id, 'observer_id': observer_id})
 
     def list_all_players(self):
         """Lists all players currently connected to the server across all games."""
@@ -273,19 +273,19 @@ class GroupAdmin:
         """Retrieves a list of games belonging to this group."""
         return self._client._send_command('list_group_games', {'group_name': self.group_name})
 
-    def kick_player(self, game_id, player_name):
+    def kick_player(self, game_id, player_id):
         """Kicks a player from a specific game in the group."""
         return self._client._send_command('kick_player', {
             'game_id': game_id, 
-            'player_name': player_name,
+            'player_id': player_id,
             'group_name': self.group_name
         })
 
-    def kick_observer(self, game_id, observer_name):
+    def kick_observer(self, game_id, observer_id):
         """Kicks an observer from a specific game in the group."""
         return self._client._send_command('kick_observer', {
             'game_id': game_id, 
-            'observer_name': observer_name,
+            'observer_id': observer_id,
             'group_name': self.group_name
         })
 

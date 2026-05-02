@@ -29,6 +29,7 @@ Représente une session de jeu unique.
 *   `next_turn()` : Passe au joueur suivant.
 
 #### Propriétés
+*   **`ID`**: L'ID unique de la session de jeu (lecture seule).
 *   **`players`**: Une liste d'objets `Player`.
 *   **`observers`**: Une liste d'objets `Observer`.
 *   **`state`**: Le `GameState` actuel de la partie.
@@ -44,6 +45,11 @@ Représente un joueur.
 *   **`name`** (`str`) : Le nom du joueur.
 *   **`**kwargs`** : Attributs personnalisés pour le joueur.
 
+#### Propriétés
+*   **`ID`**: L'ID unique du joueur (lecture seule).
+*   **`name`**: Le nom du joueur.
+*   **`attributes`**: Un dictionnaire d'attributs personnalisés.
+
 ---
 
 ### `Observer(name, **kwargs)`
@@ -53,6 +59,7 @@ Représente un observateur.
 *   **`**kwargs`** : Attributs personnalisés pour l'observateur.
 
 #### Propriétés
+*   **`ID`**: L'ID unique de l'observateur (lecture seule).
 *   **`name`**: Le nom de l'observateur.
 *   **`attributes`**: Un dictionnaire d'attributs personnalisés.
 
@@ -70,6 +77,7 @@ Représente un groupe de parties sur un serveur.
 *   `remove_game(game)` : Retire un objet `Game` du groupe.
 
 #### Propriétés
+*   **`ID`**: L'ID unique du groupe (lecture seule).
 *   **`name`**: Le nom du groupe.
 *   **`games`**: Une liste d'objets `Game` actuellement dans le groupe.
 *   **`attributes`**: Un dictionnaire d'attributs personnalisés pour le groupe.

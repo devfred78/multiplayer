@@ -31,6 +31,7 @@ Represents a single game session.
 *   `next_turn()`: Advances to the next player in a turn-based game.
 
 #### Properties
+*   **`ID`**: The unique ID of the game session (read-only).
 *   **`players`**: A list of `Player` objects in the game.
 *   **`observers`**: A list of `Observer` objects in the game.
 *   **`state`**: The current `GameState` of the game (e.g., `GameState.IN_PROGRESS`).
@@ -47,6 +48,7 @@ Represents a player.
 *   **`**kwargs`**: Custom attributes for the player (e.g., `score=100`).
 
 #### Properties
+*   **`ID`**: The unique ID of the player (read-only).
 *   **`name`**: The player's name.
 *   **`attributes`**: A dictionary of the player's custom attributes.
 
@@ -59,6 +61,7 @@ Represents an observer.
 *   **`**kwargs`**: Custom attributes for the observer.
 
 #### Properties
+*   **`ID`**: The unique ID of the observer (read-only).
 *   **`name`**: The observer's name.
 *   **`attributes`**: A dictionary of the observer's custom attributes.
 
@@ -76,6 +79,7 @@ Represents a group of games on a server.
 *   `remove_game(game)`: Removes a `Game` object from the group.
 
 #### Properties
+*   **`ID`**: The unique ID of the group (read-only).
 *   **`name`**: The name of the group.
 *   **`games`**: A list of `Game` objects currently in the group.
 *   **`attributes`**: A dictionary of custom attributes for the group.

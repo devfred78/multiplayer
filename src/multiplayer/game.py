@@ -3,6 +3,7 @@ This module provides classes for managing a multiplayer game.
 """
 
 import enum
+import uuid
 from .exceptions import GameLogicError, PlayerLimitReachedError, ObserverLimitReachedError, AuthenticationError
 
 class GameState(enum.Enum):
@@ -24,6 +25,14 @@ class Player:
     def __init__(self, name, **kwargs):
         self.name = name
         self.attributes = kwargs
+        self._id = str(uuid.uuid4())
+
+    @property
+    def ID(self):
+        """
+        The unique ID of the player.
+        """
+        return self._id
 
 class GameGroup:
     """
@@ -39,6 +48,14 @@ class GameGroup:
         self.admin_password = admin_password
         self.attributes = kwargs
         self.games = []
+        self._id = str(uuid.uuid4())
+
+    @property
+    def ID(self):
+        """
+        The unique ID of the group.
+        """
+        return self._id
 
     def add_game(self, game):
         """
@@ -71,6 +88,14 @@ class Observer:
     def __init__(self, name, **kwargs):
         self.name = name
         self.attributes = kwargs
+        self._id = str(uuid.uuid4())
+
+    @property
+    def ID(self):
+        """
+        The unique ID of the observer.
+        """
+        return self._id
 
 class Game:
     """
@@ -97,6 +122,14 @@ class Game:
         self.state = GameState.PENDING
         self.current_player_index = 0
         self.custom_state = {}
+        self._id = str(uuid.uuid4())
+
+    @property
+    def ID(self):
+        """
+        The unique ID of the game.
+        """
+        return self._id
 
     def add_player(self, player, password=None):
         """

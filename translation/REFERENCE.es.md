@@ -25,6 +25,7 @@ Representa una única sesión de juego.
 *   `start()`: Inicia la partida.
 
 #### Propiedades
+*   **`ID`**: El ID único de la sesión de juego (solo lectura).
 *   **`players`**: Una lista de objetos `Player`.
 *   **`observers`**: Una lista de objetos `Observer`.
 *   **`state`**: El `GameState` actual de la partida (ej., `GameState.IN_PROGRESS`).
@@ -38,6 +39,11 @@ Representa a un jugador.
 *   **`name`** (`str`): El nombre del jugador.
 *   **`**kwargs`**: Atributos personalizados para el jugador.
 
+#### Propiedades
+*   **`ID`**: El ID único del jugador (solo lectura).
+*   **`name`**: El nombre del jugador.
+*   **`attributes`**: Un diccionario de los atributos personalizados del jugador.
+
 ---
 
 ### `Observer(name, **kwargs)`
@@ -47,6 +53,7 @@ Representa a un observador.
 *   **`**kwargs`**: Atributos personalizados para el observador.
 
 #### Propiedades
+*   **`ID`**: El ID único del observador (solo lectura).
 *   **`name`**: El nombre del observador.
 *   **`attributes`**: Un diccionario de los atributos personalizados del observador.
 
@@ -64,6 +71,7 @@ Representa un grupo de juegos en un servidor.
 *   `remove_game(game)`: Elimina un objeto `Game` del grupo.
 
 #### Propiedades
+*   **`ID`**: El ID único del grupo (solo lectura).
 *   **`name`**: El nombre del grupo.
 *   **`games`**: Una lista de objetos `Game` actualmente en el grupo.
 *   **`attributes`**: Un diccionario de atributos personalizados para el grupo.

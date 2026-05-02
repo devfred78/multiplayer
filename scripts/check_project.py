@@ -56,21 +56,24 @@ def main():
     # 1. Check/Install uv
     check_uv()
     
-    # 2. Run Ruff (syntax/linting)
+    # 2. Run Ruff (syntax/linting) for multiple Python versions
     print("\n--- Syntax check with Ruff ---")
-    try:
-        # We use --no-project to ensure total isolation from the project's venv
-        # We specify the python version to ensure consistency
-        cmd_ruff = ["uv", "run", "--no-project", "--python", "3.12", "--with", "ruff", "ruff", "check", "."]
-        if args.fix:
-            cmd_ruff.append("--fix")
-            print("Auto-fix mode enabled (--fix)")
-            
-        subprocess.run(cmd_ruff, check=True)
-        print("Ruff check successful!")
-    except subprocess.CalledProcessError as e:
-        print("Ruff found syntax or style issues.")
-        sys.exit(e.returncode)
+    python_versions = ["3.12", "3.13", "3.14"]
+    for py_ver in python_versions:
+        print(f"\nChecking syntax for Python {py_ver}...")
+        try:
+            # We use --no-project to ensure total isolation from the project's venv
+            # We specify the python version to ensure consistency
+            cmd_ruff = ["uv", "run", "--no-project", "--python", py_ver, "--with", "ruff", "ruff", "check", "."]
+            if args.fix:
+                cmd_ruff.append("--fix")
+                print("Auto-fix mode enabled (--fix)")
+                
+            subprocess.run(cmd_ruff, check=True)
+            print(f"Ruff check successful for Python {py_ver}!")
+        except subprocess.CalledProcessError as e:
+            print(f"Ruff found syntax or style issues for Python {py_ver}.")
+            sys.exit(e.returncode)
     
     # 3. Run unit tests in an isolated environment
     print("\n--- Running unit tests in an isolated environment ---")

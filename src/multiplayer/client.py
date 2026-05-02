@@ -162,9 +162,12 @@ class GameClient:
         exception_class = getattr(exceptions, error_type, exceptions.ServerError)
         raise exception_class(message)
 
-    def create_game(self, **game_options):
+    def create_game(self, group_id=None, **game_options):
         """Requests the server to create a new game and returns a proxy to it."""
-        data = self._send_command('create_game', game_options)
+        params = game_options.copy()
+        if group_id:
+            params['group_id'] = group_id
+        data = self._send_command('create_game', params)
         remote_game = RemoteGame(data['game_id'], self.host, self.port, self.password, self.use_tls)
         
         # Propagate logging configuration if any
@@ -254,9 +257,9 @@ class ServerAdmin:
         """Creates a new game group on the server."""
         return self._client._send_command('create_group', {'name': name, 'admin_password': admin_password, 'attributes': attributes})
 
-    def delete_group(self, group_name):
-        """Deletes a game group from the server."""
-        return self._client._send_command('delete_group', {'group_name': group_name})
+    def remove_group(self, group_id):
+        """Removes a game group from the server by its ID."""
+        return self._client._send_command('remove_group', {'group_id': group_id})
 
     def list_groups(self):
         """Retrieves a list of all game groups on the server."""
@@ -266,31 +269,31 @@ class GroupAdmin:
     """
     A client class for group administrators to manage games within a specific GameGroup.
     """
-    def __init__(self, group_name, host='127.0.0.1', port=65432, group_admin_password=None, use_tls=False):
-        self.group_name = group_name
+    def __init__(self, group_id, host='127.0.0.1', port=65432, group_admin_password=None, use_tls=False):
+        self.group_id = group_id
         self.host = host
         self.port = port
         self.group_admin_password = group_admin_password
         self.use_tls = use_tls
         self._client = GameClient(host, port, group_admin_password, use_tls)
-        self._logger = logging.getLogger(f"GroupAdmin.{group_name}")
+        self._logger = logging.getLogger(f"GroupAdmin.{group_id}")
         self._logger.setLevel(logging.INFO)
 
     def configure_logging(self, host, port):
         """Configures the group admin client to send logs to a logging server."""
-        self._client.configure_logging(host, port, f"GroupAdmin.{self.group_name}")
+        self._client.configure_logging(host, port, f"GroupAdmin.{self.group_id}")
         self._logger = self._client._logger
 
     def list_games(self):
         """Retrieves a list of games belonging to this group."""
-        return self._client._send_command('list_group_games', {'group_name': self.group_name})
+        return self._client._send_command('list_group_games', {'group_id': self.group_id})
 
     def kick_player(self, game_id, player_id):
         """Kicks a player from a specific game in the group."""
         return self._client._send_command('kick_player', {
             'game_id': game_id, 
             'player_id': player_id,
-            'group_name': self.group_name
+            'group_id': self.group_id
         })
 
     def kick_observer(self, game_id, observer_id):
@@ -298,13 +301,13 @@ class GroupAdmin:
         return self._client._send_command('kick_observer', {
             'game_id': game_id, 
             'observer_id': observer_id,
-            'group_name': self.group_name
+            'group_id': self.group_id
         })
 
     def set_group_admin_password(self, new_password):
         """Sets a new administrator password for this group."""
         result = self._client._send_command('set_group_admin_password', {
-            'group_name': self.group_name,
+            'group_id': self.group_id,
             'new_password': new_password
         })
         if result.get('status') == 'success':

@@ -158,26 +158,30 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                 admin_password = server_passwords.get('admin')
 
                 # Check if it's an admin action
-                is_server_admin_action = action in ['stop_server', 'restart_server', 'get_server_info', 'set_logging_config', 'set_logging_enabled', 'list_all_players', 'get_cert_expiration', 'set_server_password', 'set_admin_password', 'create_group', 'delete_group', 'list_groups']
+                is_server_admin_action = action in ['stop_server', 'restart_server', 'get_server_info', 'set_logging_config', 'set_logging_enabled', 'list_all_players', 'get_cert_expiration', 'set_server_password', 'set_admin_password', 'create_group', 'remove_group', 'list_groups']
                 is_group_admin_action = action in ['list_group_games', 'kick_player', 'kick_observer', 'set_group_admin_password']
                 
                 # If it's a kick action, it could be server admin OR group admin
-                # If group_name is provided, we check group admin rights.
+                # If group_id is provided, we check group admin rights.
                 # If not, we check server admin rights.
-                group_name = params.get('group_name')
+                group_id = params.get('group_id')
                 
                 if is_server_admin_action:
                     if admin_password is None:
                          raise AuthenticationError("Admin actions are disabled on this server")
                     if client_password != admin_password:
                         raise AuthenticationError("Invalid admin password")
-                elif is_group_admin_action and group_name:
+                elif is_group_admin_action and group_id:
                     with lock:
-                        group = groups.get(group_name)
+                        group = None
+                        for g in groups.values():
+                            if g.ID == group_id:
+                                group = g
+                                break
                         if not group:
-                            raise GameLogicError(f"Group '{group_name}' not found")
+                            raise GameLogicError(f"Group with ID '{group_id}' not found")
                         if group.admin_password is None:
-                            raise AuthenticationError(f"Group admin actions are disabled for group '{group_name}'")
+                            raise AuthenticationError(f"Group admin actions are disabled for group ID '{group_id}'")
                         if client_password != group.admin_password:
                             # Allow server admin to also act as group admin
                             if admin_password is None or client_password != admin_password:
@@ -210,12 +214,16 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             game = Game(**params)
             games[game_id] = game
             
-            # If group_name is provided, add game to group
-            group_name = params.get('group_name')
-            if group_name:
-                if group_name not in groups:
-                    groups[group_name] = GameGroup(group_name)
-                groups[group_name].add_game(game)
+            # If group_id is provided, add game to group
+            group_id = params.get('group_id')
+            if group_id:
+                group = None
+                for g in groups.values():
+                    if g.ID == group_id:
+                        group = g
+                        break
+                if group:
+                    group.add_game(game)
                 
             return {'status': 'success', 'data': {'game_id': game_id, 'name': game.name}}
 
@@ -226,22 +234,31 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             if group_name in groups:
                 return {'status': 'error', 'message': f'Group {group_name} already exists'}
             admin_password = params.get('admin_password')
-            groups[group_name] = GameGroup(group_name, admin_password=admin_password, **params.get('attributes', {}))
-            return {'status': 'success'}
+            group = GameGroup(group_name, admin_password=admin_password, **params.get('attributes', {}))
+            groups[group_name] = group
+            return {'status': 'success', 'data': {'group_id': group.ID, 'name': group.name}}
 
-        elif action == 'delete_group':
-            group_name = params.get('group_name')
-            if not group_name:
-                return {'status': 'error', 'message': 'Missing group name'}
-            if group_name not in groups:
-                return {'status': 'error', 'message': f'Group {group_name} not found'}
-            del groups[group_name]
-            return {'status': 'success', 'message': f'Group {group_name} deleted'}
+        elif action == 'remove_group':
+            group_id = params.get('group_id')
+            if not group_id:
+                return {'status': 'error', 'message': 'Missing group ID'}
+            
+            target_name = None
+            for name, group in groups.items():
+                if group.ID == group_id:
+                    target_name = name
+                    break
+            
+            if not target_name:
+                return {'status': 'error', 'message': f'Group with ID {group_id} not found'}
+            
+            del groups[target_name]
+            return {'status': 'success', 'message': f'Group {target_name} removed'}
 
         elif action == 'list_groups':
             group_list = {}
             for name, group in groups.items():
-                group_list[name] = {
+                group_list[group.ID] = {
                     'name': group.name,
                     'attributes': group.attributes,
                     'games_count': len(group.games)
@@ -263,19 +280,27 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             return {'status': 'error', 'message': 'Server passwords dictionary not available'}
 
         elif action == 'set_group_admin_password':
-            group_name = params.get('group_name')
+            group_id = params.get('group_id')
             new_password = params.get('new_password')
-            group = groups.get(group_name)
+            group = None
+            for g in groups.values():
+                if g.ID == group_id:
+                    group = g
+                    break
             if not group:
-                return {'status': 'error', 'message': f'Group {group_name} not found'}
+                return {'status': 'error', 'message': f'Group with ID {group_id} not found'}
             group.admin_password = new_password
-            return {'status': 'success', 'message': f'Admin password for group {group_name} updated'}
+            return {'status': 'success', 'message': f'Admin password for group {group.name} updated'}
 
         elif action == 'list_group_games':
-            group_name = params.get('group_name')
-            group = groups.get(group_name)
+            group_id = params.get('group_id')
+            group = None
+            for g in groups.values():
+                if g.ID == group_id:
+                    group = g
+                    break
             if not group:
-                return {'status': 'error', 'message': f'Group {group_name} not found'}
+                return {'status': 'error', 'message': f'Group with ID {group_id} not found'}
             # We need to find the GIDs for the games in the group
             group_games = {}
             for gid, g in games.items():
@@ -433,21 +458,29 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
         
         elif action == 'kick_player':
             player_id = params.get('player_id')
-            group_name = params.get('group_name')
-            if group_name:
-                group = groups.get(group_name)
+            group_id = params.get('group_id')
+            if group_id:
+                group = None
+                for g in groups.values():
+                    if g.ID == group_id:
+                        group = g
+                        break
                 if not group or game not in group.games:
-                     return {'status': 'error', 'message': f'Game {game_id} does not belong to group {group_name}'}
+                     return {'status': 'error', 'message': f'Game {game_id} does not belong to group ID {group_id}'}
             game.remove_player(player_id)
             return {'status': 'success'}
         
         elif action == 'kick_observer':
             observer_id = params.get('observer_id')
-            group_name = params.get('group_name')
-            if group_name:
-                group = groups.get(group_name)
+            group_id = params.get('group_id')
+            if group_id:
+                group = None
+                for g in groups.values():
+                    if g.ID == group_id:
+                        group = g
+                        break
                 if not group or game not in group.games:
-                     return {'status': 'error', 'message': f'Game {game_id} does not belong to group {group_name}'}
+                     return {'status': 'error', 'message': f'Game {game_id} does not belong to group ID {group_id}'}
             game.remove_observer(observer_id)
             return {'status': 'success'}
         

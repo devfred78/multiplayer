@@ -130,16 +130,16 @@ Une classe client pour les administrateurs pour gérer un `GameServer`.
 *   `set_logging_enabled(enabled)` : Active (`True`) ou désactive (`False`) les logs sur le serveur.
 *   `set_server_password(new_password)` : Définit un nouveau mot de passe pour le serveur.
 *   `set_admin_password(new_password)` : Définit un nouveau mot de passe administrateur pour le serveur.
-*   `create_group(name, admin_password=None, **attributes)` : Crée un nouveau groupe de jeux sur le serveur.
-*   `delete_group(group_name)` : Supprime un groupe de jeux du serveur.
-*   `list_groups()` : Renvoie un dictionnaire de tous les groupes de jeux sur le serveur.
+*   `create_group(name, admin_password=None, **attributes)` : Crée un nouveau groupe de jeux sur le serveur. Retourne un dictionnaire contenant le `group_id`.
+*   `remove_group(group_id)` : Supprime un groupe de jeux du serveur par son ID.
+*   `list_groups()` : Renvoie un dictionnaire de tous les groupes de jeux sur le serveur, indexé par leur `group_id`.
 
 ---
 
-### `GroupAdmin(group_name, host='127.0.0.1', port=65432, group_admin_password=None, use_tls=False)`
+### `GroupAdmin(group_id, host='127.0.0.1', port=65432, group_admin_password=None, use_tls=False)`
 Une classe cliente pour que les administrateurs de groupe puissent gérer les parties au sein d'un `GameGroup` spécifique.
 
-*   **`group_name`** (`str`) : Le nom du groupe à gérer.
+*   **`group_id`** (`str`) : L'ID unique du groupe à gérer.
 *   **`host`** (`str`) : L'adresse IP du serveur.
 *   **`port`** (`int`) : Le port TCP du serveur.
 *   **`group_admin_password`** (`str`, optionnel) : Le mot de passe administrateur pour ce groupe.
@@ -161,7 +161,7 @@ Le point d'entrée pour qu'un client se connecte à un `GameServer`.
 
 #### Méthodes
 *   `discover_servers(timeout=2)` (méthode statique) : Scanne le réseau local à la recherche d'instances de `GameServer`.
-*   `create_game(**game_options)` : Demande au serveur de créer une nouvelle partie. Retourne un objet proxy `RemoteGame`.
+*   `create_game(group_id=None, **game_options)` : Demande au serveur de créer une nouvelle partie. Retourne un objet proxy `RemoteGame`. Peut inclure un `group_id` pour associer la partie à un groupe.
 *   `list_games()` : Retourne un dictionnaire de toutes les parties actives (non terminées).
 
 ---

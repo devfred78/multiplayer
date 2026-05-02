@@ -140,16 +140,16 @@ A client class for administrators to manage a `GameServer`.
 *   `set_logging_enabled(enabled)`: Enables (`True`) or disables (`False`) logging on the server.
 *   `set_server_password(new_password)`: Sets a new password for the server.
 *   `set_admin_password(new_password)`: Sets a new administrator password for the server.
-*   `create_group(name, admin_password=None, **attributes)`: Creates a new game group on the server.
-*   `delete_group(group_name)`: Deletes a game group from the server.
-*   `list_groups()`: Returns a dictionary of all game groups on the server.
+*   `create_group(name, admin_password=None, **attributes)`: Creates a new game group on the server. Returns a dictionary containing the `group_id`.
+*   `remove_group(group_id)`: Removes a game group from the server by its ID.
+*   `list_groups()`: Returns a dictionary of all game groups on the server, keyed by their `group_id`.
 
 ---
 
-### `GroupAdmin(group_name, host='127.0.0.1', port=65432, group_admin_password=None, use_tls=False)`
+### `GroupAdmin(group_id, host='127.0.0.1', port=65432, group_admin_password=None, use_tls=False)`
 A client class for group administrators to manage games within a specific `GameGroup`.
 
-*   **`group_name`** (`str`): The name of the group to manage.
+*   **`group_id`** (`str`): The unique ID of the group to manage.
 *   **`host`** (`str`): The IP address of the server.
 *   **`port`** (`int`): The TCP port of the server.
 *   **`group_admin_password`** (`str`, optional): The administrative password for this group.
@@ -173,7 +173,7 @@ The main entry point for a client to connect to a `GameServer`.
 
 #### Methods
 *   `discover_servers(timeout=2)` (static method): Scans the local network for running `GameServer` instances. Returns a list of `(host, port)` tuples.
-*   `create_game(**game_options)`: Requests the server to create a new game. Returns a `RemoteGame` proxy object. Can include a `password` for the game.
+*   `create_game(group_id=None, **game_options)`: Requests the server to create a new game. Returns a `RemoteGame` proxy object. Can include a `group_id` to associate the game with a group.
 *   `list_games()`: Returns a dictionary of all active (non-finished) games on the server.
 
 ---

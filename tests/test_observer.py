@@ -24,7 +24,7 @@ def test_game_with_observers():
     with pytest.raises(ObserverLimitReachedError):
         game.add_observer(obs3)
         
-    game.remove_observer("Obs1")
+    game.remove_observer(obs1.ID)
     assert len(game.observers) == 1
     assert game.observers[0].name == "Obs2"
     

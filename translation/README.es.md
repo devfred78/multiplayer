@@ -27,8 +27,6 @@ Para una descripción técnica detallada de todas las clases y funciones, consul
 
 ## Instalación
 
-Este módulo requiere la biblioteca `cryptography` para sus funciones de seguridad.
-
 Puedes instalarlo de dos maneras:
 
 ### 1. Desde PyPI

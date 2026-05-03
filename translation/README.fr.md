@@ -27,8 +27,6 @@ Pour une description technique détaillée de toutes les classes et fonctions, c
 
 ## Installation
 
-Ce module nécessite la bibliothèque `cryptography` pour ses fonctionnalités de sécurité.
-
 Vous pouvez l'installer de deux manières :
 
 ### 1. Via PyPI

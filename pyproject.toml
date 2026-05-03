@@ -17,8 +17,8 @@ classifiers = [
     "Topic :: Games/Entertainment",
 ]
 dependencies = [
-    "cryptography",
     "colorlog",
+    "cryptography",
 ]
 
 [project.scripts]

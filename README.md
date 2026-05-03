@@ -27,8 +27,6 @@ For a detailed technical description of all classes and functions, see the [API 
 
 ## Installation
 
-This module requires the `cryptography` library for its security features.
-
 You can install it in two ways:
 
 ### 1. From PyPI

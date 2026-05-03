@@ -10,6 +10,7 @@ jobs:
   build-n-publish:
     name: Build and publish to PyPI
     runs-on: ubuntu-latest
+    if: github.actor == 'devfred78'
     permissions:
       # Required for trusted publishing
       id-token: write

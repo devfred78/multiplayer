@@ -1,51 +1,73 @@
 [English](../PACKAGE.md) | [Español](PACKAGE.es.md) | **Français**
 
-# Package Multiplayer
+# Documentation du Conteneur Multiplayer
 
-Ce package permet de gérer des parties de jeux multijoueurs, localement ou en réseau.
+Ce guide décrit comment installer, configurer et gérer le conteneur Docker `multiplayer-server`.
 
 ## Installation
 
-Pour installer le package depuis PyPI :
-
+### Docker Standard
+Récupérez l'image depuis le GitHub Container Registry :
 ```bash
-pip install multiplayer
+docker pull ghcr.io/devfred78/multiplayer-server:latest
 ```
+
+### NAS Synology
+1. Ouvrez **Docker** (DSM 7.1) ou **Container Manager** (DSM 7.2+).
+2. Allez dans **Registre**, recherchez `ghcr.io/devfred78/multiplayer-server-synology`.
+3. Téléchargez le tag `latest` ou une version spécifique.
 
 ## Configuration
 
-Le serveur peut être configuré via des arguments de ligne de commande ou lors de son instanciation en Python.
+### Arguments de Ligne de Commande
+Le serveur accepte les arguments suivants :
+- `--host` : Adresse de l'hôte (par défaut : `0.0.0.0`).
+- `--port` : Port d'écoute (par défaut : `65432`).
+- `--name` : Nom de l'instance du serveur.
+- `--password` : Mot de passe global du serveur.
+- `--admin-password` : Mot de passe d'administration.
+- `--use-tls` : Active le TLS v1.3.
+- `--tls-cert-dir` : Répertoire contenant les certificats (mappé sur `/app/certs`).
+- `--logging-host` / `--logging-port` : Détails du serveur de logs centralisé.
 
-### Utilisation de TLS (Sécurité)
-Pour activer le chiffrement TLS v1.3 :
-- Soit en laissant le serveur générer un certificat auto-signé (`--use-tls`).
-- Soit en fournissant vos propres fichiers PEM (`--tls-cert` et `--tls-key`).
+### Certificats TLS
+Pour utiliser vos propres certificats :
+1. Créez un répertoire (ex: `./certs`) et placez-y `cert.pem` et `privkey.pem`.
+2. Mappez ce répertoire sur `/app/certs` dans le conteneur.
+3. Utilisez `--use-tls --tls-cert-dir /app/certs --no-self-signed`.
 
-## Exécution
+## Exécution et Gestion
 
-### Lancer un serveur de jeu
-Vous pouvez lancer un serveur autonome via la commande :
-
+### Lancer le Conteneur
 ```bash
-multiplayer-server --port 65432 --name "Mon Serveur"
+docker run -d \
+  --name multiplayer-server \
+  -p 65432:65432 \
+  -v /chemin/vers/certs:/app/certs \
+  ghcr.io/devfred78/multiplayer-server:latest \
+  --port 65432 --use-tls --tls-cert-dir /app/certs
 ```
 
-### Lancer un serveur de logs
-Pour centraliser les logs de plusieurs serveurs :
+### Arrêt et Démarrage
+- **Arrêt** : `docker stop multiplayer-server`
+- **Démarrage** : `docker start multiplayer-server`
+- **Redémarrage** : `docker restart multiplayer-server`
 
-```bash
-multiplayer-log-server --port 5000
-```
+### Interagir avec le Conteneur
+- **Logs** : `docker logs -f multiplayer-server`
+- **Shell** : `docker exec -it multiplayer-server /bin/sh`
 
-### Exemple de code Client
-```python
-from multiplayer import GameClient, Player
+## Spécificités Synology
 
-client = GameClient(host='localhost', port=65432)
-game = client.create_game(name="Ma Partie")
-game.add_player(Player("Alice"))
-game.start()
-```
+### DSM 7.1 (Docker)
+- **Réseau** : Utilisez le mode `bridge` et mappez le port `65432`.
+- **Volume** : Mappez votre dossier de certificats local vers `/app/certs` dans l'onglet **Paramètres du volume**.
+- **Environnement** : Les arguments sont passés via le champ **Commande d'exécution** dans les **Paramètres avancés**.
+
+### DSM 7.2 & 7.3 (Container Manager)
+- **Projet** : Vous pouvez utiliser un fichier `docker-compose.yml` pour une gestion facilitée.
+- **Capacité** : Assurez-vous que le conteneur n'a pas de capacités restreintes bloquées si vous utilisez des ports personnalisés inférieurs à 1024 (non applicable pour le port 65432 par défaut).
+- **Web Station** : Si vous souhaitez utiliser un domaine personnalisé avec un Reverse Proxy, configurez-le dans **Web Station** pour pointer vers le port du conteneur.
 
 ---
-*Pour plus de détails techniques, consultez la documentation complète sur le [dépôt GitHub](https://github.com/devfred78/multiplayer).*
+*Pour les détails de l'API, voir [REFERENCE.md](https://github.com/devfred78/multiplayer/blob/main/REFERENCE.md).*

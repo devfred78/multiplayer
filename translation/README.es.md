@@ -29,10 +29,19 @@ Para una descripción técnica detallada de todas las clases y funciones, consul
 
 Este módulo requiere la biblioteca `cryptography` para sus funciones de seguridad.
 
+Puedes instalarlo de dos maneras:
+
+### 1. Desde PyPI
 ```sh
-pip install multiplayer-0.1.0-py3-none-any.whl
+pip install multiplayer
 ```
-*Reemplaza `multiplayer-0.1.0-py3-none-any.whl` con el nombre real del archivo descargado.*
+
+### 2. Desde un archivo Wheel (GitHub)
+Descarga el archivo `.whl` desde la página de [Lanzamientos (Releases)](https://github.com/devfred78/multiplayer/releases) y ejecuta:
+```sh
+pip install multiplayer-0.10.1-py3-none-any.whl
+```
+*Reemplaza `multiplayer-0.10.1-py3-none-any.whl` con el nombre real del archivo descargado.*
 
 ## Uso
 

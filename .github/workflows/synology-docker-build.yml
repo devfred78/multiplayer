@@ -87,6 +87,8 @@ jobs:
           tags: |
             type=raw,value=${{ steps.determine_tag.outputs.TAG }}
             type=raw,value=synology-latest,enable=${{ github.event.inputs.push_latest == 'true' }}
+          labels: |
+            org.opencontainers.image.description=Synology-compatible game server for the multiplayer library. See PACKAGE.md for setup.
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3

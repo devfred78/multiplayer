@@ -5,7 +5,7 @@ description = "Library that allows you to manage multiple players, locally, on a
 license = "MIT"
 license-files = ["LICENSE.md"]
 author = "devfred78"
-readme = "README.md"
+readme = "PACKAGE.md"
 requires-python = ">=3.12"
 classifiers = [
     "Development Status :: 3 - Alpha",

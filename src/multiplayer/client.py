@@ -445,10 +445,14 @@ class RemoteGame:
             observer (Observer): The observer to add.
             password (str, optional): The password for observers of this game.
         """
+        self._logger.info(f"Adding observer {observer.name} to game {self.game_id}")
         params = {
             'observer': {'name': observer.name, 'attributes': observer.attributes},
             'observer_password': password,
         }
+        if isinstance(observer, PersistentPlayer):
+            params['persistent_player_password'] = observer.password
+            
         self._send_command('add_observer', params)
 
     def start(self):

@@ -489,7 +489,21 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
         
         elif action == 'add_observer':
             observer_data = params['observer']
-            observer = Observer(observer_data['name'], **observer_data.get('attributes', {}))
+            observer_name = observer_data['name']
+            persistent_player_password = params.get('persistent_player_password')
+            
+            # If the player is in persistent_players, we must authenticate
+            if persistent_players is not None and observer_name in persistent_players:
+                p_player = persistent_players[observer_name]
+                if persistent_player_password != p_player.password:
+                    raise AuthenticationError(f"Invalid password for persistent player '{observer_name}'")
+                # Combine persistent attributes with observer-specific attributes
+                combined_attributes = p_player.attributes.copy()
+                combined_attributes.update(observer_data.get('attributes', {}))
+                observer = Observer(p_player.name, id=p_player.ID, **combined_attributes)
+            else:
+                observer = Observer(observer_name, **observer_data.get('attributes', {}))
+                
             observer_password = params.get('observer_password')
             game.add_observer(observer, password=observer_password)
             return {'status': 'success'}

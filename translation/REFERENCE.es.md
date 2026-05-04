@@ -145,7 +145,7 @@ Una clase de cliente para que los administradores gestionen un `GameServer`.
 *   `list_games()`: Devuelve un diccionario de juegos activos como objetos `RemoteGame`, indexados por su ID.
 *   `kick_player(game_id, player_id)`: Elimina a un jugador de un juego específico por su ID.
 *   `kick_observer(game_id, observer_id)`: Elimina a un observador de un juego específico por su ID.
-*   `list_all_players()`: Devuelve una lista de todos los jugadores actualmente conectados al servidor, incluyendo su ID de juego asociado y su nombre.
+*   `list_all_players()`: Devuelve una lista de todos los jugadores (conectados y persistentes), incluyendo su estado de conexión, el ID del juego asociado y su nombre.
 *   `stop_server()`: Solicita el apagado del servidor.
 *   `restart_server()` : Solicita el reinicio del servidor (borra todos los juegos actuales).
 *   `set_logging_config(host, port)`: Configura el servidor para enviar sus registros a un servidor de registros remoto en la dirección y puerto especificados.

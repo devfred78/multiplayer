@@ -418,15 +418,38 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
         
         elif action == 'list_all_players':
             all_players = []
+            connected_persistent_names = set()
+            
+            # First, list all currently connected players in games
             for gid, game in games.items():
                 game_name = game.name or 'Unknown'
                 for player in game.players:
+                    is_persistent = persistent_players is not None and player.name in persistent_players
+                    if is_persistent:
+                        connected_persistent_names.add(player.name)
+                        
                     all_players.append({
                         'name': player.name,
                         'attributes': player.attributes,
                         'game_id': gid,
-                        'game_name': game_name
+                        'game_name': game_name,
+                        'connected': True,
+                        'is_persistent': is_persistent
                     })
+            
+            # Then, add persistent players who are NOT connected
+            if persistent_players:
+                for name, p_player in persistent_players.items():
+                    if name not in connected_persistent_names:
+                        all_players.append({
+                            'name': p_player.name,
+                            'attributes': p_player.attributes,
+                            'game_id': None,
+                            'game_name': None,
+                            'connected': False,
+                            'is_persistent': True
+                        })
+                        
             return {'status': 'success', 'data': all_players}
 
         elif action == 'get_cert_expiration':

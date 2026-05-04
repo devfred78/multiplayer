@@ -24,6 +24,7 @@ Para una descripción técnica detallada de todas las clases y funciones, consul
 *   **Sugerencias de Nombres Extensibles:** Incluye una función de utilidad para sugerir nombres creativos para juegos y jugadores.
 *   **Múltiples Partidas:** El servidor puede gestionar múltiples sesiones de juego simultáneamente, y la lista de partidas ahora se filtra para ocultar las partidas finalizadas.
 *   **Manejo de Errores Robusto:** Un conjunto claro de excepciones personalizadas para la lógica del juego y problemas de red.
+*   **Cuentas de Jugador Persistentes:** Capacidad para que los jugadores creen una cuenta con contraseña para uso repetido en el servidor.
 
 ## Instalación
 

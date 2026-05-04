@@ -24,6 +24,7 @@ For a detailed technical description of all classes and functions, see the [API 
 *   **Extensible Name Suggestions:** Includes a utility function to suggest creative names for games and players.
 *   **Multiple Games:** The server can manage multiple game sessions simultaneously, and the game list is now filtered to hide finished games.
 *   **Robust Error Handling:** A clear set of custom exceptions for both game logic and network issues.
+*   **Persistent Player Accounts:** Ability for players to create an account with a password for repeated use across the server.
 
 ## Installation
 

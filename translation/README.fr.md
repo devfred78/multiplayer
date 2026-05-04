@@ -24,6 +24,7 @@ Pour une description technique détaillée de toutes les classes et fonctions, c
 *   **Suggestions de Noms Extensibles :** Inclut une fonction utilitaire pour suggérer des noms créatifs pour les parties et les joueurs.
 *   **Parties Multiples :** Le serveur peut gérer plusieurs sessions de jeu simultanément, et la liste des parties est maintenant filtrée pour cacher les parties terminées.
 *   **Gestion Robuste des Erreurs :** Un ensemble clair d'exceptions personnalisées pour la logique de jeu et les problèmes réseau.
+*   **Comptes Joueurs Persistants :** Possibilité pour les joueurs de créer un compte avec un mot de passe pour une utilisation répétée sur le serveur.
 
 ## Installation
 

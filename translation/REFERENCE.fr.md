@@ -54,6 +54,19 @@ Représente un joueur.
 
 ---
 
+### `PersistentPlayer(name, password, **kwargs)`
+Représente un compte de joueur persistant (hérite de `Player`).
+
+*   **`name`** (`str`) : Le nom du joueur (unique sur le serveur).
+*   **`password`** (`str`) : Le mot de passe du compte.
+*   **`**kwargs`** : Attributs personnalisés pour le joueur.
+
+#### Propriétés
+*   Toutes les propriétés de `Player`.
+*   **`password`** : Le mot de passe du compte.
+
+---
+
 ### `Observer(name, **kwargs)`
 Représente un observateur.
 
@@ -177,6 +190,7 @@ Le point d'entrée principal pour qu'un client se connecte à un `GameServer`.
 *   `list_games()` : Retourne un dictionnaire des parties actives sous forme d'objets `RemoteGame`, indexé par leur ID.
 *   `create_group(name, admin_password=None, **attributes)` : Demande au serveur la création d'un nouveau groupe de jeux. Retourne un objet proxy `RemoteGroup`.
 *   `list_groups()` : Retourne un dictionnaire des groupes de jeux sous forme d'objets `RemoteGroup`, indexé par leur ID.
+*   `create_account(name, password, **attributes)` : Crée un compte joueur persistant sur le serveur. Retourne les données du joueur créé.
 
 ---
 
@@ -285,5 +299,6 @@ Suggère un nom aléatoire pour un joueur.
 *   **`ConnectionError`** : Levée lorsqu'un client ne parvient pas à se connecter au serveur.
 *   **`ServerError`** : Levée pour les erreurs génériques signalées par le serveur.
 *   **`AuthenticationError`** : Levée pour les échecs d'authentification par mot de passe du serveur et de la partie.
+*   **`UserAlreadyExistsError`** : Levée lors de la tentative de création d'un `PersistentPlayer` qui existe déjà.
 *   **`GroupNotFoundError`** : Levée lorsqu'un `id` de groupe n'est pas trouvé sur le serveur.
-*   **`AccessDeniedError`** : Levée lorsqu'une action administrative est tentée avec des identifiants incorrects ou manquants.
+*   **`Acc

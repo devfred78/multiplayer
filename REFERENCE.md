@@ -20,9 +20,9 @@ Represents a single game session.
 *   **`**kwargs`**: Custom attributes for the game (e.g., `difficulty="hard"`).
 
 #### Methods
-*   `add_player(player, password=None)`: Adds a `Player` object to the game. The `password` is required if the game is password-protected.
+*   `add_player(player, password=None)`: Adds a `Player` or `PersistentPlayer` object to the game. The `password` is required if the game is password-protected.
 *   `remove_player(player_id)`: Removes a player from the game by their ID.
-*   `add_observer(observer, password=None)`: Adds an `Observer` object to the game. The `password` is required if `observer_password` (or `password`) is set.
+*   `add_observer(observer, password=None)`: Adds an `Observer` or `PersistentPlayer` object to the game. The `password` is required if `observer_password` (or `password`) is set.
 *   `remove_observer(observer_id)`: Removes an observer from the game by their ID.
 *   `start()`: Starts the game.
 *   `pause()`: Pauses the game.

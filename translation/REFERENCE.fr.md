@@ -20,9 +20,9 @@ Représente une session de jeu unique.
 *   **`**kwargs`** : Attributs personnalisés pour la partie (ex: `difficulty="hard"`).
 
 #### Méthodes
-*   `add_player(player, password=None)` : Ajoute un objet `Player` à la partie. Le mot de passe est requis si la partie est protégée.
+*   `add_player(player, password=None)` : Ajoute un objet `Player` ou `PersistentPlayer` à la partie. Le mot de passe est requis si la partie est protégée.
 *   `remove_player(player_id)` : Retire un joueur de la partie par son ID.
-*   `add_observer(observer, password=None)` : Ajoute un objet `Observer` à la partie. Le mot de passe est requis si `observer_password` (ou `password`) est défini.
+*   `add_observer(observer, password=None)` : Ajoute un objet `Observer` ou `PersistentPlayer` à la partie. Le mot de passe est requis si `observer_password` (ou `password`) est défini.
 *   `remove_observer(observer_id)` : Retire un observateur de la partie par son ID.
 *   `start()` : Démarre la partie.
 *   `pause()` : Met la partie en pause.
@@ -216,8 +216,8 @@ Un objet proxy représentant une partie en cours d'exécution sur le serveur.
 *Vous ne créez généralement pas cet objet directement, mais vous l'obtenez via `client.create_game()`.*
 
 #### Méthodes
-*   `add_player(player, password=None)` : Ajoute un `Player` à la partie distante. Le mot de passe est requis si la partie est protégée. Si le joueur est un `PersistentPlayer`, les attributs fournis dans l'objet `player` seront fusionnés avec les attributs globaux du compte pour cette session de jeu.
-*   `add_observer(observer, password=None)` : Ajoute un `Observer` à la partie distante. Le mot de passe est requis si `observer_password` (ou `password`) est défini pour la partie. Si l'observateur est un `PersistentPlayer`, les attributs fournis dans l'objet `observer` seront fusionnés avec les attributs globaux du compte pour cette session de jeu.
+*   `add_player(player, password=None)` : Ajoute un `Player` ou un `PersistentPlayer` à la partie distante. Le mot de passe est requis si la partie est protégée. Si le joueur est un `PersistentPlayer`, les attributs fournis dans l'objet `player` seront fusionnés avec les attributs globaux du compte pour cette session de jeu.
+*   `add_observer(observer, password=None)` : Ajoute un `Observer` ou un `PersistentPlayer` à la partie distante. Le mot de passe est requis si `observer_password` (ou `password`) est défini pour la partie. Si l'observateur est un `PersistentPlayer`, les attributs fournis dans l'objet `observer` seront fusionnés avec les attributs globaux du compte pour cette session de jeu.
 *   `set_state(new_state)` : Écrase le dictionnaire `custom_state` de la partie sur le serveur.
 *   (Les autres méthodes sont identiques à la classe `Game` locale.)
 

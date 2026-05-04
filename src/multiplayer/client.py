@@ -8,7 +8,7 @@ import time
 import ssl
 import logging
 from logging.handlers import SocketHandler
-from .game import Player, Observer
+from .game import Player, Observer, PersistentPlayer
 from . import exceptions
 
 # Constants for network discovery
@@ -159,7 +159,14 @@ class GameClient:
         error_type = response.get('type', 'ServerError')
         message = response.get('message', 'An unknown error occurred.')
         
-        exception_class = getattr(exceptions, error_type, exceptions.ServerError)
+        # Check if error_type is a string and handle it
+        if isinstance(error_type, dict):
+            # This shouldn't happen based on server code but being safe
+            error_name = error_type.get('name', 'ServerError')
+        else:
+            error_name = error_type
+
+        exception_class = getattr(exceptions, error_name, exceptions.ServerError)
         raise exception_class(message)
 
     def create_game(self, group_id=None, **game_options):
@@ -222,6 +229,25 @@ class GameClient:
                     break
                     
         return remote_groups
+
+    def create_account(self, name, password, **attributes):
+        """
+        Creates a persistent player account on the server.
+
+        Args:
+            name (str): The name of the player.
+            password (str): The password for the account.
+            **attributes: Additional attributes for the player.
+
+        Returns:
+            dict: The created player's data.
+        """
+        params = {
+            'name': name,
+            'password': password,
+            'attributes': attributes
+        }
+        return self._send_command('create_persistent_player', params=params)
 
 class ServerAdmin:
     """
@@ -406,6 +432,9 @@ class RemoteGame:
             'player': {'name': player.name, 'attributes': player.attributes},
             'game_password': password,
         }
+        if isinstance(player, PersistentPlayer):
+            params['persistent_player_password'] = player.password
+            
         self._send_command('add_player', params)
 
     def add_observer(self, observer, password=None):

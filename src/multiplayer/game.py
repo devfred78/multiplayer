@@ -4,7 +4,7 @@ This module provides classes for managing a multiplayer game.
 
 import enum
 import uuid
-from .exceptions import GameLogicError, PlayerLimitReachedError, ObserverLimitReachedError, AuthenticationError
+from .exceptions import GameLogicError, PlayerLimitReachedError, ObserverLimitReachedError, AuthenticationError, UserAlreadyExistsError
 
 class GameState(enum.Enum):
     """
@@ -34,6 +34,20 @@ class Player:
         The unique ID of the player.
         """
         return self._id
+
+class PersistentPlayer(Player):
+    """
+    Represents a persistent player with a password.
+
+    Args:
+        name (str): The name of the player.
+        password (str): The password for the account.
+        id (str, optional): The player's ID.
+        **kwargs: Additional attributes for the player.
+    """
+    def __init__(self, name, password, id=None, **kwargs):
+        super().__init__(name, id=id, **kwargs)
+        self.password = password
 
 class GameGroup:
     """

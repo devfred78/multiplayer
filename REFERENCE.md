@@ -54,6 +54,19 @@ Represents a player.
 
 ---
 
+### `PersistentPlayer(name, password, **kwargs)`
+Represents a persistent player account (inherits from `Player`).
+
+*   **`name`** (`str`): The player's name (unique on the server).
+*   **`password`** (`str`): The password for the account.
+*   **`**kwargs`**: Custom attributes for the player.
+
+#### Properties
+*   All properties of `Player`.
+*   **`password`**: The account password.
+
+---
+
 ### `Observer(name, **kwargs)`
 Represents an observer.
 
@@ -177,6 +190,7 @@ The main entry point for a client to connect to a `GameServer`.
 *   `list_games()`: Returns a dictionary of active games as `RemoteGame` objects, keyed by their ID.
 *   `create_group(name, admin_password=None, **attributes)`: Requests the server to create a new game group. Returns a `RemoteGroup` proxy object.
 *   `list_groups()`: Returns a dictionary of game groups as `RemoteGroup` objects, keyed by their ID.
+*   `create_account(name, password, **attributes)`: Creates a persistent player account on the server. Returns the created player's data.
 
 ---
 

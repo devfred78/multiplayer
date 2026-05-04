@@ -19,8 +19,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 import enum
 
-from .game import Game, Player, Observer, GameState
-from .exceptions import GameLogicError, PlayerLimitReachedError, ObserverLimitReachedError, AuthenticationError
+from .game import Game, Player, Observer, GameState, PersistentPlayer
+from .exceptions import GameLogicError, PlayerLimitReachedError, ObserverLimitReachedError, AuthenticationError, UserAlreadyExistsError
 
 # Custom JSON Encoder to handle enums
 class EnumEncoder(json.JSONEncoder):
@@ -98,6 +98,7 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
         server_start_msg += f" (Name: {name})"
     logger.info(server_start_msg)
     games = {}
+    persistent_players = {}
     games_lock = threading.Lock()
     context = None
     if use_tls:
@@ -119,7 +120,7 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
                 continue
             try:
                 conn = context.wrap_socket(newsocket, server_side=True) if use_tls else newsocket
-                thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, groups, games_lock, server_passwords, logger_name, name, use_tls, certfile))
+                thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, groups, games_lock, server_passwords, logger_name, name, use_tls, certfile, persistent_players))
                 thread.daemon = True
                 thread.start()
             except (ssl.SSLError, OSError) as e:
@@ -139,7 +140,7 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
              except Exception:
                  pass
 
-def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_name="GameServer", server_name=None, use_tls=False, certfile=None):
+def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_name="GameServer", server_name=None, use_tls=False, certfile=None, persistent_players=None):
     """Handles a single client connection."""
     logger = logging.getLogger(logger_name)
     logger.info(f"Connected by {addr}")
@@ -160,6 +161,7 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                 # Check if it's an admin action
                 is_server_admin_action = action in ['stop_server', 'restart_server', 'get_server_info', 'set_logging_config', 'set_logging_enabled', 'list_all_players', 'get_cert_expiration', 'set_server_password', 'set_admin_password', 'create_group', 'remove_group', 'list_groups']
                 is_group_admin_action = action in ['list_group_games', 'kick_player', 'kick_observer', 'set_group_admin_password', 'get_group_info']
+                is_persistent_player_action = action in ['create_persistent_player']
                 
                 # If it's a kick action, it could be server admin OR group admin
                 # If group_id is provided, we check group admin rights.
@@ -171,6 +173,13 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                          raise AuthenticationError("Admin actions are disabled on this server")
                     if client_password != admin_password:
                         raise AuthenticationError("Invalid admin password")
+                elif is_persistent_player_action:
+                    # Creating a persistent player can be done without server password 
+                    # OR we could require server password if one is set.
+                    # Given the description "facilité optionnelle donnée aux utilisateurs réguliers",
+                    # it might be better to require server password if it exists.
+                    if server_password is not None and client_password != server_password:
+                        raise AuthenticationError("Invalid server password")
                 elif is_group_admin_action and group_id:
                     with lock:
                         group = None
@@ -195,20 +204,35 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                     raise AuthenticationError("Invalid server password")
 
                 with lock:
-                    response = _execute_command(games, groups, action, params, server_name=server_name, use_tls=use_tls, certfile=certfile, server_passwords=server_passwords)
+                    try:
+                        response = _execute_command(games, groups, action, params, server_name=server_name, use_tls=use_tls, certfile=certfile, server_passwords=server_passwords, persistent_players=persistent_players)
+                    except Exception as e:
+                        response = {'status': 'error', 'type': e.__class__.__name__, 'message': str(e)}
                 conn.sendall(json.dumps(response, cls=EnumEncoder).encode('utf-8'))
-            except (json.JSONDecodeError, TypeError, AuthenticationError, GameLogicError) as e:
-                error_response = {'status': 'error', 'type': type(e).__name__, 'message': str(e)}
+            except Exception as e:
+                error_response = {'status': 'error', 'type': e.__class__.__name__, 'message': str(e)}
                 conn.sendall(json.dumps(error_response, cls=EnumEncoder).encode('utf-8'))
     finally:
         logger.info(f"Disconnected from {addr}")
 
-def _execute_command(games, groups, action, params, server_name=None, use_tls=False, certfile=None, server_passwords=None):
+def _execute_command(games, groups, action, params, server_name=None, use_tls=False, certfile=None, server_passwords=None, persistent_players=None):
     """Executes a command on the game objects and returns a response."""
-    from .game import GameGroup
+    from .game import GameGroup, PersistentPlayer
     try:
         # Server-level actions
-        if action == 'create_game':
+        if action == 'create_persistent_player':
+            name = params.get('name')
+            password = params.get('password')
+            if not name or not password:
+                return {'status': 'error', 'message': 'Missing name or password'}
+            if name in persistent_players:
+                return {'status': 'error', 'type': 'UserAlreadyExistsError', 'message': f"Player '{name}' already exists"}
+            
+            player = PersistentPlayer(name, password, **params.get('attributes', {}))
+            persistent_players[name] = player
+            return {'status': 'success', 'data': {'player_id': player.ID, 'name': player.name}}
+
+        elif action == 'create_game':
             game_id = str(uuid.uuid4())
             # Ensure name is in params so it's part of attributes
             game = Game(**params)
@@ -420,7 +444,19 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
         
         if action == 'add_player':
             player_data = params['player']
-            player = Player(player_data['name'], **player_data.get('attributes', {}))
+            player_name = player_data['name']
+            persistent_player_password = params.get('persistent_player_password')
+            
+            # If the player is in persistent_players, we must authenticate
+            if persistent_players is not None and player_name in persistent_players:
+                p_player = persistent_players[player_name]
+                if persistent_player_password != p_player.password:
+                    raise AuthenticationError(f"Invalid password for persistent player '{player_name}'")
+                # Use the persistent player object's properties
+                player = Player(p_player.name, id=p_player.ID, **p_player.attributes)
+            else:
+                player = Player(player_name, **player_data.get('attributes', {}))
+                
             game_password = params.get('game_password')
             game.add_player(player, password=game_password)
             return {'status': 'success'}

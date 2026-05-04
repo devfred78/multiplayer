@@ -37,3 +37,7 @@ class ServerError(NetworkError):
 class AuthenticationError(NetworkError):
     """Raised for password authentication failures."""
     pass
+
+class UserAlreadyExistsError(MultiplayerError):
+    """Raised when trying to create a PersistentPlayer that already exists."""
+    pass

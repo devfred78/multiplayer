@@ -476,7 +476,10 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
                 if persistent_player_password != p_player.password:
                     raise AuthenticationError(f"Invalid password for persistent player '{player_name}'")
                 # Use the persistent player object's properties
-                player = Player(p_player.name, id=p_player.ID, **p_player.attributes)
+                # Combine persistent attributes with game-specific attributes provided in player_data
+                combined_attributes = p_player.attributes.copy()
+                combined_attributes.update(player_data.get('attributes', {}))
+                player = Player(p_player.name, id=p_player.ID, **combined_attributes)
             else:
                 player = Player(player_name, **player_data.get('attributes', {}))
                 

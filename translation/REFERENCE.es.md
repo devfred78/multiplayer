@@ -216,7 +216,7 @@ Un objeto proxy que representa un juego que se ejecuta en el servidor.
 *Normalmente no se crea este objeto directamente, sino que se obtiene de `client.create_game()`.*
 
 #### Métodos
-*   `add_player(player, password=None)`: Añade un `Player` al juego remoto. Se requiere la contraseña si el juego está protegido por contraseña.
+*   `add_player(player, password=None)`: Añade un `Player` al juego remoto. Se requiere la contraseña si el juego está protegido por contraseña. Si el jugador es un `PersistentPlayer`, los atributos proporcionados en el objeto `player` se fusionarán con los atributos globales de la cuenta para esta sesión de juego.
 *   `add_observer(observer, password=None)`: Añade un `Observer` al juego remoto. Se requiere la contraseña si `observer_password` (o `password`) está configurado para el juego.
 *   `set_state(new_state)`: Sobrescribe el diccionario `custom_state` del juego en el servidor.
 *   (Otros métodos son iguales a los de la clase `Game` local).

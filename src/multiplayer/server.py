@@ -154,9 +154,28 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                 client_password = command.get('password')
                 action = command.get('action')
                 params = command.get('params', {})
+                auth_user = command.get('auth_user')
+                auth_password = command.get('auth_password')
                 
                 server_password = server_passwords.get('server')
                 admin_password = server_passwords.get('admin')
+
+                # Check persistent player credentials if provided
+                user_role = None
+                user_managed_groups = []
+                if auth_user and auth_password:
+                    if persistent_players and auth_user in persistent_players:
+                        p = persistent_players[auth_user]
+                        if p.password == auth_password:
+                            user_role = p.role
+                            user_managed_groups = p.managed_groups
+                            logger.info(f"Authenticated as persistent player: {auth_user} (role: {user_role})")
+                        else:
+                            logger.warning(f"Failed authentication for persistent player: {auth_user} (wrong password)")
+                            raise AuthenticationError("Invalid persistent player password")
+                    else:
+                        logger.warning(f"Failed authentication for persistent player: {auth_user} (not found)")
+                        raise AuthenticationError("Persistent player account not found")
 
                 # Check if it's an admin action
                 is_server_admin_action = action in ['stop_server', 'restart_server', 'get_server_info', 'set_logging_config', 'set_logging_enabled', 'list_all_players', 'get_cert_expiration', 'set_server_password', 'set_admin_password', 'create_group', 'remove_group', 'list_groups', 'set_persistent_players_enabled']
@@ -168,18 +187,23 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                 # If not, we check server admin rights.
                 group_id = params.get('group_id')
                 
+                # Authorization check
+                from .game import PlayerRole
                 if is_server_admin_action:
-                    if admin_password is None:
-                         raise AuthenticationError("Admin actions are disabled on this server")
-                    if client_password != admin_password:
-                        raise AuthenticationError("Invalid admin password")
-                elif is_persistent_player_action:
-                    # Creating a persistent player can be done without server password 
-                    # OR we could require server password if one is set.
-                    # Given the description "facilité optionnelle donnée aux utilisateurs réguliers",
-                    # it might be better to require server password if it exists.
-                    if server_password is not None and client_password != server_password:
-                        raise AuthenticationError("Invalid server password")
+                    # Authorized if:
+                    # 1. Global admin password matches
+                    # 2. Persistent player is SERVER_ADMIN
+                    authorized = False
+                    if admin_password is not None and client_password == admin_password:
+                        authorized = True
+                    elif user_role == PlayerRole.SERVER_ADMIN:
+                        authorized = True
+                    
+                    if not authorized:
+                        if admin_password is None and user_role != PlayerRole.SERVER_ADMIN:
+                            raise AuthenticationError("Admin actions are disabled on this server")
+                        raise AuthenticationError("Invalid admin credentials")
+                
                 elif is_group_admin_action and group_id:
                     with lock:
                         group = None
@@ -189,19 +213,63 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                                 break
                         if not group:
                             raise GameLogicError(f"Group with ID '{group_id}' not found")
-                        if group.admin_password is None:
-                            raise AuthenticationError(f"Group admin actions are disabled for group ID '{group_id}'")
-                        if client_password != group.admin_password:
-                            # Allow server admin to also act as group admin
-                            if admin_password is None or client_password != admin_password:
-                                raise AuthenticationError("Invalid group admin password")
-                elif is_group_admin_action: # Kick without group_name -> must be server admin
-                    if admin_password is None:
-                         raise AuthenticationError("Admin actions are disabled on this server")
-                    if client_password != admin_password:
-                        raise AuthenticationError("Invalid admin password")
+                        
+                        authorized = False
+                        # 1. Global admin password matches
+                        if admin_password is not None and client_password == admin_password:
+                            authorized = True
+                        # 2. Persistent player is SERVER_ADMIN
+                        elif user_role == PlayerRole.SERVER_ADMIN:
+                            authorized = True
+                        # 3. Persistent player is GROUP_ADMIN for THIS group
+                        elif user_role == PlayerRole.GROUP_ADMIN:
+                            # Search by name or ID in managed_groups
+                            found = False
+                            for mg in user_managed_groups:
+                                if mg == group_id:
+                                    found = True
+                                    break
+                                # Also check if mg is the name of the group
+                                for gname, g in groups.items():
+                                    if gname == mg and g.ID == group_id:
+                                        found = True
+                                        break
+                                if found: break
+                            if found:
+                                authorized = True
+                        # 4. Group admin password matches
+                        elif group.admin_password is not None and client_password == group.admin_password:
+                            authorized = True
+                        
+                        if not authorized:
+                            logger.warning(f"Unauthorized group admin action: {action} on group {group_id} for user {auth_user} (role {user_role}). Managed groups: {user_managed_groups}")
+                            if group.admin_password is None and admin_password is None and user_role not in [PlayerRole.SERVER_ADMIN, PlayerRole.GROUP_ADMIN]:
+                                raise AuthenticationError(f"Group admin actions are disabled for group ID '{group_id}'")
+                            raise AuthenticationError("Invalid group admin credentials")
+                
+                elif is_group_admin_action: # Action without group_id (like kick without group)
+                    authorized = False
+                    if admin_password is not None and client_password == admin_password:
+                        authorized = True
+                    elif user_role == PlayerRole.SERVER_ADMIN:
+                        authorized = True
+                    
+                    if not authorized:
+                        if admin_password is None and user_role != PlayerRole.SERVER_ADMIN:
+                            raise AuthenticationError("Admin actions are disabled on this server")
+                        raise AuthenticationError("Invalid admin credentials")
+                
+                elif is_persistent_player_action:
+                    if server_password is not None and client_password != server_password:
+                        # Allow server admin to create accounts even if server password is set but not provided?
+                        # For simplicity, if server password is set, it must be provided as 'password' field 
+                        # OR the user must be already authenticated as SERVER_ADMIN.
+                        if user_role != PlayerRole.SERVER_ADMIN:
+                             raise AuthenticationError("Invalid server password")
+                
                 elif server_password is not None and client_password != server_password:
-                    raise AuthenticationError("Invalid server password")
+                    if user_role is None: # Not even a simple persistent player logged in
+                         raise AuthenticationError("Invalid server password")
 
                 with lock:
                     try:
@@ -217,7 +285,7 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
 
 def _execute_command(games, groups, action, params, server_name=None, use_tls=False, certfile=None, server_passwords=None, persistent_players=None):
     """Executes a command on the game objects and returns a response."""
-    from .game import GameGroup, PersistentPlayer
+    from .game import GameGroup, PersistentPlayer, PlayerRole
     try:
         # Server-level actions
         if action == 'set_persistent_players_enabled':
@@ -232,6 +300,13 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
         elif action == 'create_persistent_player':
             name = params.get('name')
             password = params.get('password')
+            role_val = params.get('role', 'player')
+            managed_groups = params.get('managed_groups', [])
+            
+            try:
+                role = PlayerRole(role_val)
+            except ValueError:
+                return {'status': 'error', 'message': f"Invalid role: {role_val}"}
             
             if not name or not password:
                 return {'status': 'error', 'message': 'Missing name or password'}
@@ -247,9 +322,9 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             if name in persistent_players:
                 return {'status': 'error', 'type': 'UserAlreadyExistsError', 'message': f"Player '{name}' already exists"}
             
-            player = PersistentPlayer(name, password, **params.get('attributes', {}))
+            player = PersistentPlayer(name, password, role=role, managed_groups=managed_groups, **params.get('attributes', {}))
             persistent_players[name] = player
-            return {'status': 'success', 'data': {'player_id': player.ID, 'name': player.name}}
+            return {'status': 'success', 'data': {'player_id': player.ID, 'name': player.name, 'role': player.role.value}}
 
         elif action == 'create_game':
             game_id = str(uuid.uuid4())

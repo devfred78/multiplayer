@@ -35,6 +35,14 @@ class Player:
         """
         return self._id
 
+class PlayerRole(enum.Enum):
+    """
+    Represents the role of a persistent player.
+    """
+    PLAYER = "player"
+    GROUP_ADMIN = "group_admin"
+    SERVER_ADMIN = "server_admin"
+
 class PersistentPlayer(Player):
     """
     Represents a persistent player with a password.
@@ -42,12 +50,16 @@ class PersistentPlayer(Player):
     Args:
         name (str): The name of the player.
         password (str): The password for the account.
+        role (PlayerRole, optional): The role of the player. Defaults to PlayerRole.PLAYER.
+        managed_groups (list, optional): A list of group IDs managed by this player if role is GROUP_ADMIN.
         id (str, optional): The player's ID.
         **kwargs: Additional attributes for the player.
     """
-    def __init__(self, name, password, id=None, **kwargs):
+    def __init__(self, name, password, role=PlayerRole.PLAYER, managed_groups=None, id=None, **kwargs):
         super().__init__(name, id=id, **kwargs)
         self.password = password
+        self.role = role
+        self.managed_groups = managed_groups or []
 
 class GameGroup:
     """

@@ -54,16 +54,20 @@ Represents a player.
 
 ---
 
-### `PersistentPlayer(name, password, **kwargs)`
+### `PersistentPlayer(name, password, role=PlayerRole.PLAYER, managed_groups=None, **kwargs)`
 Represents a persistent player account (inherits from `Player`).
 
 *   **`name`** (`str`): The player's name (unique on the server).
 *   **`password`** (`str`): The password for the account.
+*   **`role`** (`PlayerRole`, optional): The role of the player. Defaults to `PlayerRole.PLAYER`.
+*   **`managed_groups`** (`list`, optional): A list of group IDs managed by this player (if role is `GROUP_ADMIN`).
 *   **`**kwargs`**: Custom attributes for the player.
 
 #### Properties
 *   All properties of `Player`.
 *   **`password`**: The account password.
+*   **`role`**: The player's role (`player`, `group_admin`, or `server_admin`).
+*   **`managed_groups`**: List of group IDs the player can manage.
 
 ---
 
@@ -96,6 +100,15 @@ Represents a group of games on a server.
 *   **`name`**: The name of the group.
 *   **`games`**: A list of `Game` objects currently in the group.
 *   **`attributes`**: A dictionary of custom attributes for the group.
+
+---
+
+### `PlayerRole` (Enum)
+An enumeration for the role of a persistent player.
+
+*   `PlayerRole.PLAYER`
+*   `PlayerRole.GROUP_ADMIN`
+*   `PlayerRole.SERVER_ADMIN`
 
 ---
 
@@ -132,13 +145,15 @@ Manages game sessions and handles network requests.
 
 ---
 
-### `ServerAdmin(host='127.0.0.1', port=65432, admin_password=None, use_tls=False)`
+### `ServerAdmin(host='127.0.0.1', port=65432, admin_password=None, use_tls=False, auth_user=None, auth_password=None)`
 A client class for administrators to manage a `GameServer`.
 
 *   **`host`** (`str`): The IP address of the server.
 *   **`port`** (`int`): The TCP port of the server.
-*   **`admin_password`** (`str`, optional): The administrator password for the server.
+*   **`admin_password`** (`str`, optional): The administrator password for the server (global).
 *   **`use_tls`** (`bool`, optional): If `True`, the client will connect using TLS. Defaults to `False`.
+*   **`auth_user`** (`str`, optional): The name of a persistent player account with administrative rights.
+*   **`auth_password`** (`str`, optional): The password for the persistent player account.
 
 #### Methods
 *   `get_server_info()`: Returns information about the server (name, number of games, active game IDs).
@@ -160,7 +175,7 @@ A client class for administrators to manage a `GameServer`.
 
 ---
 
-### `GroupAdmin(group_id, host='127.0.0.1', port=65432, group_admin_password=None, use_tls=False)`
+### `GroupAdmin(group_id, host='127.0.0.1', port=65432, group_admin_password=None, use_tls=False, auth_user=None, auth_password=None)`
 A client class for group administrators to manage games within a specific `GameGroup`.
 
 *   **`group_id`** (`str`): The unique ID of the group to manage.
@@ -168,6 +183,8 @@ A client class for group administrators to manage games within a specific `GameG
 *   **`port`** (`int`): The TCP port of the server.
 *   **`group_admin_password`** (`str`, optional): The administrative password for this group.
 *   **`use_tls`** (`bool`, optional): If `True`, the client will connect using TLS. Defaults to `False`.
+*   **`auth_user`** (`str`, optional): The name of a persistent player account with administrative rights for this group.
+*   **`auth_password`** (`str`, optional): The password for the persistent player account.
 
 #### Methods
 *   `list_games()`: Returns a dictionary of games belonging to this group as `RemoteGame` objects, keyed by their ID.
@@ -177,13 +194,15 @@ A client class for group administrators to manage games within a specific `GameG
 
 ---
 
-### `GameClient(host='127.0.0.1', port=65432, password=None, use_tls=False)`
+### `GameClient(host='127.0.0.1', port=65432, password=None, use_tls=False, auth_user=None, auth_password=None)`
 The main entry point for a client to connect to a `GameServer`.
 
 *   **`host`** (`str`): The IP address of the server.
 *   **`port`** (`int`): The TCP port of the server.
 *   **`password`** (`str`, optional): The global password for the server.
 *   **`use_tls`** (`bool`, optional): If `True`, the client will connect using TLS. Defaults to `False`.
+*   **`auth_user`** (`str`, optional): The name of a persistent player account.
+*   **`auth_password`** (`str`, optional): The password for the persistent player account.
 
 #### Methods
 *   `discover_servers(timeout=2)` (static method): Scans the local network for running `GameServer` instances. Returns a list of `(host, port)` tuples.
@@ -191,7 +210,9 @@ The main entry point for a client to connect to a `GameServer`.
 *   `list_games()`: Returns a dictionary of active games as `RemoteGame` objects, keyed by their ID.
 *   `create_group(name, admin_password=None, **attributes)`: Requests the server to create a new game group. Returns a `RemoteGroup` proxy object.
 *   `list_groups()`: Returns a dictionary of game groups as `RemoteGroup` objects, keyed by their ID.
-*   `create_account(name, password, **attributes)`: Creates a persistent player account on the server. Returns the created player's data.
+*   `create_account(name, password, role="player", managed_groups=None, **attributes)`: Creates a persistent player account on the server. Returns the created player's data.
+*   `get_server_admin()`: Returns a `ServerAdmin` instance using the client's current credentials.
+*   `get_group_admin(group_id)`: Returns a `GroupAdmin` instance for the specified group using the client's current credentials.
 
 ---
 

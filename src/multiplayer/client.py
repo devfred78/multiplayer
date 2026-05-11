@@ -21,11 +21,13 @@ class GameClient:
     """
     A client for connecting to a GameServer.
     """
-    def __init__(self, host='127.0.0.1', port=65432, password=None, use_tls=False):
+    def __init__(self, host='127.0.0.1', port=65432, password=None, use_tls=False, auth_user=None, auth_password=None):
         self.host = host
         self.port = port
         self.password = password
         self.use_tls = use_tls
+        self.auth_user = auth_user
+        self.auth_password = auth_password
         self._logger = logging.getLogger("GameClient")
         self._logger.setLevel(logging.INFO)
         self._logger.propagate = True # Ensure it bubbles up to root by default
@@ -132,6 +134,8 @@ class GameClient:
                     'action': action,
                     'params': params or {},
                     'password': self.password,
+                    'auth_user': self.auth_user,
+                    'auth_password': self.auth_password,
                 }
                 conn.sendall(json.dumps(command).encode('utf-8'))
                 
@@ -175,7 +179,7 @@ class GameClient:
         if group_id:
             params['group_id'] = group_id
         data = self._send_command('create_game', params)
-        remote_game = RemoteGame(data['game_id'], self.host, self.port, self.password, self.use_tls)
+        remote_game = RemoteGame(data['game_id'], self.host, self.port, self.password, self.use_tls, self.auth_user, self.auth_password)
         
         # Propagate logging configuration if any
         for h in self._logger.handlers:
@@ -191,7 +195,7 @@ class GameClient:
         
         remote_games = {}
         for gid in games_data:
-            remote_games[gid] = RemoteGame(gid, self.host, self.port, self.password, self.use_tls)
+            remote_games[gid] = RemoteGame(gid, self.host, self.port, self.password, self.use_tls, self.auth_user, self.auth_password)
             
             # Propagate logging configuration if any
             for h in self._logger.handlers:
@@ -204,7 +208,7 @@ class GameClient:
     def create_group(self, name, admin_password=None, **attributes):
         """Requests the server to create a new game group and returns a proxy to it."""
         data = self._send_command('create_group', {'name': name, 'admin_password': admin_password, 'attributes': attributes})
-        remote_group = RemoteGroup(data['group_id'], self.host, self.port, self.password, self.use_tls)
+        remote_group = RemoteGroup(data['group_id'], self.host, self.port, self.password, self.use_tls, self.auth_user, self.auth_password)
         
         # Propagate logging configuration if any
         for h in self._logger.handlers:
@@ -220,7 +224,7 @@ class GameClient:
         
         remote_groups = {}
         for gid in groups_data:
-            remote_groups[gid] = RemoteGroup(gid, self.host, self.port, self.password, self.use_tls)
+            remote_groups[gid] = RemoteGroup(gid, self.host, self.port, self.password, self.use_tls, self.auth_user, self.auth_password)
             
             # Propagate logging configuration if any
             for h in self._logger.handlers:
@@ -230,13 +234,15 @@ class GameClient:
                     
         return remote_groups
 
-    def create_account(self, name, password, **attributes):
+    def create_account(self, name, password, role="player", managed_groups=None, **attributes):
         """
         Creates a persistent player account on the server.
 
         Args:
             name (str): The name of the player.
             password (str): The password for the account.
+            role (str, optional): The player's role ('player', 'group_admin', or 'server_admin'). Defaults to 'player'.
+            managed_groups (list, optional): A list of group IDs managed by this player (if role is 'group_admin').
             **attributes: Additional attributes for the player.
 
         Returns:
@@ -245,20 +251,38 @@ class GameClient:
         params = {
             'name': name,
             'password': password,
+            'role': role,
+            'managed_groups': managed_groups or [],
             'attributes': attributes
         }
         return self._send_command('create_persistent_player', params=params)
+
+    def get_server_admin(self):
+        """
+        Returns a ServerAdmin instance using this client's credentials.
+        Only useful if the current user has SERVER_ADMIN role.
+        """
+        return ServerAdmin(self.host, self.port, self.password, self.use_tls, self.auth_user, self.auth_password)
+
+    def get_group_admin(self, group_id):
+        """
+        Returns a GroupAdmin instance for the specified group using this client's credentials.
+        Only useful if the current user has SERVER_ADMIN role or is GROUP_ADMIN for this group.
+        """
+        return GroupAdmin(group_id, self.host, self.port, self.password, self.use_tls, self.auth_user, self.auth_password)
 
 class ServerAdmin:
     """
     A client class for administrators to connect to and manage a GameServer.
     """
-    def __init__(self, host='127.0.0.1', port=65432, admin_password=None, use_tls=False):
+    def __init__(self, host='127.0.0.1', port=65432, admin_password=None, use_tls=False, auth_user=None, auth_password=None):
         self.host = host
         self.port = port
         self.admin_password = admin_password
         self.use_tls = use_tls
-        self._client = GameClient(host, port, admin_password, use_tls)
+        self.auth_user = auth_user
+        self.auth_password = auth_password
+        self._client = GameClient(host, port, admin_password, use_tls, auth_user, auth_password)
         self._logger = logging.getLogger("ServerAdmin")
         self._logger.setLevel(logging.INFO)
 
@@ -342,13 +366,15 @@ class GroupAdmin:
     """
     A client class for group administrators to manage games within a specific GameGroup.
     """
-    def __init__(self, group_id, host='127.0.0.1', port=65432, group_admin_password=None, use_tls=False):
+    def __init__(self, group_id, host='127.0.0.1', port=65432, group_admin_password=None, use_tls=False, auth_user=None, auth_password=None):
         self.group_id = group_id
         self.host = host
         self.port = port
         self.group_admin_password = group_admin_password
         self.use_tls = use_tls
-        self._client = GameClient(host, port, group_admin_password, use_tls)
+        self.auth_user = auth_user
+        self.auth_password = auth_password
+        self._client = GameClient(host, port, group_admin_password, use_tls, auth_user, auth_password)
         self._logger = logging.getLogger(f"GroupAdmin.{group_id}")
         self._logger.setLevel(logging.INFO)
 
@@ -359,7 +385,7 @@ class GroupAdmin:
 
     def list_games(self):
         """Retrieves a dictionary of games belonging to this group as RemoteGame objects, indexed by ID."""
-        remote_group = RemoteGroup(self.group_id, self.host, self.port, self.group_admin_password, self.use_tls)
+        remote_group = RemoteGroup(self.group_id, self.host, self.port, self.group_admin_password, self.use_tls, self.auth_user, self.auth_password)
         
         # Propagate logging configuration if any
         for h in self._logger.handlers:
@@ -400,11 +426,11 @@ class RemoteGame:
     """
     A proxy for a Game object on a remote server.
     """
-    def __init__(self, game_id, host='127.0.0.1', port=65432, password=None, use_tls=False):
+    def __init__(self, game_id, host='127.0.0.1', port=65432, password=None, use_tls=False, auth_user=None, auth_password=None):
         self.game_id = game_id
         self.host = host
         self.port = port
-        self._client = GameClient(host, port, password, use_tls)
+        self._client = GameClient(host, port, password, use_tls, auth_user, auth_password)
         self._logger = logging.getLogger("RemoteGame")
         self._logger.setLevel(logging.INFO)
         self._logger.propagate = True
@@ -516,11 +542,11 @@ class RemoteGroup:
     """
     A proxy for a GameGroup object on a remote server.
     """
-    def __init__(self, group_id, host='127.0.0.1', port=65432, password=None, use_tls=False):
+    def __init__(self, group_id, host='127.0.0.1', port=65432, password=None, use_tls=False, auth_user=None, auth_password=None):
         self.group_id = group_id
         self.host = host
         self.port = port
-        self._client = GameClient(host, port, password, use_tls)
+        self._client = GameClient(host, port, password, use_tls, auth_user, auth_password)
         self._logger = logging.getLogger(f"RemoteGroup.{group_id}")
         self._logger.setLevel(logging.INFO)
         self._logger.propagate = True
@@ -549,7 +575,7 @@ class RemoteGroup:
         
         remote_games = {}
         for gid in games_data:
-            remote_games[gid] = RemoteGame(gid, self.host, self.port, self._client.password, self._client.use_tls)
+            remote_games[gid] = RemoteGame(gid, self.host, self.port, self._client.password, self._client.use_tls, self._client.auth_user, self._client.auth_password)
             
             # Propagate logging configuration if any
             for h in self._logger.handlers:

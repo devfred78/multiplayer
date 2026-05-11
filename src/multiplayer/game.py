@@ -58,10 +58,9 @@ class GameGroup:
         admin_password (str, optional): A password for administrative actions on this group.
         **kwargs: Additional attributes for the group.
     """
-    def __init__(self, name, admin_password=None, persistent_players_enabled=True, **kwargs):
+    def __init__(self, name, admin_password=None, **kwargs):
         self.name = name
         self.admin_password = admin_password
-        self.persistent_players_enabled = persistent_players_enabled
         self.attributes = kwargs
         self.games = []
         self._id = str(uuid.uuid4())

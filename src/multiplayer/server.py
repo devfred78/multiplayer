@@ -222,50 +222,25 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
         # Server-level actions
         if action == 'set_persistent_players_enabled':
             enabled = params.get('enabled')
-            group_id = params.get('group_id')
             
-            if group_id:
-                group = None
-                for g in groups.values():
-                    if g.ID == group_id:
-                        group = g
-                        break
-                if not group:
-                    return {'status': 'error', 'message': f'Group with ID {group_id} not found'}
-                group.persistent_players_enabled = enabled
+            if server_passwords is not None:
+                server_passwords['persistent_players_enabled'] = enabled
                 status = "enabled" if enabled else "disabled"
-                return {'status': 'success', 'message': f'Persistent player creation {status} for group {group.name}'}
-            else:
-                if server_passwords is not None:
-                    server_passwords['persistent_players_enabled'] = enabled
-                    status = "enabled" if enabled else "disabled"
-                    return {'status': 'success', 'message': f'Persistent player creation {status} globally'}
-                return {'status': 'error', 'message': 'Server passwords dictionary not available'}
+                return {'status': 'success', 'message': f'Persistent player creation {status} globally'}
+            return {'status': 'error', 'message': 'Server passwords dictionary not available'}
 
         elif action == 'create_persistent_player':
             name = params.get('name')
             password = params.get('password')
-            group_id = params.get('group_id')
             
             if not name or not password:
                 return {'status': 'error', 'message': 'Missing name or password'}
             
-            # Check if persistent players are enabled (globally or for group if specified)
+            # Check if persistent players are enabled
             enabled = True
             if server_passwords is not None:
                 enabled = server_passwords.get('persistent_players_enabled', True)
             
-            # Check group-specific setting if group_id is provided
-            if group_id:
-                group = None
-                for g in groups.values():
-                    if g.ID == group_id:
-                        group = g
-                        break
-                if group and not group.persistent_players_enabled:
-                    return {'status': 'error', 'message': f'Persistent player creation is disabled for group {group.name}'}
-
-            # However, if the server-wide setting is disabled, we block it.
             if not enabled:
                 return {'status': 'error', 'message': 'Persistent player creation is disabled on this server'}
 

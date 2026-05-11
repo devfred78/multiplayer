@@ -156,7 +156,7 @@ A client class for administrators to manage a `GameServer`.
 *   `create_group(name, admin_password=None, **attributes)`: Creates a new game group on the server. Returns a `RemoteGroup` proxy object.
 *   `remove_group(group_id)`: Removes a game group from the server by its ID.
 *   `list_groups()`: Returns a dictionary of all game groups on the server as `RemoteGroup` objects, keyed by their `group_id`.
-*   `set_persistent_players_enabled(enabled, group_id=None)`: Enables (`True`) or disables (`False`) the creation of persistent player accounts on the server. If `group_id` is provided, the policy is applied specifically to that group.
+*   `set_persistent_players_enabled(enabled)`: Enables (`True`) or disables (`False`) the creation of persistent player accounts on the server.
 
 ---
 
@@ -191,7 +191,7 @@ The main entry point for a client to connect to a `GameServer`.
 *   `list_games()`: Returns a dictionary of active games as `RemoteGame` objects, keyed by their ID.
 *   `create_group(name, admin_password=None, **attributes)`: Requests the server to create a new game group. Returns a `RemoteGroup` proxy object.
 *   `list_groups()`: Returns a dictionary of game groups as `RemoteGroup` objects, keyed by their ID.
-*   `create_account(name, password, group_id=None, **attributes)`: Creates a persistent player account on the server. If `group_id` is provided, the creation will be subject to the group's policy regarding persistent accounts. Returns the created player's data.
+*   `create_account(name, password, **attributes)`: Creates a persistent player account on the server. Returns the created player's data.
 
 ---
 
@@ -300,4 +300,4 @@ Suggests a random name for a player.
 *   **`ConnectionError`**: Raised when a client fails to connect to the server.
 *   **`ServerError`**: Raised for generic errors reported by the server.
 *   **`AuthenticationError`**: Raised for both server and game password authentication failures.
-*   **`GroupNotFoundError`**: Raised when a group `id` is not found on the se
+*   **`GroupNotFoundError`**: Raised when a group `id` is not found on the se                                                                                                                            

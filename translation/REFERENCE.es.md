@@ -156,7 +156,7 @@ Una clase de cliente para que los administradores gestionen un `GameServer`.
 *   `create_group(name, admin_password=None, **attributes)`: Crea un nuevo grupo de juegos en el servidor. Devuelve un objeto proxy `RemoteGroup`.
 *   `remove_group(group_id)` : Elimina un grupo de juegos del servidor por su ID.
 *   `list_groups()` : Devuelve un diccionario de todos los grupos de juegos en el servidor como objetos `RemoteGroup`, indexados por su `group_id`.
-*   `set_persistent_players_enabled(enabled, group_id=None)`: Activa (`True`) o desactiva (`False`) la creación de cuentas de jugadores persistentes en el servidor. Si se proporciona `group_id`, la política se aplica específicamente a ese grupo.
+*   `set_persistent_players_enabled(enabled)`: Activa (`True`) o desactiva (`False`) la creación de cuentas de jugadores persistentes en el servidor.
 
 ---
 
@@ -191,7 +191,7 @@ El punto de entrada principal para que un cliente se conecte a un `GameServer`.
 *   `list_games()`: Devuelve un diccionario de juegos activos como objetos `RemoteGame`, indexados por su ID.
 *   `create_group(name, admin_password=None, **attributes)`: Solicita al servidor crear un nuevo grupo de juegos. Devuelve un objeto proxy `RemoteGroup`.
 *   `list_groups()` : Devuelve un diccionario de grupos de juegos como objetos `RemoteGroup`, indexados por su ID.
-*   `create_account(name, password, group_id=None, **attributes)`: Crea una cuenta de jugador persistente en el servidor. Si se proporciona `group_id`, la creación estará sujeta a la política del grupo con respecto a las cuentas persistentes. Devuelve los datos del jugador creado.
+*   `create_account(name, password, **attributes)`: Crea una cuenta de jugador persistente en el servidor. Devuelve los datos del jugador creado.
 
 ---
 

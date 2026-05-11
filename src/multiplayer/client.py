@@ -230,14 +230,13 @@ class GameClient:
                     
         return remote_groups
 
-    def create_account(self, name, password, group_id=None, **attributes):
+    def create_account(self, name, password, **attributes):
         """
         Creates a persistent player account on the server.
 
         Args:
             name (str): The name of the player.
             password (str): The password for the account.
-            group_id (str, optional): The ID of the group the account is created for.
             **attributes: Additional attributes for the player.
 
         Returns:
@@ -246,7 +245,6 @@ class GameClient:
         params = {
             'name': name,
             'password': password,
-            'group_id': group_id,
             'attributes': attributes
         }
         return self._send_command('create_persistent_player', params=params)
@@ -334,11 +332,10 @@ class ServerAdmin:
         """Retrieves a list of all game groups on the server as RemoteGroup objects."""
         return self._client.list_groups()
 
-    def set_persistent_players_enabled(self, enabled, group_id=None):
+    def set_persistent_players_enabled(self, enabled):
         """Enables or disables the creation of persistent players on the server."""
         return self._client._send_command('set_persistent_players_enabled', {
-            'enabled': enabled,
-            'group_id': group_id
+            'enabled': enabled
         })
 
 class GroupAdmin:

@@ -173,6 +173,7 @@ A client class for group administrators to manage games within a specific `GameG
 *   `kick_player(game_id, player_id)`: Removes a player from a specific game in the group by their ID.
 *   `kick_observer(game_id, observer_id)`: Removes an observer from a specific game in the group by their ID.
 *   `set_group_admin_password(new_password)`: Sets a new administrator password for this group.
+*   `set_persistent_players_enabled(enabled)`: Enables (`True`) or disables (`False`) the creation of persistent player accounts for this group on the server.
 
 ---
 
@@ -190,7 +191,7 @@ The main entry point for a client to connect to a `GameServer`.
 *   `list_games()`: Returns a dictionary of active games as `RemoteGame` objects, keyed by their ID.
 *   `create_group(name, admin_password=None, **attributes)`: Requests the server to create a new game group. Returns a `RemoteGroup` proxy object.
 *   `list_groups()`: Returns a dictionary of game groups as `RemoteGroup` objects, keyed by their ID.
-*   `create_account(name, password, **attributes)`: Creates a persistent player account on the server. Returns the created player's data.
+*   `create_account(name, password, group_id=None, **attributes)`: Creates a persistent player account on the server. If `group_id` is provided, the creation will be subject to the group's policy regarding persistent accounts. Returns the created player's data.
 
 ---
 
@@ -299,5 +300,4 @@ Suggests a random name for a player.
 *   **`ConnectionError`**: Raised when a client fails to connect to the server.
 *   **`ServerError`**: Raised for generic errors reported by the server.
 *   **`AuthenticationError`**: Raised for both server and game password authentication failures.
-*   **`GroupNotFoundError`**: Raised when a group `id` is not found on the server.
-*   **`AccessDeniedError`**: Raised when an administrative action is attempted with incorrect or missing credentials.
+*   **`GroupNotFoundError`**: Raised when a group `id` is not found on the se

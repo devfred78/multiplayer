@@ -230,13 +230,14 @@ class GameClient:
                     
         return remote_groups
 
-    def create_account(self, name, password, **attributes):
+    def create_account(self, name, password, group_id=None, **attributes):
         """
         Creates a persistent player account on the server.
 
         Args:
             name (str): The name of the player.
             password (str): The password for the account.
+            group_id (str, optional): The ID of the group the account is created for.
             **attributes: Additional attributes for the player.
 
         Returns:
@@ -245,6 +246,7 @@ class GameClient:
         params = {
             'name': name,
             'password': password,
+            'group_id': group_id,
             'attributes': attributes
         }
         return self._send_command('create_persistent_player', params=params)

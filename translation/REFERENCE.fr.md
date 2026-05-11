@@ -173,6 +173,7 @@ Une classe cliente pour que les administrateurs de groupe gèrent les parties au
 *   `kick_player(game_id, player_id)` : Retire un joueur d'une partie spécifique dans le groupe par son ID.
 *   `kick_observer(game_id, observer_id)` : Retire un observateur d'une partie spécifique dans le groupe par son ID.
 *   `set_group_admin_password(new_password)` : Définit un nouveau mot de passe administrateur pour ce groupe.
+*   `set_persistent_players_enabled(enabled)` : Active (`True`) ou désactive (`False`) la création de comptes de joueurs persistants pour ce groupe sur le serveur.
 
 ---
 
@@ -190,7 +191,7 @@ Le point d'entrée principal pour qu'un client se connecte à un `GameServer`.
 *   `list_games()` : Retourne un dictionnaire des parties actives sous forme d'objets `RemoteGame`, indexé par leur ID.
 *   `create_group(name, admin_password=None, **attributes)` : Demande au serveur la création d'un nouveau groupe de jeux. Retourne un objet proxy `RemoteGroup`.
 *   `list_groups()` : Retourne un dictionnaire des groupes de jeux sous forme d'objets `RemoteGroup`, indexé par leur ID.
-*   `create_account(name, password, **attributes)` : Crée un compte joueur persistant sur le serveur. Retourne les données du joueur créé.
+*   `create_account(name, password, group_id=None, **attributes)` : Crée un compte joueur persistant sur le serveur. Si `group_id` est fourni, la création sera soumise à la politique du groupe concernant les comptes persistants. Retourne les données du joueur créé.
 
 ---
 
@@ -299,6 +300,4 @@ Suggère un nom aléatoire pour un joueur.
 *   **`ConnectionError`** : Levée lorsqu'un client ne parvient pas à se connecter au serveur.
 *   **`ServerError`** : Levée pour les erreurs génériques signalées par le serveur.
 *   **`AuthenticationError`** : Levée pour les échecs d'authentification par mot de passe du serveur et de la partie.
-*   **`UserAlreadyExistsError`** : Levée lors de la tentative de création d'un `PersistentPlayer` qui existe déjà.
-*   **`GroupNotFoundError`** : Levée lorsqu'un `id` de groupe n'est pas trouvé sur le serveur.
-*   **`Acc
+*   **`UserAlreadyExistsError`** : Levée lors de la tentative de création d'un `PersistentPlayer`

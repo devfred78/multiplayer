@@ -22,17 +22,17 @@ def test_group_admin_set_persistent_players_enabled():
         res_disable = group_admin.set_persistent_players_enabled(False)
         assert 'disabled' in res_disable['message']
         
-        # 3. Tenter de créer un compte (devrait échouer)
+        # 3. Tenter de créer un compte pour ce groupe (devrait échouer)
         with pytest.raises(exceptions.ServerError) as excinfo:
-            client.create_account("Persist2", "pass2")
+            client.create_account("Persist2", "pass2", group_id=group_id)
         assert 'disabled' in str(excinfo.value)
         
         # 4. Réactiver via GroupAdmin
         res_enable = group_admin.set_persistent_players_enabled(True)
         assert 'enabled' in res_enable['message']
         
-        # 5. Tenter de créer un compte (devrait réussir)
-        res_create2 = client.create_account("Persist2", "pass2")
+        # 5. Tenter de créer un compte pour ce groupe (devrait réussir)
+        res_create2 = client.create_account("Persist2", "pass2", group_id=group_id)
         assert res_create2['name'] == "Persist2"
             
     finally:

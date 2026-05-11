@@ -159,8 +159,8 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                 admin_password = server_passwords.get('admin')
 
                 # Check if it's an admin action
-                is_server_admin_action = action in ['stop_server', 'restart_server', 'get_server_info', 'set_logging_config', 'set_logging_enabled', 'list_all_players', 'get_cert_expiration', 'set_server_password', 'set_admin_password', 'create_group', 'remove_group', 'list_groups', 'set_persistent_players_enabled']
-                is_group_admin_action = action in ['list_group_games', 'kick_player', 'kick_observer', 'set_group_admin_password', 'get_group_info']
+                is_server_admin_action = action in ['stop_server', 'restart_server', 'get_server_info', 'set_logging_config', 'set_logging_enabled', 'list_all_players', 'get_cert_expiration', 'set_server_password', 'set_admin_password', 'create_group', 'remove_group', 'list_groups']
+                is_group_admin_action = action in ['list_group_games', 'kick_player', 'kick_observer', 'set_group_admin_password', 'get_group_info', 'set_persistent_players_enabled']
                 is_persistent_player_action = action in ['create_persistent_player']
                 
                 # If it's a kick action, it could be server admin OR group admin
@@ -220,11 +220,55 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
     from .game import GameGroup, PersistentPlayer
     try:
         # Server-level actions
-        if action == 'create_persistent_player':
+        if action == 'set_persistent_players_enabled':
+            enabled = params.get('enabled')
+            group_id = params.get('group_id')
+            
+            if group_id:
+                group = None
+                for g in groups.values():
+                    if g.ID == group_id:
+                        group = g
+                        break
+                if not group:
+                    return {'status': 'error', 'message': f'Group with ID {group_id} not found'}
+                group.persistent_players_enabled = enabled
+                status = "enabled" if enabled else "disabled"
+                return {'status': 'success', 'message': f'Persistent player creation {status} for group {group.name}'}
+            else:
+                if server_passwords is not None:
+                    server_passwords['persistent_players_enabled'] = enabled
+                    status = "enabled" if enabled else "disabled"
+                    return {'status': 'success', 'message': f'Persistent player creation {status} globally'}
+                return {'status': 'error', 'message': 'Server passwords dictionary not available'}
+
+        elif action == 'create_persistent_player':
             name = params.get('name')
             password = params.get('password')
+            group_id = params.get('group_id')
+            
             if not name or not password:
                 return {'status': 'error', 'message': 'Missing name or password'}
+            
+            # Check if persistent players are enabled (globally or for group if specified)
+            enabled = True
+            if server_passwords is not None:
+                enabled = server_passwords.get('persistent_players_enabled', True)
+            
+            # Check group-specific setting if group_id is provided
+            if group_id:
+                group = None
+                for g in groups.values():
+                    if g.ID == group_id:
+                        group = g
+                        break
+                if group and not group.persistent_players_enabled:
+                    return {'status': 'error', 'message': f'Persistent player creation is disabled for group {group.name}'}
+
+            # However, if the server-wide setting is disabled, we block it.
+            if not enabled:
+                return {'status': 'error', 'message': 'Persistent player creation is disabled on this server'}
+
             if name in persistent_players:
                 return {'status': 'error', 'type': 'UserAlreadyExistsError', 'message': f"Player '{name}' already exists"}
             

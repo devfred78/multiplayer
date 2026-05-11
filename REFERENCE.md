@@ -156,6 +156,7 @@ A client class for administrators to manage a `GameServer`.
 *   `create_group(name, admin_password=None, **attributes)`: Creates a new game group on the server. Returns a `RemoteGroup` proxy object.
 *   `remove_group(group_id)`: Removes a game group from the server by its ID.
 *   `list_groups()`: Returns a dictionary of all game groups on the server as `RemoteGroup` objects, keyed by their `group_id`.
+*   `set_persistent_players_enabled(enabled, group_id=None)`: Enables (`True`) or disables (`False`) the creation of persistent player accounts on the server. If `group_id` is provided, the policy is applied specifically to that group.
 
 ---
 
@@ -173,7 +174,6 @@ A client class for group administrators to manage games within a specific `GameG
 *   `kick_player(game_id, player_id)`: Removes a player from a specific game in the group by their ID.
 *   `kick_observer(game_id, observer_id)`: Removes an observer from a specific game in the group by their ID.
 *   `set_group_admin_password(new_password)`: Sets a new administrator password for this group.
-*   `set_persistent_players_enabled(enabled)`: Enables (`True`) or disables (`False`) the creation of persistent player accounts for this group on the server.
 
 ---
 

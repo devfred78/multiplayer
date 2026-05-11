@@ -156,6 +156,7 @@ Une classe client pour les administrateurs pour gérer un `GameServer`.
 *   `create_group(name, admin_password=None, **attributes)` : Crée un nouveau groupe de jeux sur le serveur. Retourne un objet proxy `RemoteGroup`.
 *   `remove_group(group_id)` : Supprime un groupe de jeux du serveur par son ID.
 *   `list_groups()` : Renvoie un dictionnaire de tous les groupes de jeux sur le serveur sous forme d'objets `RemoteGroup`, indexé par leur `group_id`.
+*   `set_persistent_players_enabled(enabled, group_id=None)` : Active (`True`) ou désactive (`False`) la création de comptes de joueurs persistants sur le serveur. Si `group_id` est fourni, la politique est appliquée spécifiquement à ce groupe.
 
 ---
 
@@ -173,7 +174,6 @@ Une classe cliente pour que les administrateurs de groupe gèrent les parties au
 *   `kick_player(game_id, player_id)` : Retire un joueur d'une partie spécifique dans le groupe par son ID.
 *   `kick_observer(game_id, observer_id)` : Retire un observateur d'une partie spécifique dans le groupe par son ID.
 *   `set_group_admin_password(new_password)` : Définit un nouveau mot de passe administrateur pour ce groupe.
-*   `set_persistent_players_enabled(enabled)` : Active (`True`) ou désactive (`False`) la création de comptes de joueurs persistants pour ce groupe sur le serveur.
 
 ---
 

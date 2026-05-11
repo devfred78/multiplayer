@@ -334,6 +334,13 @@ class ServerAdmin:
         """Retrieves a list of all game groups on the server as RemoteGroup objects."""
         return self._client.list_groups()
 
+    def set_persistent_players_enabled(self, enabled, group_id=None):
+        """Enables or disables the creation of persistent players on the server."""
+        return self._client._send_command('set_persistent_players_enabled', {
+            'enabled': enabled,
+            'group_id': group_id
+        })
+
 class GroupAdmin:
     """
     A client class for group administrators to manage games within a specific GameGroup.
@@ -391,13 +398,6 @@ class GroupAdmin:
             self.group_admin_password = new_password
             self._client.password = new_password
         return result
-
-    def set_persistent_players_enabled(self, enabled):
-        """Enables or disables the creation of persistent players on the server."""
-        return self._client._send_command('set_persistent_players_enabled', {
-            'enabled': enabled,
-            'group_id': self.group_id
-        })
 
 class RemoteGame:
     """

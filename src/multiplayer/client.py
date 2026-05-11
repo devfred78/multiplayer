@@ -390,6 +390,13 @@ class GroupAdmin:
             self._client.password = new_password
         return result
 
+    def set_persistent_players_enabled(self, enabled):
+        """Enables or disables the creation of persistent players on the server."""
+        return self._client._send_command('set_persistent_players_enabled', {
+            'enabled': enabled,
+            'group_id': self.group_id
+        })
+
 class RemoteGame:
     """
     A proxy for a Game object on a remote server.

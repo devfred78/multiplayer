@@ -360,4 +360,159 @@ Suggère un nom aléatoire pour un joueur.
 *   **`ConnectionError`** : Levée lorsqu'un client ne parvient pas à se connecter au serveur.
 *   **`ServerError`** : Levée pour les erreurs génériques signalées par le serveur.
 *   **`AuthenticationError`** : Levée pour les échecs d'authentification par mot de passe du serveur et de la partie.
-*   **`UserAlreadyExistsError`** : Levée lors de la tentative de création d'un `PersistentPlayer`
+*   **`UserAlreadyExistsError`** : Levée lors de la tentative de création d'un `PersistentPlayer` avec un nom déjà utilisé.
+*   **`GroupNotFoundError`** : Levée lorsqu'un `id` de groupe n'est pas trouvé sur le serveur.
+
+## Exemples
+
+### 1. Partie locale simple
+Création d'une session de jeu basique en local sans serveur.
+
+```python
+from multiplayer.game import Game, Player
+
+# Créer une partie et des joueurs
+game = Game(name="Ma partie d'échecs", turn_based=True)
+
+# Initialiser l'état de départ du jeu
+game.custom_state = {"plateau": "standard", "demi_coups": 0}
+
+alice = Player("Alice")
+bob = Player("Bob")
+
+# Ajouter les joueurs et démarrer
+game.add_player(alice)
+game.add_player(bob)
+game.start()
+
+print(f"Partie '{game.name}' démarrée avec l'état : {game.state}")
+```
+
+### 2. Connexion à un serveur et création de compte
+Connexion à un serveur de jeu distant et configuration d'un compte persistant.
+
+```python
+from multiplayer.client import GameClient
+from multiplayer.data import PlayerRole
+
+client = GameClient(host="localhost", port=65432)
+client.connect()
+
+# Créer un compte persistant
+account = client.create_account(
+    name="Charlie", 
+    password="mot_de_passe_sur", 
+    role=PlayerRole.PLAYER
+)
+print(f"Compte créé pour {account['name']} avec le rôle {account['role']}")
+
+client.disconnect()
+```
+
+### 3. Gestion de groupe et de partie (Admin)
+Création d'un groupe et d'une session de jeu en tant qu'administrateur de groupe.
+
+```python
+from multiplayer.client import GameClient
+
+client = GameClient(host="localhost", port=65432)
+client.connect(password="pass_serveur")
+
+# Se connecter en tant qu'admin de groupe
+admin = client.login("AdminUser", "admin_pass")
+
+# Créer un groupe et une partie à l'intérieur
+group = admin.create_group("Tournoi A")
+remote_game = group.create_game(name="Match Final", max_players=2)
+
+print(f"Partie '{remote_game.ID}' créée dans le groupe '{group.name}'")
+```
+
+### 4. Jeu au tour par tour avec observateurs
+Gestion d'une partie au tour par tour avec des spectateurs sur le serveur.
+
+```python
+from multiplayer.client import GameClient
+from multiplayer.game import Player
+
+client = GameClient(host="localhost", port=65432)
+client.connect()
+
+# Récupérer la liste des parties actives sur le serveur
+active_games = client.list_games()
+print(f"Parties actives sur le serveur : {list(active_games.keys())}")
+
+# Rejoindre la première partie active en tant que joueur
+game_id = list(active_games.keys())[0]
+remote_game = active_games[game_id]
+me = Player("Dave")
+remote_game.add_player(me)
+
+# Avancer le tour (si c'est votre tour)
+if remote_game.current_player.name == "Dave":
+    remote_game.next_turn()
+
+# Lister les observateurs
+for obs in remote_game.observers:
+    print(f"Spectateur : {obs['name']}")
+```
+
+### 5. Avancé : TLS, attributs personnalisés et journalisation
+Utilisation du chiffrement, des métadonnées et du serveur de journalisation autonome.
+
+```python
+from multiplayer.client import GameClient
+from multiplayer.game import Game
+
+# Se connecter via TLS
+client = GameClient(host="game.example.com", port=65432, use_tls=True)
+client.connect()
+
+# Créer une partie avec des métadonnées personnalisées
+game_options = {
+    "name": "Ligue Pro",
+    "difficulty": "expert",
+    "map": "valles_marineris"
+}
+remote_game = client.create_game(**game_options)
+
+# Les logs sont automatiquement envoyés au serveur de logs
+# si le GameServer a été configuré avec --port
+print(f"Attributs de la partie : {remote_game.attributes}")
+```
+
+### Exemple 6 : Gestion du serveur
+Cet exemple montre comment lancer et gérer un serveur de jeu.
+
+```python
+import time
+from multiplayer.server import GameServer
+
+# Initialiser le serveur
+# host : "0.0.0.0" pour écouter sur toutes les interfaces
+# port : 65432 (par défaut)
+# password : Mot de passe optionnel pour rejoindre le serveur
+# admin_password : Mot de passe requis pour ServerAdmin et GroupAdmin
+server = GameServer(
+    host="0.0.0.0",
+    port=65432,
+    password="player_pass",
+    admin_password="admin_super_secret",
+    name="Mon Serveur de Jeu Professionnel",
+    use_tls=True,
+    tls_self_signed=True
+)
+
+# Lancer le serveur (s'exécute dans un processus séparé)
+server.start()
+
+try:
+    print("Le serveur est en cours d'exécution. Appuyez sur Ctrl+C pour arrêter.")
+    while True:
+        time.sleep(1)
+except KeyboardInterrupt:
+    print("Arrêt du serveur...")
+finally:
+    # Arrêter proprement le serveur
+    server.stop()
+```

@@ -1,4 +1,4 @@
-**English** | [Español](translation/REFERENCE.es.md) | [Français](translation/REFERENCE.fr.md)
+﻿**English** | [Español](translation/REFERENCE.es.md) | [Français](translation/REFERENCE.fr.md)
 
 # API Reference for the `multiplayer` Module
 
@@ -360,4 +360,158 @@ Suggests a random name for a player.
 *   **`ConnectionError`**: Raised when a client fails to connect to the server.
 *   **`ServerError`**: Raised for generic errors reported by the server.
 *   **`AuthenticationError`**: Raised for both server and game password authentication failures.
-*   **`GroupNotFoundError`**: Raised when a group `id` is not found on the se                                                                                                                            
+*   **`GroupNotFoundError`**: Raised when a group `id` is not found on the server.
+
+## Examples
+
+### 1. Simple Local Game
+Creating a basic game session locally without a server.
+
+```python
+from multiplayer.game import Game, Player
+
+# Create a game and players
+game = Game(name="My Chess Game", turn_based=True)
+
+# Initialize starting game state
+game.custom_state = {"board": "standard", "half_moves": 0}
+
+alice = Player("Alice")
+bob = Player("Bob")
+
+# Add players and start
+game.add_player(alice)
+game.add_player(bob)
+game.start()
+
+print(f"Game '{game.name}' started with state: {game.state}")
+```
+
+### 2. Connecting to a Server and Creating an Account
+Connecting to a remote game server and setting up a persistent account.
+
+```python
+from multiplayer.client import GameClient
+from multiplayer.data import PlayerRole
+
+client = GameClient(host="localhost", port=65432)
+client.connect()
+
+# Create a persistent account
+account = client.create_account(
+    name="Charlie", 
+    password="secure_password", 
+    role=PlayerRole.PLAYER
+)
+print(f"Account created for {account['name']} with role {account['role']}")
+
+client.disconnect()
+```
+
+### 3. Group and Game Management (Admin)
+Creating a group and a game session as a Group Admin.
+
+```python
+from multiplayer.client import GameClient
+
+client = GameClient(host="localhost", port=65432)
+client.connect(password="server_pass")
+
+# Login as group admin
+admin = client.login("AdminUser", "admin_pass")
+
+# Create a group and a game inside it
+group = admin.create_group("Tournament A")
+remote_game = group.create_game(name="Final Match", max_players=2)
+
+print(f"Game '{remote_game.ID}' created in group '{group.name}'")
+```
+
+### 4. Turn-Based Game with Observers
+Managing a turn-based game with spectators on the server.
+
+```python
+from multiplayer.client import GameClient
+from multiplayer.game import Player
+
+client = GameClient(host="localhost", port=65432)
+client.connect()
+
+# Get the list of active games from the server
+active_games = client.list_games()
+print(f"Active games on server: {list(active_games.keys())}")
+
+# Join the first active game as a player
+game_id = list(active_games.keys())[0]
+remote_game = active_games[game_id]
+me = Player("Dave")
+remote_game.add_player(me)
+
+# Advance turn (if it's your turn)
+if remote_game.current_player.name == "Dave":
+    remote_game.next_turn()
+
+# List observers
+for obs in remote_game.observers:
+    print(f"Spectator: {obs['name']}")
+```
+
+### 5. Advanced: TLS, Custom Attributes, and Logging
+Using encryption, metadata, and the standalone logging server.
+
+```python
+from multiplayer.client import GameClient
+from multiplayer.game import Game
+
+# Connect using TLS
+client = GameClient(host="game.example.com", port=65432, use_tls=True)
+client.connect()
+
+# Create a game with custom metadata
+game_options = {
+    "name": "Pro League",
+    "difficulty": "expert",
+    "map": "valles_marineris"
+}
+remote_game = client.create_game(**game_options)
+
+# Logs are automatically sent to the log server 
+# if the GameServer was configured with --port
+print(f"Game attributes: {remote_game.attributes}")
+```
+
+### Example 6: Server Management
+This example shows how to launch and manage a game server.
+
+```python
+import time
+from multiplayer.server import GameServer
+
+# Initialize the server
+# host: "0.0.0.0" to listen on all interfaces
+# port: 65432 (default)
+# password: Optional password to join the server
+# admin_password: Required password for ServerAdmin and GroupAdmin
+server = GameServer(
+    host="0.0.0.0",
+    port=65432,
+    password="player_pass",
+    admin_password="admin_super_secret",
+    name="My Professional Game Server",
+    use_tls=True,
+    tls_self_signed=True
+)
+
+# Start the server (runs in a separate process)
+server.start()
+
+try:
+    print("Server is running. Press Ctrl+C to stop.")
+    while True:
+        time.sleep(1)
+except KeyboardInterrupt:
+    print("Stopping server...")
+finally:
+    # Gracefully stop the server
+    server.stop()
+```

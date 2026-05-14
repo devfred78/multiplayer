@@ -41,7 +41,12 @@ jobs:
         shell: bash
         run: |
           # Extract version from tag (remove 'v' prefix if present)
-          VERSION=${GITHUB_REF_NAME#v}
+          # If not a tag, use a placeholder version for the dry-run
+          if [[ $GITHUB_REF == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF_NAME#v}
+          else
+            VERSION="0.0.0-dev+${GITHUB_SHA::7}"
+          fi
           echo "Building version $VERSION"
           
           # Update version in pyproject.toml
@@ -53,7 +58,8 @@ jobs:
           with open('pyproject.toml', 'r') as f:
               content = f.read()
           # Match version = \"X.Y.Z\" under [project]
-          content = re.sub(r'(^version\s*=\s*\").*(\")', f'\\g<1>{version}\\g<2>', content, flags=re.MULTILINE)
+          # Use raw string for the replacement pattern to avoid SyntaxWarning
+          content = re.sub(r'(^version\s*=\s*\").*(\")', rf'\g<1>{version}\g<2>', content, flags=re.MULTILINE)
           with open('pyproject.toml', 'w') as f:
               f.write(content)
           "

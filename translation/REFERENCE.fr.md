@@ -164,7 +164,7 @@ Le point d'entrée principal pour qu'un client se connecte à un `GameServer`.
 
 #### Méthodes
 *   `discover_servers(timeout=2)` (méthode statique) : Scanne le réseau local à la recherche d'instances de `GameServer` en cours d'exécution.
-    *   **Retourne** : Une `list` de tuples `(host, port)` représentant les serveurs découverts.
+    *   **Retourne** : Une `list` de tuples `(host, port, name)` représentant les serveurs découverts.
 *   `create_game(group_id=None, **game_options)` : Demande au serveur la création d'une nouvelle partie.
     *   **`group_id`** (`str`, optionnel) : L'ID du groupe dans lequel la partie doit être créée.
     *   **`**game_options`** : Options de configuration de la partie. Celles-ci correspondent aux arguments du constructeur de la classe `Game` :

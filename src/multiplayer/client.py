@@ -15,7 +15,7 @@ from . import exceptions
 MULTICAST_GROUP = '224.1.1.1'
 DISCOVERY_PORT = 5007
 DISCOVERY_MESSAGE = b'multiplayer_game_discovery_request'
-RESPONSE_MESSAGE_FORMAT = b'!15sH' # 15-char IP, unsigned short port
+RESPONSE_MESSAGE_FORMAT = b'!15sH64s' # 15-char IP, unsigned short port, 64-char name
 
 class GameClient:
     """
@@ -86,7 +86,7 @@ class GameClient:
             timeout (int): The number of seconds to listen for responses.
 
         Returns:
-            A list of (host, port) tuples for discovered servers.
+            A list of (host, port, name) tuples for discovered servers.
         """
         servers = []
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) as sock:
@@ -102,9 +102,10 @@ class GameClient:
             while time.time() < end_time:
                 try:
                     data, _ = sock.recvfrom(1024)
-                    ip_bytes, port = struct.unpack(RESPONSE_MESSAGE_FORMAT, data)
+                    ip_bytes, port, name_bytes = struct.unpack(RESPONSE_MESSAGE_FORMAT, data)
                     host = ip_bytes.decode('utf-8').strip('\x00')
-                    servers.append((host, port))
+                    name = name_bytes.decode('utf-8').strip('\x00')
+                    servers.append((host, port, name))
                 except socket.timeout:
                     break
                 except Exception:

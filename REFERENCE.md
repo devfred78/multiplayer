@@ -164,7 +164,7 @@ The main entry point for a client to connect to a `GameServer`.
 
 #### Methods
 *   `discover_servers(timeout=2)` (static method): Scans the local network for running `GameServer` instances.
-    *   **Returns**: A `list` of `(host, port)` tuples representing the discovered servers.
+    *   **Returns**: A `list` of `(host, port, name)` tuples representing the discovered servers.
 *   `create_game(group_id=None, **game_options)`: Requests the server to create a new game.
     *   **`group_id`** (`str`, optional): The ID of the group where the game should be created.
     *   **`**game_options`**: Configuration options for the game. These match the `Game` class constructor arguments:

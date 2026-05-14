@@ -33,7 +33,7 @@ class EnumEncoder(json.JSONEncoder):
 MULTICAST_GROUP = '224.1.1.1'
 DISCOVERY_PORT = 5007
 DISCOVERY_MESSAGE = b'multiplayer_game_discovery_request'
-RESPONSE_MESSAGE_FORMAT = b'!15sH' # 15-char IP, unsigned short port
+RESPONSE_MESSAGE_FORMAT = b'!15sH64s' # 15-char IP, unsigned short port, 64-char name
 
 def _generate_self_signed_cert(domain="localhost"):
     """Generates a temporary self-signed certificate and key."""
@@ -855,7 +855,8 @@ class GameServer:
                         logger.info(f"Discovery request from {addr}, sending response...")
                         response_ip = self._get_lan_ip()
                         response_port = self.port
-                        message = struct.pack(RESPONSE_MESSAGE_FORMAT, response_ip.encode('utf-8'), response_port)
+                        server_name = (self.name or "").encode('utf-8')
+                        message = struct.pack(RESPONSE_MESSAGE_FORMAT, response_ip.encode('utf-8'), response_port, server_name)
                         sock.sendto(message, addr)
                 except socket.timeout:
                     continue

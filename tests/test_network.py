@@ -100,7 +100,7 @@ def test_server_discovery(game_server):
             return
 
     assert len(discovered_servers) > 0
-    found = any(port == TEST_PORT for _, port in discovered_servers)
+    found = any(port == TEST_PORT for _, port, _ in discovered_servers)
     assert found
 
 def test_server_connection(game_server):

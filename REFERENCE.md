@@ -166,6 +166,15 @@ The main entry point for a client to connect to a `GameServer`.
 *   `discover_servers(timeout=2)` (static method): Scans the local network for running `GameServer` instances.
     *   **Returns**: A `list` of `(host, port)` tuples representing the discovered servers.
 *   `create_game(group_id=None, **game_options)`: Requests the server to create a new game.
+    *   **`group_id`** (`str`, optional): The ID of the group where the game should be created.
+    *   **`**game_options`**: Configuration options for the game. These match the `Game` class constructor arguments:
+        *   `name` (`str`): The name of the game session.
+        *   `max_players` (`int`): Maximum number of players allowed.
+        *   `max_observers` (`int`): Maximum number of observers allowed.
+        *   `turn_based` (`bool`): Whether the game is turn-based.
+        *   `password` (`str`): Password required for players to join.
+        *   `observer_password` (`str`): Specific password for observers.
+        *   Any other keyword argument will be stored as a custom attribute in the game's `attributes` property.
     *   **Returns**: A `RemoteGame` proxy object.
 *   `list_games()`: Returns all active games.
     *   **Returns**: A `dict` where keys are game IDs (`str`) and values are `RemoteGame` objects.
@@ -241,7 +250,7 @@ A proxy object representing a game group running on the server.
 *You typically do not create this object directly, but get it from `client.create_group()` or `client.list_groups()`.*
 
 #### Methods
-*   `create_game(**game_options)`: Creates a new game within this group.
+*   `create_game(**game_options)`: Creates a new game within this group. Supports the same `game_options` as `GameClient.create_game()`.
     *   **Returns**: A `RemoteGame` proxy object.
 *   `list_games()`: Returns all games belonging to this group.
     *   **Returns**: A `dict` where keys are game IDs (`str`) and values are `RemoteGame` objects.

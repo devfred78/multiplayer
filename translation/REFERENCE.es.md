@@ -166,6 +166,15 @@ El punto de entrada principal para que un cliente se conecte a un `GameServer`.
 *   `discover_servers(timeout=2)` (método estático): Escanea la red local en busca de instancias de `GameServer` en ejecución.
     *   **Devuelve**: Una `list` de tuplas `(host, port)` que representan los servidores descubiertos.
 *   `create_game(group_id=None, **game_options)`: Solicita al servidor crear un nuevo juego.
+    *   **`group_id`** (`str`, opcional): El ID del grupo donde se debe crear el juego.
+    *   **`**game_options`**: Opciones de configuración para el juego. Estas coinciden con los argumentos del constructor de la clase `Game`:
+        *   `name` (`str`): El nombre de la sesión de juego.
+        *   `max_players` (`int`): Número máximo de jugadores permitidos.
+        *   `max_observers` (`int`): Número máximo de observadores permitidos.
+        *   `turn_based` (`bool`): Indica si el juego es por turnos.
+        *   `password` (`str`): Contraseña requerida para que los jugadores se unan.
+        *   `observer_password` (`str`): Contraseña específica para los observadores.
+        *   Cualquier otro argumento con nombre se almacenará como un atributo personalizado en la propiedad `attributes` del juego.
     *   **Devuelve**: Un objeto proxy `RemoteGame`.
 *   `list_games()`: Devuelve todos los juegos activos.
     *   **Devuelve**: Un `dict` donde las claves son IDs de juegos (`str`) y los valores son objetos `RemoteGame`.
@@ -241,7 +250,7 @@ Un objeto proxy que representa un grupo de juegos que se ejecuta en el servidor.
 *Normalmente no se crea este objeto directamente, sino que se obtiene de `client.create_group()` o `client.list_groups()`.*
 
 #### Métodos
-*   `create_game(**game_options)`: Crea un nuevo juego dentro de este grupo.
+*   `create_game(**game_options)`: Crea un nuevo juego dentro de este grupo. Soporta las mismas `game_options` que `GameClient.create_game()`.
     *   **Devuelve**: Un objeto proxy `RemoteGame`.
 *   `list_games()`: Devuelve todos los juegos pertenecientes a este grupo.
     *   **Devuelve**: Un `dict` donde las claves son IDs de juegos (`str`) y los valores son objetos `RemoteGame`.

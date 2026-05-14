@@ -166,6 +166,15 @@ Le point d'entrée principal pour qu'un client se connecte à un `GameServer`.
 *   `discover_servers(timeout=2)` (méthode statique) : Scanne le réseau local à la recherche d'instances de `GameServer` en cours d'exécution.
     *   **Retourne** : Une `list` de tuples `(host, port)` représentant les serveurs découverts.
 *   `create_game(group_id=None, **game_options)` : Demande au serveur la création d'une nouvelle partie.
+    *   **`group_id`** (`str`, optionnel) : L'ID du groupe dans lequel la partie doit être créée.
+    *   **`**game_options`** : Options de configuration de la partie. Celles-ci correspondent aux arguments du constructeur de la classe `Game` :
+        *   `name` (`str`) : Le nom de la session de jeu.
+        *   `max_players` (`int`) : Le nombre maximum de joueurs autorisés.
+        *   `max_observers` (`int`) : Le nombre maximum d'observateurs autorisés.
+        *   `turn_based` (`bool`) : Indique si le jeu est au tour par tour.
+        *   `password` (`str`) : Mot de passe requis pour que les joueurs rejoignent.
+        *   `observer_password` (`str`) : Mot de passe spécifique pour les observateurs.
+        *   Tout autre argument nommé sera stocké en tant qu'attribut personnalisé dans la propriété `attributes` de la partie.
     *   **Retourne** : Un objet proxy `RemoteGame`.
 *   `list_games()` : Retourne toutes les parties actives.
     *   **Retourne** : Un `dict` où les clés sont les IDs de partie (`str`) et les valeurs sont des objets `RemoteGame`.
@@ -241,7 +250,7 @@ Un objet proxy représentant un groupe de jeux en cours d'exécution sur le serv
 *Vous ne créez généralement pas cet objet directement, mais vous l'obtenez via `client.create_group()` ou `client.list_groups()`.*
 
 #### Méthodes
-*   `create_game(**game_options)` : Crée une nouvelle partie au sein de ce groupe.
+*   `create_game(**game_options)` : Crée une nouvelle partie au sein de ce groupe. Supporte les mêmes `game_options` que `GameClient.create_game()`.
     *   **Retourne** : Un objet proxy `RemoteGame`.
 *   `list_games()` : Retourne toutes les parties appartenant à ce groupe.
     *   **Retourne** : Un `dict` où les clés sont les IDs de partie (`str`) et les valeurs sont des objets `RemoteGame`.

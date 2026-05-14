@@ -106,9 +106,9 @@ Représente un groupe de parties sur un serveur.
 ### `PlayerRole` (Enum)
 Une énumération pour le rôle d'un joueur persistant.
 
-*   `PlayerRole.PLAYER`
-*   `PlayerRole.GROUP_ADMIN`
-*   `PlayerRole.SERVER_ADMIN`
+*   `PlayerRole.PLAYER` : Un joueur standard qui peut rejoindre et participer à des parties.
+*   `PlayerRole.GROUP_ADMIN` : Un joueur qui peut gérer les parties au sein des groupes qui lui sont assignés. Ce rôle inclut toutes les permissions d'un `PLAYER`.
+*   `PlayerRole.SERVER_ADMIN` : Un joueur avec un accès administratif complet au serveur. Ce rôle englobe le rôle de `GROUP_ADMIN`, lui-même pouvant également jouer le rôle de `PLAYER`.
 
 ---
 

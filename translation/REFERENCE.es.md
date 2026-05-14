@@ -185,6 +185,7 @@ El punto de entrada principal para que un cliente se conecte a un `GameServer`.
 *   `list_groups()` : Devuelve todos los grupos de juegos en el servidor.
     *   **Devuelve**: Un `dict` donde las claves son IDs de grupo (`str`) y los valores son objetos `RemoteGroup`.
 *   `create_account(name, password, role=PlayerRole.PLAYER, managed_groups=None, **attributes)`: Crea una cuenta de jugador persistente en el servidor.
+    *   **Error**: `UserAlreadyExistsError` si ya existe una cuenta con el mismo nombre.
     *   **Devuelve**: Un `dict` que representa los datos del jugador creado:
         *   `player_id` (`str`): El ID único de la cuenta.
         *   `name` (`str`): El nombre de la cuenta.

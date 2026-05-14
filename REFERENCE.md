@@ -185,6 +185,7 @@ The main entry point for a client to connect to a `GameServer`.
 *   `list_groups()`: Returns all game groups on the server.
     *   **Returns**: A `dict` where keys are group IDs (`str`) and values are `RemoteGroup` objects.
 *   `create_account(name, password, role=PlayerRole.PLAYER, managed_groups=None, **attributes)`: Creates a persistent player account on the server.
+    *   **Raises**: `UserAlreadyExistsError` if an account with the same name already exists.
     *   **Returns**: A `dict` representing the created player's data:
         *   `player_id` (`str`): The unique ID of the account.
         *   `name` (`str`): The account name.

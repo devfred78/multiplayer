@@ -363,6 +363,12 @@ class ServerAdmin(GameClient):
             'enabled': enabled
         })
 
+    def set_server_hidden(self, hidden):
+        """Sets the server as hidden or visible for network discovery."""
+        return self._send_command('set_server_hidden', {
+            'hidden': hidden
+        })
+
 class GroupAdmin(GameClient):
     """
     A client class for group administrators to manage games within a specific GameGroup.

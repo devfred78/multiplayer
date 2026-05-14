@@ -22,6 +22,7 @@ def main():
     parser.add_argument("--logging-port", type=int, help="IPC logging server port")
     parser.add_argument("--logger-name", default="GameServer", help="Name of the logger (default: GameServer)")
     parser.add_argument("--name", help="Human-readable name for the server instance")
+    parser.add_argument("--hidden", action="store_true", help="Hide the server from network discovery")
 
     args = parser.parse_args()
 
@@ -75,7 +76,8 @@ def main():
         logging_port=args.logging_port,
         logger_name=args.logger_name,
         name=args.name,
-        unencrypted_port=args.unencrypted_port
+        unencrypted_port=args.unencrypted_port,
+        hidden=args.hidden
     )
 
     try:

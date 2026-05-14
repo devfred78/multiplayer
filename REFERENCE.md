@@ -130,7 +130,7 @@ An enumeration representing the current status of a game.
 
 These classes manage the client-server architecture.
 
-### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, name=None)`
+### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, name=None, unencrypted_port=None, hidden=False)`
 Manages game sessions and handles network requests.
 
 *   **`host`** (`str`): The host address to bind to. Use `'0.0.0.0'` to make it accessible on the local network.
@@ -145,6 +145,8 @@ Manages game sessions and handles network requests.
 *   **`logging_host`** (`str`, optional): The host address of a logging server to send logs to.
 *   **`logging_port`** (`int`, optional): The port of the logging server.
 *   **`name`** (`str`, optional): A name for the server instance.
+*   **`unencrypted_port`** (`int`, optional): Port for unencrypted connections when TLS is enabled.
+*   **`hidden`** (`bool`, optional): If `True`, the server will not respond to network discovery requests. Defaults to `False`.
 
 #### Methods
 *   `start()`: Starts the server in a background process.
@@ -226,6 +228,7 @@ A client class for administrators to manage a `GameServer` (inherits from `GameC
 *   `set_admin_password(new_password)`: Sets a new administrator password for the server.
 *   `remove_group(group_id)`: Removes a game group from the server by its ID.
 *   `set_persistent_players_enabled(enabled)`: Enables (`True`) or disables (`False`) the creation of persistent player accounts on the server.
+*   `set_server_hidden(hidden)`: Sets the server as hidden (`True`) or visible (`False`) for network discovery.
 
 ---
 
@@ -319,6 +322,7 @@ Starts a standalone game server.
 *   **`--no-self-signed`**: Disables automatic generation of self-signed certificates.
 *   **`--unencrypted-port`** (`int`): Port for unencrypted connections. Only relevant when `--use-tls` is enabled. This allows the server to be reachable via both TLS and plain text on different ports.
 *   **`--name`** (`str`): Human-readable name for the server instance.
+*   **`--hidden`**: Hides the server from network discovery.
 
 ## Utility Functions
 
@@ -527,8 +531,4 @@ License date: 12.5.2026
 VDF date: 12.5.2026
 Minimum engine: 8.3.0.0
 Signatures: 7721
-Required linked VDF: 8.21.0.64
-Source: 8.21.0.64
-Compiler: 1.6.0.0
-
- x��ƌ1cǎ:t�ѢE�(P�B�#F�6lذaÇ;v�ٳƜ*��%N�)��ٲp���Q�W�x�O�ЫQ�v�ذa
+Required linked VDF: 

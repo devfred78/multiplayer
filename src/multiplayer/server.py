@@ -79,7 +79,7 @@ def get_cert_expiration(cert_path):
     except Exception as e:
         return f"Error reading certificate: {e}"
 
-def _run_server_process(host, port, password, admin_password, use_tls, certfile, keyfile, logging_host=None, logging_port=None, logger_name="GameServer", name=None, persistent_players_enabled=True, unencrypted_port=None):
+def _run_server_process(host, port, password, admin_password, use_tls, certfile, keyfile, logging_host=None, logging_port=None, logger_name="GameServer", name=None, persistent_players_enabled=True, unencrypted_port=None, hidden=False, discovery_event=None):
     """The main server loop that listens for and handles connections."""
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.INFO)
@@ -123,7 +123,7 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
         unencrypted_bindsocket.listen()
 
     groups = {} # Store GameGroup objects
-    server_passwords = {'server': password, 'admin': admin_password, 'persistent_players_enabled': persistent_players_enabled}
+    server_passwords = {'server': password, 'admin': admin_password, 'persistent_players_enabled': persistent_players_enabled, 'hidden': hidden}
     
     import select
     
@@ -134,6 +134,14 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
             
         while True:
             readable, _, _ = select.select(inputs, [], [], 1.0)
+            
+            # Sync discovery state if event is provided
+            if discovery_event:
+                if server_passwords.get('hidden', False):
+                    discovery_event.set()
+                else:
+                    discovery_event.clear()
+            
             for s in readable:
                 try:
                     newsocket, fromaddr = s.accept()
@@ -321,6 +329,14 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
                 server_passwords['persistent_players_enabled'] = enabled
                 status = "enabled" if enabled else "disabled"
                 return {'status': 'success', 'message': f'Persistent player creation {status} globally'}
+            return {'status': 'error', 'message': 'Server passwords dictionary not available'}
+
+        elif action == 'set_server_hidden':
+            hidden = params.get('hidden', False)
+            if server_passwords is not None:
+                server_passwords['hidden'] = hidden
+                status = "hidden" if hidden else "visible"
+                return {'status': 'success', 'message': f'Server is now {status}'}
             return {'status': 'error', 'message': 'Server passwords dictionary not available'}
 
         elif action == 'create_persistent_player':
@@ -712,7 +728,7 @@ class GameServer:
     """
     Manages multiple Game instances and handles network requests from clients.
     """
-    def __init__(self, host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, logger_name="GameServer", name=None, unencrypted_port=None):
+    def __init__(self, host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, logger_name="GameServer", name=None, unencrypted_port=None, hidden=False):
         self.host = host
         self.port = port
         self.unencrypted_port = unencrypted_port
@@ -727,9 +743,11 @@ class GameServer:
         self.logging_port = logging_port
         self.logger_name = logger_name
         self.name = name
+        self.hidden = hidden
         self._server_process = None
         self._discovery_thread = None
         self._stop_discovery = threading.Event()
+        self._hidden_event = None
         self._temp_certs = False
 
     def start(self):
@@ -791,7 +809,11 @@ class GameServer:
 
         # Use 'spawn' start method to avoid DeprecationWarning and potential deadlocks when forking from a multi-threaded process.
         ctx = get_context('spawn')
-        self._server_process = ctx.Process(target=_run_server_process, args=(self.host, self.port, self.password, self.admin_password, self.use_tls, certfile, keyfile, self.logging_host, self.logging_port, self.logger_name, self.name, True, self.unencrypted_port))
+        self._hidden_event = ctx.Event()
+        if self.hidden:
+            self._hidden_event.set()
+            
+        self._server_process = ctx.Process(target=_run_server_process, args=(self.host, self.port, self.password, self.admin_password, self.use_tls, certfile, keyfile, self.logging_host, self.logging_port, self.logger_name, self.name, True, self.unencrypted_port, self.hidden, self._hidden_event))
         self._server_process.daemon = True
         self._server_process.start()
         self._stop_discovery.clear()
@@ -833,6 +855,9 @@ class GameServer:
             if hasattr(socket, 'SO_REUSEPORT'):
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
             
+            # Allow broadcasting and multicast
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            
             try:
                 sock.bind(('', DISCOVERY_PORT))
             except OSError as e:
@@ -851,6 +876,10 @@ class GameServer:
                 try:
                     data, addr = sock.recvfrom(1024)
                     if data == DISCOVERY_MESSAGE:
+                        # Check if hidden via shared event
+                        if self._hidden_event and self._hidden_event.is_set():
+                            continue
+                        
                         logger = logging.getLogger(self.logger_name)
                         logger.info(f"Discovery request from {addr}, sending response...")
                         response_ip = self._get_lan_ip()

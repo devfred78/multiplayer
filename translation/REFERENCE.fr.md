@@ -130,7 +130,7 @@ Une énumération représentant le statut actuel d'une partie.
 
 Ces classes gèrent l'architecture client-serveur.
 
-### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, name=None)`
+### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, name=None, unencrypted_port=None, hidden=False)`
 Gère les sessions de jeu et les requêtes réseau.
 
 *   **`host`** (`str`) : L'adresse de l'hôte sur laquelle s'écouter. Utilisez `'0.0.0.0'` pour le rendre accessible sur le réseau local.
@@ -145,6 +145,8 @@ Gère les sessions de jeu et les requêtes réseau.
 *   **`logging_host`** (`str`, optionnel) : L'adresse de l'hôte d'un serveur de logging pour envoyer les logs.
 *   **`logging_port`** (`int`, optionnel) : Le port du serveur de logging.
 *   **`name`** (`str`, optionnel) : Un nom pour l'instance du serveur.
+*   **`unencrypted_port`** (`int`, optionnel) : Port pour les connexions non chiffrées lorsque le TLS est activé.
+*   **`hidden`** (`bool`, optionnel) : Si `True`, le serveur ne répondra pas aux requêtes de découverte réseau. Par défaut `False`.
 
 #### Méthodes
 *   `start()` : Démarre le serveur dans un processus d'arrière-plan.
@@ -226,6 +228,7 @@ Une classe client pour les administrateurs pour gérer un `GameServer` (hérite 
 *   `set_admin_password(new_password)` : Définit un nouveau mot de passe administrateur pour le serveur.
 *   `remove_group(group_id)` : Supprime un groupe de jeux du serveur par son ID.
 *   `set_persistent_players_enabled(enabled)` : Active (`True`) ou désactive (`False`) la création de comptes de joueurs persistants sur le serveur.
+*   `set_server_hidden(hidden)` : Définit le serveur comme caché (`True`) ou visible (`False`) pour la découverte réseau.
 
 ---
 
@@ -319,6 +322,7 @@ Démarre un serveur de jeu autonome.
 *   **`--no-self-signed`** : Désactive la génération automatique de certificats auto-signés.
 *   **`--unencrypted-port`** (`int`) : Port pour les connexions non-cryptées. Uniquement pertinent lorsque `--use-tls` est activé. Cela permet au serveur d'être joignable à la fois via TLS et en clair sur des ports différents.
 *   **`--name`** (`str`) : Nom lisible par l'homme pour l'instance du serveur.
+*   **`--hidden`** : Cache le serveur de la découverte réseau.
 
 ## Fonctions Utilitaires
 

@@ -91,9 +91,9 @@ jobs:
           PREVIOUS_TAG=$(git describe --tags --abbrev=0 ${{ github.ref_name }}^ 2>/dev/null || echo "")
           
           if [ -z "$PREVIOUS_TAG" ]; then
-            TASK="Analyze the codebase and generate a descriptive release text in English for the first release ${{ github.ref_name }}. Focus on the main features and purpose of the project. OUTPUT ONLY the release description without any comments, code blocks, or tool execution logs."
+            TASK="Acting as a technical writer, generate a professional release description in English for the first release ${{ github.ref_name }}. Focus exclusively on the main features, architecture, and purpose of the project. Do NOT mention that you are generating this text or analyzing the code. OUTPUT ONLY the final content starting directly with '### Summary'."
           else
-            TASK="Analyze the commits between $PREVIOUS_TAG and ${{ github.ref_name }}. Generate a descriptive release text in English summarizing the changes, new features, and bug fixes. OUTPUT ONLY the release description without any comments, code blocks, or tool execution logs."
+            TASK="Acting as a technical writer, analyze the commits between $PREVIOUS_TAG and ${{ github.ref_name }}. Generate professional release notes in English. Summarize new features, improvements, and bug fixes for the end user. Do NOT include meta-comments about your analysis process (e.g., 'Analyzed X commits') or mentions of yourself. OUTPUT ONLY the final content starting directly with '### Summary'."
           fi
           
           # Run Junie to generate the description

@@ -70,7 +70,7 @@ Representa una cuenta de jugador persistente (hereda de `Player`).
 #### Propiedades
 *   Todas las propiedades de `Player`.
 *   **`password`**: La contraseña de la cuenta.
-*   **`role`**: El rol del jugador (`player`, `group_admin`, o `server_admin`).
+*   **`role`**: El rol del jugador (`PlayerRole.PLAYER`, `PlayerRole.GROUP_ADMIN`, o `PlayerRole.SERVER_ADMIN`).
 *   **`managed_groups`**: Lista de IDs de grupos que el jugador puede gestionar.
 
 ---

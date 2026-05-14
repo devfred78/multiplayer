@@ -70,7 +70,7 @@ Represents a persistent player account (inherits from `Player`).
 #### Properties
 *   All properties of `Player`.
 *   **`password`**: The account password.
-*   **`role`**: The player's role (`player`, `group_admin`, or `server_admin`).
+*   **`role`**: The player's role (`PlayerRole.PLAYER`, `PlayerRole.GROUP_ADMIN`, or `PlayerRole.SERVER_ADMIN`).
 *   **`managed_groups`**: List of group IDs the player can manage.
 
 ---

@@ -17,6 +17,7 @@ def main():
     parser.add_argument("--tls-cert-dir", help="Directory containing TLS certificate (cert.pem) and key (privkey.pem)")
     parser.add_argument("--tls-self-signed", action="store_true", default=True, help="Generate a self-signed certificate (default: True)")
     parser.add_argument("--no-self-signed", action="store_false", dest="tls_self_signed", help="Do not generate a self-signed certificate")
+    parser.add_argument("--unencrypted-port", type=int, help="Port for unencrypted connections (when TLS is enabled)")
     parser.add_argument("--logging-host", help="IPC logging server host")
     parser.add_argument("--logging-port", type=int, help="IPC logging server port")
     parser.add_argument("--logger-name", default="GameServer", help="Name of the logger (default: GameServer)")
@@ -73,7 +74,8 @@ def main():
         logging_host=args.logging_host,
         logging_port=args.logging_port,
         logger_name=args.logger_name,
-        name=args.name
+        name=args.name,
+        unencrypted_port=args.unencrypted_port
     )
 
     try:

@@ -79,7 +79,7 @@ def get_cert_expiration(cert_path):
     except Exception as e:
         return f"Error reading certificate: {e}"
 
-def _run_server_process(host, port, password, admin_password, use_tls, certfile, keyfile, logging_host=None, logging_port=None, logger_name="GameServer", name=None, persistent_players_enabled=True):
+def _run_server_process(host, port, password, admin_password, use_tls, certfile, keyfile, logging_host=None, logging_port=None, logger_name="GameServer", name=None, persistent_players_enabled=True, unencrypted_port=None):
     """The main server loop that listens for and handles connections."""
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.INFO)
@@ -94,6 +94,8 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
         logger.info(f"Logging configured to send to {logging_host}:{logging_port}")
 
     server_start_msg = f"Starting server process on {host}:{port}"
+    if unencrypted_port:
+        server_start_msg += f" (Unencrypted on {host}:{unencrypted_port})"
     if name:
         server_start_msg += f" (Name: {name})"
     logger.info(server_start_msg)
@@ -105,29 +107,52 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
         context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         context.minimum_version = ssl.TLSVersion.TLSv1_3
         context.load_cert_chain(certfile=certfile, keyfile=keyfile)
+    
+    # Primary listener
     bindsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     bindsocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     bindsocket.bind((host, port))
     bindsocket.listen()
+    
+    # Secondary listener (unencrypted)
+    unencrypted_bindsocket = None
+    if use_tls and unencrypted_port:
+        unencrypted_bindsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        unencrypted_bindsocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        unencrypted_bindsocket.bind((host, unencrypted_port))
+        unencrypted_bindsocket.listen()
+
     groups = {} # Store GameGroup objects
     server_passwords = {'server': password, 'admin': admin_password, 'persistent_players_enabled': persistent_players_enabled}
+    
+    import select
+    
     try:
-        bindsocket.settimeout(1.0)
+        inputs = [bindsocket]
+        if unencrypted_bindsocket:
+            inputs.append(unencrypted_bindsocket)
+            
         while True:
-            try:
-                newsocket, fromaddr = bindsocket.accept()
-            except socket.timeout:
-                continue
-            try:
-                conn = context.wrap_socket(newsocket, server_side=True) if use_tls else newsocket
-                thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, groups, games_lock, server_passwords, logger_name, name, use_tls, certfile, persistent_players))
-                thread.daemon = True
-                thread.start()
-            except (ssl.SSLError, OSError) as e:
-                print(f"Failed to wrap socket or start thread: {e}")
-                newsocket.close()
+            readable, _, _ = select.select(inputs, [], [], 1.0)
+            for s in readable:
+                try:
+                    newsocket, fromaddr = s.accept()
+                    is_tls_conn = (s == bindsocket and use_tls)
+                    conn = context.wrap_socket(newsocket, server_side=True) if is_tls_conn else newsocket
+                    thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, groups, games_lock, server_passwords, logger_name, name, is_tls_conn, certfile, persistent_players))
+                    thread.daemon = True
+                    thread.start()
+                except (ssl.SSLError, OSError) as e:
+                    logger.error(f"Failed to wrap socket or start thread: {e}")
+                    # Attempt to close newsocket if it was accepted but wrapping/threading failed
+                    try:
+                        newsocket.close()
+                    except Exception:
+                        pass
     finally:
         bindsocket.close()
+        if unencrypted_bindsocket:
+            unencrypted_bindsocket.close()
         # Clean up temporary files if they were created (indicated by "tmp" in filename or being specifically tracked)
         # Note: self._temp_certs from GameServer is not available here, so we rely on path indicators or naming.
         if use_tls and certfile and ("tmp" in certfile.lower() or "multiplayer_fullchain" in certfile.lower()): 
@@ -685,9 +710,10 @@ class GameServer:
     """
     Manages multiple Game instances and handles network requests from clients.
     """
-    def __init__(self, host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, logger_name="GameServer", name=None):
+    def __init__(self, host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, logger_name="GameServer", name=None, unencrypted_port=None):
         self.host = host
         self.port = port
+        self.unencrypted_port = unencrypted_port
         self.password = password
         self.admin_password = admin_password
         self.use_tls = use_tls
@@ -763,7 +789,7 @@ class GameServer:
 
         # Use 'spawn' start method to avoid DeprecationWarning and potential deadlocks when forking from a multi-threaded process.
         ctx = get_context('spawn')
-        self._server_process = ctx.Process(target=_run_server_process, args=(self.host, self.port, self.password, self.admin_password, self.use_tls, certfile, keyfile, self.logging_host, self.logging_port, self.logger_name, self.name))
+        self._server_process = ctx.Process(target=_run_server_process, args=(self.host, self.port, self.password, self.admin_password, self.use_tls, certfile, keyfile, self.logging_host, self.logging_port, self.logger_name, self.name, True, self.unencrypted_port))
         self._server_process.daemon = True
         self._server_process.start()
         self._stop_discovery.clear()
@@ -776,6 +802,8 @@ class GameServer:
         print(start_msg)
         if self.use_tls:
             print("TLS encryption is enabled.")
+            if self.unencrypted_port:
+                print(f"Unencrypted connections allowed on port {self.unencrypted_port}")
         print("Network discovery service started.")
 
     def stop(self, timeout=5):

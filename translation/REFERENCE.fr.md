@@ -320,6 +320,7 @@ Démarre un serveur de jeu autonome.
 *   **`--tls-cert-dir`** (`str`) : Chemin vers un répertoire contenant des certificats PEM (`cert.pem`, `RSA-cert.pem`, ou `ECC-cert.pem`) et des clés. C'est particulièrement utile pour les volumes Docker.
 *   **`--tls-self-signed`** : Génère un certificat auto-signé si les fichiers sont manquants (par défaut).
 *   **`--no-self-signed`** : Désactive la génération automatique de certificats auto-signés.
+*   **`--unencrypted-port`** (`int`) : Port pour les connexions non-cryptées. Uniquement pertinent lorsque `--use-tls` est activé. Cela permet au serveur d'être joignable à la fois via TLS et en clair sur des ports différents.
 *   **`--name`** (`str`) : Nom lisible par l'homme pour l'instance du serveur.
 
 ## Fonctions Utilitaires

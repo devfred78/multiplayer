@@ -47,7 +47,7 @@ class GameClient:
             curr = curr.parent
         return False
 
-    def configure_logging(self, host, port, name=None):
+    def set_logging_for_client(self, host, port, name=None):
         """
         Configures the client to send logs to a logging server.
         
@@ -200,7 +200,7 @@ class GameClient:
             # Propagate logging configuration if any
             for h in self._logger.handlers:
                 if isinstance(h, SocketHandler):
-                    remote_games[gid].configure_logging(h.host, h.port)
+                    remote_games[gid].set_logging_for_client(h.host, h.port)
                     break
                     
         return remote_games
@@ -229,7 +229,7 @@ class GameClient:
             # Propagate logging configuration if any
             for h in self._logger.handlers:
                 if isinstance(h, SocketHandler):
-                    remote_groups[gid].configure_logging(h.host, h.port)
+                    remote_groups[gid].set_logging_for_client(h.host, h.port)
                     break
                     
         return remote_groups
@@ -287,9 +287,9 @@ class ServerAdmin(GameClient):
         self._logger = logging.getLogger("ServerAdmin")
         self._logger.setLevel(logging.INFO)
 
-    def configure_logging(self, host, port):
+    def set_logging_for_client(self, host, port):
         """Configures the admin client to send logs to a logging server."""
-        super().configure_logging(host, port, "ServerAdmin")
+        super().set_logging_for_client(host, port, "ServerAdmin")
 
     def stop_server(self):
         """Requests the server to shut down."""
@@ -319,9 +319,9 @@ class ServerAdmin(GameClient):
         """Lists all players currently connected to the server across all games."""
         return self._send_command('list_all_players')
 
-    def set_logging_config(self, host, port):
+    def set_logging_for_server(self, host, port):
         """Sets the logging server address and port."""
-        return self._send_command('set_logging_config', {'host': host, 'port': port})
+        return self._send_command('set_logging_for_server', {'host': host, 'port': port})
 
     def set_logging_enabled(self, enabled):
         """Enables or disables logging on the server."""
@@ -373,9 +373,9 @@ class GroupAdmin(GameClient):
         self._logger = logging.getLogger(f"GroupAdmin.{group_id}")
         self._logger.setLevel(logging.INFO)
 
-    def configure_logging(self, host, port):
+    def set_logging_for_client(self, host, port):
         """Configures the group admin client to send logs to a logging server."""
-        super().configure_logging(host, port, f"GroupAdmin.{self.group_id}")
+        super().set_logging_for_client(host, port, f"GroupAdmin.{self.group_id}")
 
     def list_games(self):
         """Retrieves a dictionary of games belonging to this group as RemoteGame objects, indexed by ID."""
@@ -435,7 +435,7 @@ class RemoteGame:
         """Configures the remote game proxy to send logs to a logging server."""
         if name is None:
             name = f"RemoteGame.{self.game_id[:8]}"
-        self._client.configure_logging(host, port, name)
+        self._client.set_logging_for_client(host, port, name)
         self._logger = self._client._logger
 
     def _send_command(self, action, params=None):
@@ -559,7 +559,7 @@ class RemoteGroup:
         """Configures the remote group proxy to send logs to a logging server."""
         if name is None:
             name = f"RemoteGroup.{self.group_id[:8]}"
-        self._client.configure_logging(host, port, name)
+        self._client.set_logging_for_client(host, port, name)
         self._logger = self._client._logger
 
     def _send_command(self, action, params=None):
@@ -584,7 +584,7 @@ class RemoteGroup:
             # Propagate logging configuration if any
             for h in self._logger.handlers:
                 if isinstance(h, SocketHandler):
-                    remote_games[gid].configure_logging(h.host, h.port)
+                    remote_games[gid].set_logging_for_client(h.host, h.port)
                     break
                     
         return remote_games

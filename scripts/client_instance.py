@@ -35,7 +35,7 @@ def run_client(player_name, game_id, host, port, is_creator, min_players, log_ho
     # If log_host and log_port are provided, configure the client to use them
     # This will also set the internal logger name to Client-NAME
     if log_host and log_port:
-        client.configure_logging(log_host, log_port, f"Client-{player_name}")
+        client.set_logging_for_client(log_host, log_port, f"Client-{player_name}")
         # Local reference should point to the same logger
         logger = client._logger
     
@@ -44,7 +44,7 @@ def run_client(player_name, game_id, host, port, is_creator, min_players, log_ho
         game_proxy = client.create_game(name=game_id, turn_based=True)
         # Ensure the proxy also knows about the custom logger name
         if log_host and log_port:
-            game_proxy.configure_logging(log_host, log_port, f"Client-{player_name}")
+            game_proxy.set_logging_for_client(log_host, log_port, f"Client-{player_name}")
             logger = game_proxy._logger
         
         actual_game_id = game_proxy.game_id

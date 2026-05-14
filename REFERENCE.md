@@ -180,7 +180,7 @@ The main entry point for a client to connect to a `GameServer`.
         *   `role` (`PlayerRole`): The assigned role.
 *   `get_server_admin()`: Returns a `ServerAdmin` instance using the client's current credentials.
 *   `get_group_admin(group_id)`: Returns a `GroupAdmin` instance for the specified group using the client's current credentials.
-*   `configure_logging(host, port, name=None)`: Configures the client to send its logs to a remote logging server.
+*   `set_logging_for_client(host, port, name=None)`: Configures the client to send its logs to a remote logging server.
 
 ---
 
@@ -209,7 +209,7 @@ A client class for administrators to manage a `GameServer` (inherits from `GameC
         *   `is_persistent` (`bool`): `True` if this is a persistent account.
 *   `stop_server()`: Requests the server to shut down.
 *   `restart_server()`: Requests the server to restart (clears all current games).
-*   `set_logging_config(host, port)`: Configures the server to send its logs to a remote logging server at the specified address and port.
+*   `set_logging_for_server(host, port)`: Configures the server to send its logs to a remote logging server at the specified address and port.
 *   `get_cert_expiration()`: Returns the expiration date of the server's TLS certificate.
     *   **Returns**: A `str` representing the expiration date in ISO format, or `None` if TLS is not used.
 *   `set_logging_enabled(enabled)`: Enables (`True`) or disables (`False`) logging on the server.
@@ -522,4 +522,4 @@ Required linked VDF: 8.21.0.64
 Source: 8.21.0.64
 Compiler: 1.6.0.0
 
- x��ƌ1cǎ:t�ѢE�(P�B�#F�6lذaÇ;v�ٳƜ*��%N�)��ٲp���Q�W�x�O�ЫQ�v�ذaÇ
+ x��ƌ1cǎ:t�ѢE�(P�B�#F�6lذaÇ;v�ٳƜ*��%N�)��ٲp���Q�W�x�O�ЫQ�v�ذa

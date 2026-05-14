@@ -25,7 +25,7 @@ def run_repro():
     # 3. Create Client and Game
     client = GameClient(port=SERVER_PORT)
     # Configure logging using the new method
-    client.configure_logging('127.0.0.1', LOG_PORT, "ClientAlice")
+    client.set_logging_for_client('127.0.0.1', LOG_PORT, "ClientAlice")
     
     client._logger.info("Alice is starting")
     

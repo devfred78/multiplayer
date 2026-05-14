@@ -203,7 +203,7 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                         raise AuthenticationError("Persistent player account not found")
 
                 # Check if it's an admin action
-                is_server_admin_action = action in ['stop_server', 'restart_server', 'get_server_info', 'set_logging_config', 'set_logging_enabled', 'list_all_players', 'get_cert_expiration', 'set_server_password', 'set_admin_password', 'create_group', 'remove_group', 'list_groups', 'set_persistent_players_enabled']
+                is_server_admin_action = action in ['stop_server', 'restart_server', 'get_server_info', 'set_logging_for_server', 'set_logging_enabled', 'list_all_players', 'get_cert_expiration', 'set_server_password', 'set_admin_password', 'create_group', 'remove_group', 'list_groups', 'set_persistent_players_enabled']
                 is_group_admin_action = action in ['list_group_games', 'kick_player', 'kick_observer', 'set_group_admin_password', 'get_group_info']
                 is_persistent_player_action = action in ['create_persistent_player']
                 
@@ -507,7 +507,7 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
                 'active_games': [gid for gid, g in games.items() if g.state != GameState.FINISHED]
             }}
         
-        elif action == 'set_logging_config':
+        elif action == 'set_logging_for_server':
             logging_host = params.get('host')
             logging_port = params.get('port')
             if logging_host and logging_port:

@@ -17,7 +17,7 @@ def test_admin_set_logging_config():
         # Set logging config
         logging_host = "127.0.0.1"
         logging_port = 5000
-        response = admin.set_logging_config(logging_host, logging_port)
+        response = admin.set_logging_for_server(logging_host, logging_port)
         
         assert response['status'] == 'success'
         

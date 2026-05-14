@@ -39,6 +39,10 @@ Represents a single game session.
 *   **`attributes`**: A dictionary of custom attributes.
 *   **`current_player`**: The active `Player` object in a turn-based game.
 
+> **Note: `custom_state` vs `attributes`**
+> - **`attributes`** (Static Metadata): Defined at creation via `**kwargs`. Used for configuration that rarely changes (e.g., `difficulty`, `map`).
+> - **`custom_state`** (Dynamic State): A dictionary for the game's evolving logic (e.g., piece positions, scores). In network play, use `client.set_state()` to synchronize this across the server.
+
 ---
 
 ### `Player(name, **kwargs)`

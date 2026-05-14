@@ -39,6 +39,10 @@ Représente une session de jeu unique.
 *   **`attributes`** : Un dictionnaire d'attributs personnalisés.
 *   **`current_player`** : L'objet `Player` actif dans un jeu au tour par tour.
 
+> **Note : `custom_state` vs `attributes`**
+> - **`attributes`** (Métadonnées statiques) : Définis à la création via `**kwargs`. Utilisés pour la configuration qui change rarement (ex : `difficulty`, `map`).
+> - **`custom_state`** (État dynamique) : Un dictionnaire pour la logique évolutive du jeu (ex : positions des pièces, scores). En jeu réseau, utilisez `client.set_state()` pour synchroniser cet état sur le serveur.
+
 ---
 
 ### `Player(name, **kwargs)`

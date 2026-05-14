@@ -130,6 +130,12 @@ jobs:
             echo "Version $VERSION_NAME detected as stable release"
           fi
 
+          # Display the description in the logs (especially useful for dry-run)
+          echo "========================================="
+          echo "GENERATED RELEASE DESCRIPTION:"
+          cat release_description.txt
+          echo "========================================="
+
       - name: Download all wheels
         uses: actions/download-artifact@v4
         with:

@@ -75,13 +75,17 @@ def test_persistent_player_game_specific_attributes(server):
     # marks them all as connected if they are in at least one game.
     
     alice_instances = [p for p in all_players if p['name'] == "Alice"]
-    assert len(alice_instances) >= 2
+    assert len(alice_instances) == 1
+    alice = alice_instances[0]
     
-    # Check that connected instances have merged attributes
-    game1_alice = next(p for p in alice_instances if p['game_name'] == "Strategy Game")
+    # Verify we have two games in game_id/game_name dicts
+    assert len(alice['game_id']) == 2
+    
+    # Check that game_details has merged attributes for each game
+    game1_alice = next(g for g in alice['game_details'] if g['game_name'] == "Strategy Game")
     assert game1_alice['attributes']['faction'] == "Orcs"
     assert game1_alice['attributes']['rank'] == "Gold"
     
-    game2_alice = next(p for p in alice_instances if p['game_name'] == "Racing Game")
+    game2_alice = next(g for g in alice['game_details'] if g['game_name'] == "Racing Game")
     assert game2_alice['attributes']['car'] == "Ferrari"
     assert game2_alice['attributes']['rank'] == "Gold"

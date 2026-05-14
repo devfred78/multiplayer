@@ -592,40 +592,48 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             return {'status': 'success'}
         
         elif action == 'list_all_players':
-            all_players = []
-            connected_persistent_names = set()
+            player_map = {}
             
             # First, list all currently connected players in games
             for gid, game in games.items():
                 game_name = game.name or 'Unknown'
                 for player in game.players:
                     is_persistent = persistent_players is not None and player.name in persistent_players
-                    if is_persistent:
-                        connected_persistent_names.add(player.name)
-                        
-                    all_players.append({
-                        'name': player.name,
-                        'attributes': player.attributes,
+                    
+                    if player.name not in player_map:
+                        player_map[player.name] = {
+                            'name': player.name,
+                            'attributes': player.attributes, # Note: This takes attributes from the first game found
+                            'game_id': {},
+                            'game_name': {},
+                            'connected': True,
+                            'is_persistent': is_persistent,
+                            'game_details': [] # Added to track game-specific attributes
+                        }
+                    
+                    player_map[player.name]['game_id'][gid] = game_name
+                    player_map[player.name]['game_name'][gid] = game_name  # Key is gid, value is name
+                    player_map[player.name]['connected'] = True
+                    player_map[player.name]['game_details'].append({
                         'game_id': gid,
                         'game_name': game_name,
-                        'connected': True,
-                        'is_persistent': is_persistent
+                        'attributes': player.attributes
                     })
-            
+
             # Then, add persistent players who are NOT connected
             if persistent_players:
                 for name, p_player in persistent_players.items():
-                    if name not in connected_persistent_names:
-                        all_players.append({
+                    if name not in player_map:
+                        player_map[name] = {
                             'name': p_player.name,
                             'attributes': p_player.attributes,
-                            'game_id': None,
-                            'game_name': None,
+                            'game_id': {},
+                            'game_name': {},
                             'connected': False,
                             'is_persistent': True
-                        })
+                        }
                         
-            return {'status': 'success', 'data': all_players}
+            return {'status': 'success', 'data': list(player_map.values())}
 
         elif action == 'get_cert_expiration':
             if not use_tls or not certfile:

@@ -217,8 +217,12 @@ Une classe client pour les administrateurs pour gérer un `GameServer` (hérite 
     *   **Retourne** : Une `list` de `dict`, où chaque dictionnaire contient :
         *   `name` (`str`) : Le nom du joueur.
         *   `attributes` (`dict`) : Les attributs personnalisés du joueur.
-        *   `game_id` (`str` ou `None`) : L'ID de la partie dans laquelle se trouve le joueur, ou `None` s'il n'est pas dans une partie.
-        *   `game_name` (`str` ou `None`) : Le nom de la partie, ou `None`.
+        *   `game_id` (`dict`) : Un dictionnaire où les clés sont les ID des parties (`str`) et les valeurs sont les noms des parties (`str`), représentant les parties dans lesquelles le joueur est actuellement présent.
+        *   `game_name` (`dict`) : Un dictionnaire où les clés sont les ID des parties (`str`) et les valeurs sont les noms des parties (`str`). Similaire à `game_id` pour faciliter l'accès.
+        *   `game_details` (`list` de `dict`) : Une liste détaillée des parties auxquelles le joueur participe, où chaque entrée contient :
+            *   `game_id` (`str`) : L'ID de la partie.
+            *   `game_name` (`str`) : Le nom de la partie.
+            *   `attributes` (`dict`) : Les attributs spécifiques du joueur dans cette partie (fusionnés avec les attributs persistants si applicable).
         *   `connected` (`bool`) : `True` si le joueur est actuellement connecté à une session de jeu.
         *   `is_persistent` (`bool`) : `True` s'il s'agit d'un compte persistant.
 *   `stop_server()` : Demande l'arrêt du serveur.

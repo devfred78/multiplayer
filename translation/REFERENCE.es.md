@@ -217,8 +217,12 @@ Una clase de cliente para que los administradores gestionen un `GameServer` (her
     *   **Devuelve**: Una `list` de `dict`, donde cada diccionario contiene:
         *   `name` (`str`): El nombre del jugador.
         *   `attributes` (`dict`): Los atributos personalizados del jugador.
-        *   `game_id` (`str` o `None`): El ID del juego en el que está el jugador, o `None` si no está en ningún juego.
-        *   `game_name` (`str` o `None`): El nombre del juego, or `None`.
+        *   `game_id` (`dict`): Un diccionario donde las claves son los ID de los juegos (`str`) y los valores son los nombres de los juegos (`str`), representando los juegos en los que el jugador está actualmente.
+        *   `game_name` (`dict`): Un diccionario donde las claves son los ID de los juegos (`str`) y los valores son los nombres de los juegos (`str`). Similitud a `game_id` para facilitar el acceso.
+        *   `game_details` (`list` de `dict`): Una lista detallada de los juegos en los que participa el jugador, donde cada entrada contiene:
+            *   `game_id` (`str`): El ID del juego.
+            *   `game_name` (`str`): El nombre del juego.
+            *   `attributes` (`dict`): Los atributos específicos del jugador en este juego (fusionados con los atributos persistentes si corresponde).
         *   `connected` (`bool`): `True` si el jugador está actualmente conectado a una sesión de juego.
         *   `is_persistent` (`bool`): `True` si se trata de una cuenta persistente.
 *   `stop_server()`: Solicita el apagado del servidor.

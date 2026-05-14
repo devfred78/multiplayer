@@ -390,6 +390,27 @@ class ServerAdmin(GameClient):
             'hidden': hidden
         })
 
+    def update_persistent_player(self, name, role=None, managed_groups=None, password=None, **attributes):
+        """
+        Updates a persistent player's information.
+        """
+        params = {'name': name}
+        if role:
+            params['role'] = role.value if hasattr(role, 'value') else role
+        if managed_groups is not None:
+            params['managed_groups'] = managed_groups
+        if password:
+            params['password'] = password
+        if attributes:
+            params['attributes'] = attributes
+        return self._send_command('update_persistent_player', params)
+
+    def remove_persistent_player(self, name):
+        """
+        Removes a persistent player from the server.
+        """
+        return self._send_command('remove_persistent_player', {'name': name})
+
 class GroupAdmin(GameClient):
     """
     A client class for group administrators to manage games within a specific GameGroup.

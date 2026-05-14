@@ -232,6 +232,8 @@ Une classe client pour les administrateurs pour gérer un `GameServer` (hérite 
 *   `remove_group(group_id)` : Supprime un groupe de jeux du serveur par son ID.
 *   `set_persistent_players_enabled(enabled)` : Active (`True`) ou désactive (`False`) la création de comptes de joueurs persistants sur le serveur. En cas de désactivation, les joueurs persistants créés précédemment restent actifs et utilisables.
 *   `set_server_hidden(hidden)` : Définit le serveur comme caché (`True`) ou visible (`False`) pour la découverte réseau.
+*   `update_persistent_player(name, role=None, managed_groups=None, password=None, **attributes)` : Met à jour les informations d'un joueur persistant.
+*   `remove_persistent_player(name)` : Supprime un compte de joueur persistant du serveur.
 
 ---
 

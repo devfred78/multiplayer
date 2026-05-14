@@ -232,6 +232,8 @@ A client class for administrators to manage a `GameServer` (inherits from `GameC
 *   `remove_group(group_id)`: Removes a game group from the server by its ID.
 *   `set_persistent_players_enabled(enabled)`: Enables (`True`) or disables (`False`) the creation of persistent player accounts on the server. When disabled, existing persistent players remain active and usable.
 *   `set_server_hidden(hidden)`: Sets the server as hidden (`True`) or visible (`False`) for network discovery.
+*   `update_persistent_player(name, role=None, managed_groups=None, password=None, **attributes)`: Updates a persistent player's information.
+*   `remove_persistent_player(name)`: Removes a persistent player account from the server.
 
 ---
 

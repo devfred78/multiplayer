@@ -368,6 +368,45 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             persistent_players[name] = player
             return {'status': 'success', 'data': {'player_id': player.ID, 'name': player.name, 'role': player.role.value}}
 
+        elif action == 'update_persistent_player':
+            name = params.get('name')
+            if not name or name not in persistent_players:
+                return {'status': 'error', 'message': f"Player '{name}' not found"}
+            
+            player = persistent_players[name]
+            
+            # Update role if provided
+            role_val = params.get('role')
+            if role_val:
+                try:
+                    player.role = PlayerRole(role_val)
+                except ValueError:
+                    return {'status': 'error', 'message': f"Invalid role: {role_val}"}
+            
+            # Update managed_groups if provided
+            managed_groups = params.get('managed_groups')
+            if managed_groups is not None:
+                player.managed_groups = managed_groups
+            
+            # Update password if provided
+            password = params.get('password')
+            if password:
+                player.password = password
+            
+            # Update attributes
+            attributes = params.get('attributes', {})
+            player.attributes.update(attributes)
+            
+            return {'status': 'success', 'message': f"Player '{name}' updated"}
+
+        elif action == 'remove_persistent_player':
+            name = params.get('name')
+            if not name or name not in persistent_players:
+                return {'status': 'error', 'message': f"Player '{name}' not found"}
+            
+            del persistent_players[name]
+            return {'status': 'success', 'message': f"Player '{name}' removed"}
+
         elif action == 'create_game':
             game_id = str(uuid.uuid4())
             # Ensure name is in params so it's part of attributes

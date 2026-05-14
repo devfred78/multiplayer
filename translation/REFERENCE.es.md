@@ -190,7 +190,9 @@ El punto de entrada principal para que un cliente se conecte a un `GameServer`.
         *   `name` (`str`): El nombre de la cuenta.
         *   `role` (`PlayerRole`): El rol asignado.
 *   `get_server_admin()`: Devuelve una instancia de `ServerAdmin` utilizando las credenciales actuales del cliente.
+    *   **Error**: `AuthenticationError` si el cliente no está autenticado con una cuenta persistente o no tiene permisos de `SERVER_ADMIN`.
 *   `get_group_admin(group_id)`: Devuelve una instancia de `GroupAdmin` para el grupo especificado utilizando las credenciales actuales del cliente.
+    *   **Error**: `AuthenticationError` si el cliente no está autenticado con una cuenta persistente o no tiene permisos de administración para el grupo especificado.
 *   `set_logging_for_client(host, port, name=None)`: Configura el cliente para enviar sus registros a un servidor de registros remoto.
 
 ---

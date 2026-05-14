@@ -58,22 +58,19 @@ class TestPersistentPlayerRoles(unittest.TestCase):
         self.assertIsInstance(games, dict)
         
         # Should NOT be able to list all players (server admin action)
-        sa_attempt = ga_client.get_server_admin()
         with self.assertRaises(AuthenticationError):
-            sa_attempt.list_all_players()
+            ga_client.get_server_admin()
             
         # 4. Test Simple Player account
         p_client = GameClient(self.host, self.port, auth_user="simple_player", auth_password="player_pass")
         
         # Should NOT be able to do group admin actions
-        p_ga_attempt = p_client.get_group_admin(gid)
         with self.assertRaises(AuthenticationError):
-            p_ga_attempt.list_games()
+            p_client.get_group_admin(gid)
             
         # Should NOT be able to do server admin actions
-        p_sa_attempt = p_client.get_server_admin()
         with self.assertRaises(AuthenticationError):
-            p_sa_attempt.list_all_players()
+            p_client.get_server_admin()
 
     def test_invalid_credentials(self):
         # Create account

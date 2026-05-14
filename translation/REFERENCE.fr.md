@@ -190,7 +190,9 @@ Le point d'entrée principal pour qu'un client se connecte à un `GameServer`.
         *   `name` (`str`) : Le nom du compte.
         *   `role` (`PlayerRole`) : Le rôle assigné.
 *   `get_server_admin()` : Retourne une instance de `ServerAdmin` utilisant les identifiants actuels du client.
+    *   **Erreur** : `AuthenticationError` si le client n'est pas authentifié avec un compte persistant ou n'a pas les droits `SERVER_ADMIN`.
 *   `get_group_admin(group_id)` : Retourne une instance de `GroupAdmin` pour le groupe spécifié utilisant les identifiants actuels du client.
+    *   **Erreur** : `AuthenticationError` si le client n'est pas authentifié avec un compte persistant ou n'a pas les droits d'administration pour le groupe spécifié.
 *   `set_logging_for_client(host, port, name=None)` : Configure le client pour envoyer ses logs à un serveur de logging distant.
 
 ---

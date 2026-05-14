@@ -267,16 +267,37 @@ class GameClient:
     def get_server_admin(self):
         """
         Returns a ServerAdmin instance using this client's credentials.
-        Only useful if the current user has SERVER_ADMIN role.
+        Raises AuthenticationError if the client is not authenticated or has insufficient permissions.
         """
-        return ServerAdmin(self.host, self.port, self.password, self.use_tls, self.auth_user, self.auth_password)
+        if not self.auth_user or not self.auth_password:
+            raise exceptions.AuthenticationError("Client must be authenticated with a persistent account to access ServerAdmin")
+        
+        # Verify permissions by trying a simple admin command
+        admin = ServerAdmin(self.host, self.port, self.password, self.use_tls, self.auth_user, self.auth_password)
+        try:
+            admin.get_server_info()
+        except exceptions.AuthenticationError:
+            raise exceptions.AuthenticationError(f"Persistent account '{self.auth_user}' does not have SERVER_ADMIN permissions")
+            
+        return admin
 
     def get_group_admin(self, group_id):
         """
         Returns a GroupAdmin instance for the specified group using this client's credentials.
-        Only useful if the current user has SERVER_ADMIN role or is GROUP_ADMIN for this group.
+        Raises AuthenticationError if the client is not authenticated or has insufficient permissions.
         """
-        return GroupAdmin(group_id, self.host, self.port, self.password, self.use_tls, self.auth_user, self.auth_password)
+        if not self.auth_user or not self.auth_password:
+            raise exceptions.AuthenticationError("Client must be authenticated with a persistent account to access GroupAdmin")
+        
+        # Verify permissions
+        admin = GroupAdmin(group_id, self.host, self.port, self.password, self.use_tls, self.auth_user, self.auth_password)
+        try:
+            # list_games() for a GroupAdmin is a group-specific action
+            admin.list_games()
+        except exceptions.AuthenticationError:
+            raise exceptions.AuthenticationError(f"Persistent account '{self.auth_user}' does not have administrative permissions for group '{group_id}'")
+            
+        return admin
 
 class ServerAdmin(GameClient):
     """

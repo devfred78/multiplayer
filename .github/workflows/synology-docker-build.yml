@@ -53,7 +53,7 @@ on:
           - v0.5.0
         default: v0.12.0
       push_latest:
-        description: 'Also tag as synology-latest'
+        description: 'Also tag as latest'
         type: boolean
         default: true
 
@@ -88,7 +88,7 @@ jobs:
           images: ghcr.io/${{ github.repository_owner }}/multiplayer-server-synology
           tags: |
             type=raw,value=${{ steps.determine_tag.outputs.TAG }}
-            type=raw,value=synology-latest,enable=${{ github.event.inputs.push_latest == 'true' }}
+            type=raw,value=latest,enable=${{ github.event.inputs.push_latest == 'true' }}
           labels: |
             org.opencontainers.image.description=Synology-compatible game server for the multiplayer library. See PACKAGE.md on GitHub for detailed setup and usage.
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}

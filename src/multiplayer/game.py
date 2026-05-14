@@ -11,6 +11,7 @@ class GameState(enum.Enum):
     Represents the state of the game.
     """
     PENDING = "pending"
+    PAUSING = "pausing"
     IN_PROGRESS = "in_progress"
     FINISHED = "finished"
 
@@ -211,7 +212,7 @@ class Game:
             
             if self.turn_based and self.state == GameState.IN_PROGRESS:
                 if not self.players:
-                    self.state = GameState.PENDING
+                    self.state = GameState.PAUSING
                 elif self.current_player_index >= removed_player_index:
                     self.current_player_index = self.current_player_index % len(self.players)
 
@@ -248,17 +249,17 @@ class Game:
         """
         if self.state != GameState.IN_PROGRESS:
             raise GameLogicError("Game is not in progress")
-        self.state = GameState.PENDING
+        self.state = GameState.PAUSING
 
     def resume(self):
         """
         Resumes the game.
 
         Raises:
-            GameLogicError: If the game is not pending.
+            GameLogicError: If the game is not pausing.
         """
-        if self.state != GameState.PENDING:
-            raise GameLogicError("Game is not pending")
+        if self.state != GameState.PAUSING:
+            raise GameLogicError("Game is not pausing")
         self.state = GameState.IN_PROGRESS
 
     def stop(self):

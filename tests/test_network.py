@@ -252,7 +252,7 @@ def test_remote_game_lifecycle(game_server):
     game.start()
     
     game.pause()
-    assert game.state['status'] == GameState.PENDING.value
+    assert game.state['status'] == GameState.PAUSING.value
     
     game.resume()
     assert game.state['status'] == GameState.IN_PROGRESS.value

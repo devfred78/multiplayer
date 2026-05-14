@@ -172,7 +172,7 @@ def test_pause_and_resume_game():
     game.start()
     assert game.state == GameState.IN_PROGRESS
     game.pause()
-    assert game.state == GameState.PENDING
+    assert game.state == GameState.PAUSING
     game.resume()
     assert game.state == GameState.IN_PROGRESS
 
@@ -188,7 +188,7 @@ def test_game_resume_not_paused():
     game = Game()
     game.add_player(Player("Alice"))
     game.start()
-    with pytest.raises(GameLogicError, match="Game is not pending"):
+    with pytest.raises(GameLogicError, match="Game is not pausing"):
         game.resume()
 
 def test_game_next_turn_no_players():
@@ -197,8 +197,8 @@ def test_game_next_turn_no_players():
     game.add_player(alice)
     game.start()
     game.remove_player(alice.ID)
-    # Now the game is back to PENDING because of remove_player logic
-    assert game.state == GameState.PENDING
+    # Now the game is back to PAUSING because of remove_player logic
+    assert game.state == GameState.PAUSING
     with pytest.raises(GameLogicError, match="Game is not in progress"):
         game.next_turn()
 
@@ -211,12 +211,12 @@ def test_game_start_already_started():
 
 def test_resume_game_raises_error_if_not_pending():
     """
-    Tests that resuming a game that is not pending raises GameLogicError.
+    Tests that resuming a game that is not pausing raises GameLogicError.
     """
     game = Game()
     game.add_player(Player("Alice"))
     game.start()
-    with pytest.raises(GameLogicError, match="Game is not pending"):
+    with pytest.raises(GameLogicError, match="Game is not pausing"):
         game.resume()
 
 def test_stop_game():

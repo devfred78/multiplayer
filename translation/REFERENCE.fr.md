@@ -119,7 +119,8 @@ Une énumération pour le rôle d'un joueur persistant.
 ### `GameState` (Enum)
 Une énumération représentant le statut actuel d'une partie.
 
-*   `GameState.PENDING` : La partie a été créée mais n'a pas encore commencé, ou elle est actuellement en pause. Les joueurs peuvent rejoindre ou quitter la partie.
+*   `GameState.PENDING` : La partie a été créée mais n'a pas encore commencé. Cet état est dédié à l'attente des joueurs. Les joueurs peuvent rejoindre ou quitter la partie.
+*   `GameState.PAUSING` : La partie est actuellement en pause. Cet état est utilisé lorsqu'une partie qui était en cours est temporairement suspendue.
 *   `GameState.IN_PROGRESS` : La partie est actuellement active. Les coups peuvent être joués et la logique du tour par tour est appliquée.
 *   `GameState.FINISHED` : La partie est terminée. Plus aucun coup ne peut être joué et les résultats sont définitifs.
 

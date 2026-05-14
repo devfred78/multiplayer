@@ -2,6 +2,7 @@ import unittest
 import time
 from multiplayer.server import GameServer
 from multiplayer.client import GameClient, ServerAdmin
+from multiplayer.game import PlayerRole
 from multiplayer.exceptions import AuthenticationError
 
 class TestPersistentPlayerRoles(unittest.TestCase):
@@ -17,22 +18,28 @@ class TestPersistentPlayerRoles(unittest.TestCase):
         self.server.stop()
         time.sleep(1) # Wait for server to stop
 
+    def test_create_account_return_role_enum(self):
+        admin = ServerAdmin(self.host, self.port, admin_password=self.admin_password)
+        data = admin._client.create_account("role_tester", "test_pass", role=PlayerRole.GROUP_ADMIN)
+        self.assertEqual(data['role'], PlayerRole.GROUP_ADMIN)
+        self.assertIsInstance(data['role'], PlayerRole)
+
     def test_role_based_access(self):
         # 1. Connect as global admin to create accounts
         admin = ServerAdmin(self.host, self.port, admin_password=self.admin_password)
         
         # Create a server admin account
-        admin._client.create_account("super_admin", "super_pass", role="server_admin")
+        admin._client.create_account("super_admin", "super_pass", role=PlayerRole.SERVER_ADMIN)
         
         # Create a group admin account
         admin.create_group("Test Group", admin_password="group_pass")
         groups = admin.list_groups()
         gid = next(iter(groups.keys()))
         
-        admin._client.create_account("group_boss", "boss_pass", role="group_admin", managed_groups=[gid])
+        admin._client.create_account("group_boss", "boss_pass", role=PlayerRole.GROUP_ADMIN, managed_groups=[gid])
         
         # Create a simple player account
-        admin._client.create_account("simple_player", "player_pass", role="player")
+        admin._client.create_account("simple_player", "player_pass", role=PlayerRole.PLAYER)
         
         # 2. Test Server Admin account
         sa_client = GameClient(self.host, self.port, auth_user="super_admin", auth_password="super_pass")
@@ -71,7 +78,7 @@ class TestPersistentPlayerRoles(unittest.TestCase):
     def test_invalid_credentials(self):
         # Create account
         admin = ServerAdmin(self.host, self.port, admin_password=self.admin_password)
-        admin._client.create_account("user1", "pass1", role="player")
+        admin._client.create_account("user1", "pass1", role=PlayerRole.PLAYER)
         
         # Test wrong password
         client = GameClient(self.host, self.port, auth_user="user1", auth_password="wrong_password")
@@ -84,4 +91,4 @@ class TestPersistentPlayerRoles(unittest.TestCase):
             client2.list_games()
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest

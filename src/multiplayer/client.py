@@ -8,7 +8,7 @@ import time
 import ssl
 import logging
 from logging.handlers import SocketHandler
-from .game import Player, Observer, PersistentPlayer
+from .game import Player, Observer, PersistentPlayer, PlayerRole
 from . import exceptions
 
 # Constants for network discovery
@@ -234,15 +234,15 @@ class GameClient:
                     
         return remote_groups
 
-    def create_account(self, name, password, role="player", managed_groups=None, **attributes):
+    def create_account(self, name, password, role=PlayerRole.PLAYER, managed_groups=None, **attributes):
         """
         Creates a persistent player account on the server.
 
         Args:
             name (str): The name of the player.
             password (str): The password for the account.
-            role (str, optional): The player's role ('player', 'group_admin', or 'server_admin'). Defaults to 'player'.
-            managed_groups (list, optional): A list of group IDs managed by this player (if role is 'group_admin').
+            role (PlayerRole, optional): The player's role (PlayerRole.PLAYER, PlayerRole.GROUP_ADMIN, or PlayerRole.SERVER_ADMIN). Defaults to PlayerRole.PLAYER.
+            managed_groups (list, optional): A list of group IDs managed by this player (if role is PlayerRole.GROUP_ADMIN).
             **attributes: Additional attributes for the player.
 
         Returns:
@@ -251,11 +251,17 @@ class GameClient:
         params = {
             'name': name,
             'password': password,
-            'role': role,
+            'role': role.value if isinstance(role, PlayerRole) else role,
             'managed_groups': managed_groups or [],
             'attributes': attributes
         }
-        return self._send_command('create_persistent_player', params=params)
+        data = self._send_command('create_persistent_player', params=params)
+        if 'role' in data:
+            try:
+                data['role'] = PlayerRole(data['role'])
+            except ValueError:
+                pass
+        return data
 
     def get_server_admin(self):
         """

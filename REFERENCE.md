@@ -231,11 +231,11 @@ The main entry point for a client to connect to a `GameServer`.
     *   **Returns**: A `RemoteGroup` proxy object.
 *   `list_groups()`: Returns all game groups on the server.
     *   **Returns**: A `dict` where keys are group IDs (`str`) and values are `RemoteGroup` objects.
-*   `create_account(name, password, role="player", managed_groups=None, **attributes)`: Creates a persistent player account on the server.
+*   `create_account(name, password, role=PlayerRole.PLAYER, managed_groups=None, **attributes)`: Creates a persistent player account on the server.
     *   **Returns**: A `dict` representing the created player's data:
         *   `player_id` (`str`): The unique ID of the account.
         *   `name` (`str`): The account name.
-        *   `role` (`str`): The assigned role.
+        *   `role` (`PlayerRole`): The assigned role.
 *   `get_server_admin()`: Returns a `ServerAdmin` instance using the client's current credentials.
 *   `get_group_admin(group_id)`: Returns a `GroupAdmin` instance for the specified group using the client's current credentials.
 

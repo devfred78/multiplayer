@@ -231,11 +231,11 @@ El punto de entrada principal para que un cliente se conecte a un `GameServer`.
     *   **Devuelve**: Un objeto proxy `RemoteGroup`.
 *   `list_groups()` : Devuelve todos los grupos de juegos en el servidor.
     *   **Devuelve**: Un `dict` donde las claves son IDs de grupo (`str`) y los valores son objetos `RemoteGroup`.
-*   `create_account(name, password, role="player", managed_groups=None, **attributes)`: Crea una cuenta de jugador persistente en el servidor.
+*   `create_account(name, password, role=PlayerRole.PLAYER, managed_groups=None, **attributes)`: Crea una cuenta de jugador persistente en el servidor.
     *   **Devuelve**: Un `dict` que representa los datos del jugador creado:
         *   `player_id` (`str`): El ID único de la cuenta.
         *   `name` (`str`): El nombre de la cuenta.
-        *   `role` (`str`): El rol asignado.
+        *   `role` (`PlayerRole`): El rol asignado.
 *   `get_server_admin()`: Devuelve una instancia de `ServerAdmin` utilizando las credenciales actuales del cliente.
 *   `get_group_admin(group_id)`: Devuelve una instancia de `GroupAdmin` para el grupo especificado utilizando las credenciales actuales del cliente.
 
@@ -351,4 +351,4 @@ Sugiere un nombre aléatorio para un jugador.
 
 ## Excepciones
 
-*   **`MultiplayerError`**: Excepci�
+*   **`MultiplayerError`**: Excepci�

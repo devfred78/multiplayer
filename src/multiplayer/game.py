@@ -4,7 +4,13 @@ This module provides classes for managing a multiplayer game.
 
 import enum
 import uuid
-from .exceptions import GameLogicError, PlayerLimitReachedError, ObserverLimitReachedError, AuthenticationError
+from .exceptions import (
+    GameLogicError, 
+    PlayerLimitReachedError, 
+    ObserverLimitReachedError, 
+    AuthenticationError,
+    PlayerAlreadyInGameError
+)
 
 class GameState(enum.Enum):
     """
@@ -172,7 +178,10 @@ class Game:
         Raises:
             AuthenticationError: If the provided password does not match the game's password.
             PlayerLimitReachedError: If the maximum number of players has been reached.
+            PlayerAlreadyInGameError: If the player is already in the game.
         """
+        if any(p.ID == player.ID for p in self.players):
+            raise PlayerAlreadyInGameError(f"Player with ID {player.ID} is already in the game")
         if self.password is not None and self.password != password:
             raise AuthenticationError("Invalid password for this game")
         if self.max_players is not None and len(self.players) >= self.max_players:
@@ -190,7 +199,10 @@ class Game:
         Raises:
             AuthenticationError: If the provided password does not match the observer password (or game password if no observer password is set).
             ObserverLimitReachedError: If the maximum number of observers has been reached.
+            PlayerAlreadyInGameError: If the observer is already in the game.
         """
+        if any(o.ID == observer.ID for o in self.observers):
+            raise PlayerAlreadyInGameError(f"Observer with ID {observer.ID} is already in the game")
         required_password = self.observer_password if self.observer_password is not None else self.password
         if required_password is not None and required_password != password:
             raise AuthenticationError("Invalid password for this game")

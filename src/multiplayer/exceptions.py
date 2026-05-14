@@ -41,3 +41,7 @@ class AuthenticationError(NetworkError):
 class UserAlreadyExistsError(MultiplayerError):
     """Raised when trying to create a PersistentPlayer that already exists."""
     pass
+
+class PlayerAlreadyInGameError(GameLogicError):
+    """Raised when trying to add a player or observer that is already in the game."""
+    pass

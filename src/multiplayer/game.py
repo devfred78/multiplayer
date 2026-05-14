@@ -72,6 +72,19 @@ class PersistentPlayer(Player):
         self.role = role
         self.managed_groups = managed_groups or []
 
+    @property
+    def role(self):
+        """
+        The role of the player.
+        """
+        return self._role
+
+    @role.setter
+    def role(self, value):
+        if not isinstance(value, PlayerRole):
+            raise TypeError("role must be an instance of PlayerRole")
+        self._role = value
+
 class GameGroup:
     """
     Represents a group of games on a server.

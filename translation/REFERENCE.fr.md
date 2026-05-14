@@ -152,6 +152,38 @@ Gère les sessions de jeu et les requêtes réseau.
 
 ---
 
+### `GameClient(host='127.0.0.1', port=65432, password=None, use_tls=False, auth_user=None, auth_password=None)`
+Le point d'entrée principal pour qu'un client se connecte à un `GameServer`.
+
+*   **`host`** (`str`) : L'adresse IP du serveur.
+*   **`port`** (`int`) : Le port TCP du serveur.
+*   **`password`** (`str`, optionnel) : Le mot de passe global du serveur.
+*   **`use_tls`** (`bool`, optionnel) : Si `True`, le client se connectera en utilisant TLS. Par défaut `False`.
+*   **`auth_user`** (`str`, optionnel) : Le nom d'un compte joueur persistant.
+*   **`auth_password`** (`str`, optionnel) : Le mot de passe du compte joueur persistant.
+
+#### Méthodes
+*   `discover_servers(timeout=2)` (méthode statique) : Scanne le réseau local à la recherche d'instances de `GameServer` en cours d'exécution.
+    *   **Retourne** : Une `list` de tuples `(host, port)` représentant les serveurs découverts.
+*   `create_game(group_id=None, **game_options)` : Demande au serveur la création d'une nouvelle partie.
+    *   **Retourne** : Un objet proxy `RemoteGame`.
+*   `list_games()` : Retourne toutes les parties actives.
+    *   **Retourne** : Un `dict` où les clés sont les IDs de partie (`str`) et les valeurs sont des objets `RemoteGame`.
+*   `create_group(name, admin_password=None, **attributes)` : Demande au serveur la création d'un nouveau groupe de jeux.
+    *   **Retourne** : Un objet proxy `RemoteGroup`.
+*   `list_groups()` : Retourne tous les groupes de jeux sur le serveur.
+    *   **Retourne** : Un `dict` où les clés sont les IDs de groupe (`str`) et les valeurs sont des objets `RemoteGroup`.
+*   `create_account(name, password, role=PlayerRole.PLAYER, managed_groups=None, **attributes)` : Crée un compte joueur persistant sur le serveur.
+    *   **Retourne** : Un `dict` représentant les données du joueur créé :
+        *   `player_id` (`str`) : L'ID unique du compte.
+        *   `name` (`str`) : Le nom du compte.
+        *   `role` (`PlayerRole`) : Le rôle assigné.
+*   `get_server_admin()` : Retourne une instance de `ServerAdmin` utilisant les identifiants actuels du client.
+*   `get_group_admin(group_id)` : Retourne une instance de `GroupAdmin` pour le groupe spécifié utilisant les identifiants actuels du client.
+*   `configure_logging(host, port, name=None)` : Configure le client pour envoyer ses logs à un serveur de logging distant.
+
+---
+
 ### `ServerAdmin(host='127.0.0.1', port=65432, admin_password=None, use_tls=False, auth_user=None, auth_password=None)`
 Une classe client pour les administrateurs pour gérer un `GameServer` (hérite de `GameClient`).
 
@@ -200,38 +232,6 @@ Une classe cliente pour que les administrateurs de groupe gèrent les parties au
 *   `kick_player(game_id, player_id)` : Retire un joueur d'une partie spécifique dans le groupe par son ID.
 *   `kick_observer(game_id, observer_id)` : Retire un observateur d'une partie spécifique dans le groupe par son ID.
 *   `set_group_admin_password(new_password)` : Définit un nouveau mot de passe administrateur pour ce groupe.
-
----
-
-### `GameClient(host='127.0.0.1', port=65432, password=None, use_tls=False, auth_user=None, auth_password=None)`
-Le point d'entrée principal pour qu'un client se connecte à un `GameServer`.
-
-*   **`host`** (`str`) : L'adresse IP du serveur.
-*   **`port`** (`int`) : Le port TCP du serveur.
-*   **`password`** (`str`, optionnel) : Le mot de passe global du serveur.
-*   **`use_tls`** (`bool`, optionnel) : Si `True`, le client se connectera en utilisant TLS. Par défaut `False`.
-*   **`auth_user`** (`str`, optionnel) : Le nom d'un compte joueur persistant.
-*   **`auth_password`** (`str`, optionnel) : Le mot de passe du compte joueur persistant.
-
-#### Méthodes
-*   `discover_servers(timeout=2)` (méthode statique) : Scanne le réseau local à la recherche d'instances de `GameServer` en cours d'exécution.
-    *   **Retourne** : Une `list` de tuples `(host, port)` représentant les serveurs découverts.
-*   `create_game(group_id=None, **game_options)` : Demande au serveur la création d'une nouvelle partie.
-    *   **Retourne** : Un objet proxy `RemoteGame`.
-*   `list_games()` : Retourne toutes les parties actives.
-    *   **Retourne** : Un `dict` où les clés sont les IDs de partie (`str`) et les valeurs sont des objets `RemoteGame`.
-*   `create_group(name, admin_password=None, **attributes)` : Demande au serveur la création d'un nouveau groupe de jeux.
-    *   **Retourne** : Un objet proxy `RemoteGroup`.
-*   `list_groups()` : Retourne tous les groupes de jeux sur le serveur.
-    *   **Retourne** : Un `dict` où les clés sont les IDs de groupe (`str`) et les valeurs sont des objets `RemoteGroup`.
-*   `create_account(name, password, role=PlayerRole.PLAYER, managed_groups=None, **attributes)` : Crée un compte joueur persistant sur le serveur.
-    *   **Retourne** : Un `dict` représentant les données du joueur créé :
-        *   `player_id` (`str`) : L'ID unique du compte.
-        *   `name` (`str`) : Le nom du compte.
-        *   `role` (`PlayerRole`) : Le rôle assigné.
-*   `get_server_admin()` : Retourne une instance de `ServerAdmin` utilisant les identifiants actuels du client.
-*   `get_group_admin(group_id)` : Retourne une instance de `GroupAdmin` pour le groupe spécifié utilisant les identifiants actuels du client.
-*   `configure_logging(host, port, name=None)` : Configure le client pour envoyer ses logs à un serveur de logging distant.
 
 ---
 
@@ -512,3 +512,4 @@ finally:
     # Arrêter proprement le serveur
     server.stop()
 ```
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            

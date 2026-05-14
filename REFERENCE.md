@@ -152,6 +152,38 @@ Manages game sessions and handles network requests.
 
 ---
 
+### `GameClient(host='127.0.0.1', port=65432, password=None, use_tls=False, auth_user=None, auth_password=None)`
+The main entry point for a client to connect to a `GameServer`.
+
+*   **`host`** (`str`): The IP address of the server.
+*   **`port`** (`int`): The TCP port of the server.
+*   **`password`** (`str`, optional): The global password for the server.
+*   **`use_tls`** (`bool`, optional): If `True`, the client will connect using TLS. Defaults to `False`.
+*   **`auth_user`** (`str`, optional): The name of a persistent player account.
+*   **`auth_password`** (`str`, optional): The password for the persistent player account.
+
+#### Methods
+*   `discover_servers(timeout=2)` (static method): Scans the local network for running `GameServer` instances.
+    *   **Returns**: A `list` of `(host, port)` tuples representing the discovered servers.
+*   `create_game(group_id=None, **game_options)`: Requests the server to create a new game.
+    *   **Returns**: A `RemoteGame` proxy object.
+*   `list_games()`: Returns all active games.
+    *   **Returns**: A `dict` where keys are game IDs (`str`) and values are `RemoteGame` objects.
+*   `create_group(name, admin_password=None, **attributes)`: Requests the server to create a new game group.
+    *   **Returns**: A `RemoteGroup` proxy object.
+*   `list_groups()`: Returns all game groups on the server.
+    *   **Returns**: A `dict` where keys are group IDs (`str`) and values are `RemoteGroup` objects.
+*   `create_account(name, password, role=PlayerRole.PLAYER, managed_groups=None, **attributes)`: Creates a persistent player account on the server.
+    *   **Returns**: A `dict` representing the created player's data:
+        *   `player_id` (`str`): The unique ID of the account.
+        *   `name` (`str`): The account name.
+        *   `role` (`PlayerRole`): The assigned role.
+*   `get_server_admin()`: Returns a `ServerAdmin` instance using the client's current credentials.
+*   `get_group_admin(group_id)`: Returns a `GroupAdmin` instance for the specified group using the client's current credentials.
+*   `configure_logging(host, port, name=None)`: Configures the client to send its logs to a remote logging server.
+
+---
+
 ### `ServerAdmin(host='127.0.0.1', port=65432, admin_password=None, use_tls=False, auth_user=None, auth_password=None)`
 A client class for administrators to manage a `GameServer` (inherits from `GameClient`).
 
@@ -200,38 +232,6 @@ A client class for group administrators to manage games within a specific `GameG
 *   `kick_player(game_id, player_id)`: Removes a player from a specific game in the group by their ID.
 *   `kick_observer(game_id, observer_id)`: Removes an observer from a specific game in the group by their ID.
 *   `set_group_admin_password(new_password)`: Sets a new administrator password for this group.
-
----
-
-### `GameClient(host='127.0.0.1', port=65432, password=None, use_tls=False, auth_user=None, auth_password=None)`
-The main entry point for a client to connect to a `GameServer`.
-
-*   **`host`** (`str`): The IP address of the server.
-*   **`port`** (`int`): The TCP port of the server.
-*   **`password`** (`str`, optional): The global password for the server.
-*   **`use_tls`** (`bool`, optional): If `True`, the client will connect using TLS. Defaults to `False`.
-*   **`auth_user`** (`str`, optional): The name of a persistent player account.
-*   **`auth_password`** (`str`, optional): The password for the persistent player account.
-
-#### Methods
-*   `discover_servers(timeout=2)` (static method): Scans the local network for running `GameServer` instances.
-    *   **Returns**: A `list` of `(host, port)` tuples representing the discovered servers.
-*   `create_game(group_id=None, **game_options)`: Requests the server to create a new game.
-    *   **Returns**: A `RemoteGame` proxy object.
-*   `list_games()`: Returns all active games.
-    *   **Returns**: A `dict` where keys are game IDs (`str`) and values are `RemoteGame` objects.
-*   `create_group(name, admin_password=None, **attributes)`: Requests the server to create a new game group.
-    *   **Returns**: A `RemoteGroup` proxy object.
-*   `list_groups()`: Returns all game groups on the server.
-    *   **Returns**: A `dict` where keys are group IDs (`str`) and values are `RemoteGroup` objects.
-*   `create_account(name, password, role=PlayerRole.PLAYER, managed_groups=None, **attributes)`: Creates a persistent player account on the server.
-    *   **Returns**: A `dict` representing the created player's data:
-        *   `player_id` (`str`): The unique ID of the account.
-        *   `name` (`str`): The account name.
-        *   `role` (`PlayerRole`): The assigned role.
-*   `get_server_admin()`: Returns a `ServerAdmin` instance using the client's current credentials.
-*   `get_group_admin(group_id)`: Returns a `GroupAdmin` instance for the specified group using the client's current credentials.
-*   `configure_logging(host, port, name=None)`: Configures the client to send its logs to a remote logging server.
 
 ---
 
@@ -522,4 +522,4 @@ Required linked VDF: 8.21.0.64
 Source: 8.21.0.64
 Compiler: 1.6.0.0
 
- xñãÆŒ1cÇ:tèÑ¢EŠ(P¡B„#F6lØ°aÃ‡;vìÙ³Æœ*˜ó%N)ÁêÙ²pÂÕÁQ¨W±x÷OĞ«Q·vìØ°aÃ‡
+ xï¿½ï¿½ÆŒ1cÇ:tï¿½Ñ¢Eï¿½(Pï¿½Bï¿½#Fï¿½6lØ°aÃ‡;vï¿½Ù³Æœ*ï¿½ï¿½%Nï¿½)ï¿½ï¿½Ù²pï¿½ï¿½ï¿½Qï¿½Wï¿½xï¿½Oï¿½Ğ«Qï¿½vï¿½Ø°aÃ‡

@@ -152,6 +152,38 @@ Gestiona las sesiones de juego y maneja las peticiones de red.
 
 ---
 
+### `GameClient(host='127.0.0.1', port=65432, password=None, use_tls=False, auth_user=None, auth_password=None)`
+El punto de entrada principal para que un cliente se conecte a un `GameServer`.
+
+*   **`host`** (`str`): La direcciÃ³n IP del servidor.
+*   **`port`** (`int`): El puerto TCP del servidor.
+*   **`password`** (`str`, opcional): La contraseÃ±a global del servidor.
+*   **`use_tls`** (`bool`, opcional): Si es `True`, el cliente se conectarÃ¡ usando TLS. Por defecto es `False`.
+*   **`auth_user`** (`str`, opcional): El nombre de una cuenta de jugador persistente.
+*   **`auth_password`** (`str`, opcional): La contraseÃ±a de la cuenta de jugador persistente.
+
+#### MÃ©todos
+*   `discover_servers(timeout=2)` (mÃ©todo estÃ¡tico): Escanea la red local en busca de instancias de `GameServer` en ejecuciÃ³n.
+    *   **Devuelve**: Una `list` de tuplas `(host, port)` que representan los servidores descubiertos.
+*   `create_game(group_id=None, **game_options)`: Solicita al servidor crear un nuevo juego.
+    *   **Devuelve**: Un objeto proxy `RemoteGame`.
+*   `list_games()`: Devuelve todos los juegos activos.
+    *   **Devuelve**: Un `dict` donde las claves son IDs de juegos (`str`) y los valores son objetos `RemoteGame`.
+*   `create_group(name, admin_password=None, **attributes)`: Solicita al servidor crear un nuevo grupo de juegos.
+    *   **Devuelve**: Un objeto proxy `RemoteGroup`.
+*   `list_groups()` : Devuelve todos los grupos de juegos en el servidor.
+    *   **Devuelve**: Un `dict` donde las claves son IDs de grupo (`str`) y los valores son objetos `RemoteGroup`.
+*   `create_account(name, password, role=PlayerRole.PLAYER, managed_groups=None, **attributes)`: Crea una cuenta de jugador persistente en el servidor.
+    *   **Devuelve**: Un `dict` que representa los datos del jugador creado:
+        *   `player_id` (`str`): El ID Ãºnico de la cuenta.
+        *   `name` (`str`): El nombre de la cuenta.
+        *   `role` (`PlayerRole`): El rol asignado.
+*   `get_server_admin()`: Devuelve una instancia de `ServerAdmin` utilizando las credenciales actuales del cliente.
+*   `get_group_admin(group_id)`: Devuelve una instancia de `GroupAdmin` para el grupo especificado utilizando las credenciales actuales del cliente.
+*   `configure_logging(host, port, name=None)`: Configura el cliente para enviar sus registros a un servidor de registros remoto.
+
+---
+
 ### `ServerAdmin(host='127.0.0.1', port=65432, admin_password=None, use_tls=False, auth_user=None, auth_password=None)`
 Una clase de cliente para que los administradores gestionen un `GameServer` (hereda de `GameClient`).
 
@@ -200,38 +232,6 @@ Una clase de cliente para que los administradores de grupo gestionen juegos dent
 *   `kick_player(game_id, player_id)`: Elimina a un jugador de un juego especÃ­fico en the grupo por su ID.
 *   `kick_observer(game_id, observer_id)`: Elimina a un observador de un juego especÃ­fico en el grupo por su ID.
 *   `set_group_admin_password(new_password)`: Establece una nueva contraseÃ±a de administrador para este grupo.
-
----
-
-### `GameClient(host='127.0.0.1', port=65432, password=None, use_tls=False, auth_user=None, auth_password=None)`
-El punto de entrada principal para que un cliente se conecte a un `GameServer`.
-
-*   **`host`** (`str`): La direcciÃ³n IP del servidor.
-*   **`port`** (`int`): El puerto TCP del servidor.
-*   **`password`** (`str`, opcional): La contraseÃ±a global del servidor.
-*   **`use_tls`** (`bool`, opcional): Si es `True`, el cliente se conectarÃ¡ usando TLS. Por defecto es `False`.
-*   **`auth_user`** (`str`, opcional): El nombre de una cuenta de jugador persistente.
-*   **`auth_password`** (`str`, opcional): La contraseÃ±a de la cuenta de jugador persistente.
-
-#### MÃ©todos
-*   `discover_servers(timeout=2)` (mÃ©todo estÃ¡tico): Escanea la red local en busca de instancias de `GameServer` en ejecuciÃ³n.
-    *   **Devuelve**: Una `list` de tuplas `(host, port)` que representan los servidores descubiertos.
-*   `create_game(group_id=None, **game_options)`: Solicita al servidor crear un nuevo juego.
-    *   **Devuelve**: Un objeto proxy `RemoteGame`.
-*   `list_games()`: Devuelve todos los juegos activos.
-    *   **Devuelve**: Un `dict` donde las claves son IDs de juegos (`str`) y los valores son objetos `RemoteGame`.
-*   `create_group(name, admin_password=None, **attributes)`: Solicita al servidor crear un nuevo grupo de juegos.
-    *   **Devuelve**: Un objeto proxy `RemoteGroup`.
-*   `list_groups()` : Devuelve todos los grupos de juegos en el servidor.
-    *   **Devuelve**: Un `dict` donde las claves son IDs de grupo (`str`) y los valores son objetos `RemoteGroup`.
-*   `create_account(name, password, role=PlayerRole.PLAYER, managed_groups=None, **attributes)`: Crea una cuenta de jugador persistente en el servidor.
-    *   **Devuelve**: Un `dict` que representa los datos del jugador creado:
-        *   `player_id` (`str`): El ID Ãºnico de la cuenta.
-        *   `name` (`str`): El nombre de la cuenta.
-        *   `role` (`PlayerRole`): El rol asignado.
-*   `get_server_admin()`: Devuelve una instancia de `ServerAdmin` utilizando las credenciales actuales del cliente.
-*   `get_group_admin(group_id)`: Devuelve una instancia de `GroupAdmin` para el grupo especificado utilizando las credenciales actuales del cliente.
-*   `configure_logging(host, port, name=None)`: Configura el cliente para enviar sus registros a un servidor de registros remoto.
 
 ---
 
@@ -511,4 +511,4 @@ finally:
     # Detener el servidor de forma segura
     server.stop()
 ```
-                                                                                                                                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               IT¤IT~H8åH8âH8ßH8ÜH8ÖG8äG8áG8ÞG8ÛG8ÕF8ãF8àF8ÝF8ÚF8ÔEVEV	CTJCT'CTCSáCS¾CSvBT?BTBSùBSÖBS³BSkAT0ATASêASÇAS¤AS\@T/@T@Sé@SÆ@S£@S[>8ô>8ò>8ð>8î>8ê=8ó=8ñ=8ï=8í=8é<8Ñ<8Ï<8Í<8Ë<8Ç;8Ð;8Î;8Ì;8Ê;8Æ:8Á:8½:8¹:8µ:8®98¿98»98·98³98¬88¾88º88¶88²88«7C\7CZ7CX7CV7CR6C[6CY6CW6CU6CQ5RK5F3UÐ       Î

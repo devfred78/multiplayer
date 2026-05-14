@@ -532,13 +532,23 @@ class RemoteGame:
     def players(self):
         """Gets the list of players in the remote game."""
         data = self._send_command('get_players')
-        return [Player(p['name'], id=p['id'], **p['attributes']) for p in data]
+        players = []
+        for p in data:
+            player = Player(p['name'], **p['attributes'])
+            player._force_id(p['id'])
+            players.append(player)
+        return players
 
     @property
     def observers(self):
         """Gets the list of observers in the remote game."""
         data = self._send_command('get_observers')
-        return [Observer(o['name'], id=o['id'], **o['attributes']) for o in data]
+        observers = []
+        for o in data:
+            observer = Observer(o['name'], **o['attributes'])
+            observer._force_id(o['id'])
+            observers.append(observer)
+        return observers
 
     def set_state(self, state):
         """Sets the state of the remote game."""

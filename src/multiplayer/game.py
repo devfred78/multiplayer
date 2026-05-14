@@ -27,13 +27,18 @@ class Player:
 
     Args:
         name (str): The name of the player.
-        id (str, optional): The player's ID.
         **kwargs: Additional attributes for the player.
     """
-    def __init__(self, name, id=None, **kwargs):
+    def __init__(self, name, **kwargs):
         self.name = name
         self.attributes = kwargs
-        self._id = id or str(uuid.uuid4())
+        self._id = str(uuid.uuid4())
+
+    def _force_id(self, id):
+        """
+        Internal use only to restore an object with a specific ID.
+        """
+        self._id = id
 
     @property
     def ID(self):
@@ -59,11 +64,10 @@ class PersistentPlayer(Player):
         password (str): The password for the account.
         role (PlayerRole, optional): The role of the player. Defaults to PlayerRole.PLAYER.
         managed_groups (list, optional): A list of group IDs managed by this player if role is GROUP_ADMIN.
-        id (str, optional): The player's ID.
         **kwargs: Additional attributes for the player.
     """
-    def __init__(self, name, password, role=PlayerRole.PLAYER, managed_groups=None, id=None, **kwargs):
-        super().__init__(name, id=id, **kwargs)
+    def __init__(self, name, password, role=PlayerRole.PLAYER, managed_groups=None, **kwargs):
+        super().__init__(name, **kwargs)
         self.password = password
         self.role = role
         self.managed_groups = managed_groups or []
@@ -118,13 +122,18 @@ class Observer:
 
     Args:
         name (str): The name of the observer.
-        id (str, optional): The observer's ID.
         **kwargs: Additional attributes for the observer.
     """
-    def __init__(self, name, id=None, **kwargs):
+    def __init__(self, name, **kwargs):
         self.name = name
         self.attributes = kwargs
-        self._id = id or str(uuid.uuid4())
+        self._id = str(uuid.uuid4())
+
+    def _force_id(self, id):
+        """
+        Internal use only to restore an object with a specific ID.
+        """
+        self._id = id
 
     @property
     def ID(self):

@@ -599,7 +599,8 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
                 # Combine persistent attributes with game-specific attributes provided in player_data
                 combined_attributes = p_player.attributes.copy()
                 combined_attributes.update(player_data.get('attributes', {}))
-                player = Player(p_player.name, id=p_player.ID, **combined_attributes)
+                player = Player(p_player.name, **combined_attributes)
+                player._force_id(p_player.ID)
             else:
                 player = Player(player_name, **player_data.get('attributes', {}))
                 
@@ -620,7 +621,8 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
                 # Combine persistent attributes with observer-specific attributes
                 combined_attributes = p_player.attributes.copy()
                 combined_attributes.update(observer_data.get('attributes', {}))
-                observer = Observer(p_player.name, id=p_player.ID, **combined_attributes)
+                observer = Observer(p_player.name, **combined_attributes)
+                observer._force_id(p_player.ID)
             else:
                 observer = Observer(observer_name, **observer_data.get('attributes', {}))
                 

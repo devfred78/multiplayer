@@ -44,15 +44,70 @@ def check_uv():
             print("Fatal error: Could not install 'uv'. Please install it manually: https://astral.sh/uv")
             sys.exit(1)
 
+def get_changed_files(target_file=None):
+    """Returns a list of changed files compared to origin/main or the parent commit."""
+    if target_file:
+        return [str(target_file)]
+    
+    try:
+        # We try to get the diff against origin/main, if it fails we take the current changes
+        # vs the last commit.
+        base = "origin/main"
+        # Check if origin/main exists
+        subprocess.run(["git", "rev-parse", "--verify", base], capture_output=True, check=True)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        base = "HEAD"
+
+    try:
+        output = subprocess.check_output(["git", "diff", "--name-only", base], text=True)
+        files = output.splitlines()
+        
+        # We also add unstaged changes (new files not yet in git)
+        output_unstaged = subprocess.check_output(["git", "ls-files", "--others", "--exclude-standard"], text=True)
+        files.extend(output_unstaged.splitlines())
+        
+        return list(set(files))
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # Git not available or not a git repo
+        return None
+
 def main():
     parser = argparse.ArgumentParser(description="Verify syntax and run project unit tests in an isolated environment.")
     parser.add_argument("--fix", action="store_true", help="Ask Ruff to fix detectable errors.")
+    parser.add_argument("--force", action="store_true", help="Force execution even if only documentation has changed.")
+    parser.add_argument("--only", type=str, help="Only check the specified file.")
     args = parser.parse_args()
 
     # Ensure we are at the project root
     project_root = Path(__file__).parent.parent.resolve()
     os.chdir(project_root)
-    
+
+    # Detect changes to avoid useless runs
+    if not args.force:
+        changed_files = get_changed_files(args.only)
+        if changed_files is not None:
+            # We filter for relevant files: .py files or files in src/ or tests/
+            # and we exclude documentation files.
+            important_extensions = {".py", ".toml", ".lock"}
+            important_dirs = {"src", "tests", "scripts"}
+            
+            needs_check = False
+            for f in changed_files:
+                path = Path(f)
+                if path.suffix in important_extensions:
+                    needs_check = True
+                    break
+                # Check if file is in an important directory
+                if any(part in important_dirs for part in path.parts):
+                    needs_check = True
+                    break
+            
+            if not needs_check and changed_files:
+                print("\n--- Skip Check ---")
+                print("Only documentation or non-code files have changed.")
+                print("Use --force to run checks anyway.")
+                return
+
     # 1. Check/Install uv
     check_uv()
     

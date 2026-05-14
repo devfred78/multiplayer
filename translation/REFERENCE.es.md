@@ -113,11 +113,13 @@ Una enumeración para el rol de un jugador persistente.
 ---
 
 ### `GameState` (Enum)
-Una enumeración para el estado del juego.
+Una enumeración que representa el estado actual de una partida.
 
-*   `GameState.PENDING`
-*   `GameState.IN_PROGRESS`
-*   `GameState.FINISHED`
+*   `GameState.PENDING`: La partida ha sido creada pero aún no ha comenzado, o está actualmente en pausa. Los jugadores pueden unirse o salir.
+*   `GameState.IN_PROGRESS`: La partida está actualmente activa. Se pueden realizar movimientos y se aplica la lógica de turnos.
+*   `GameState.FINISHED`: La partida ha terminado. No se pueden realizar más movimientos y los resultados son definitivos.
+
+---
 
 ## Clases de Red
 

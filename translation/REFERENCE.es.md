@@ -156,21 +156,36 @@ Una clase de cliente para que los administradores gestionen un `GameServer`.
 *   **`auth_password`** (`str`, opcional): La contraseña de la cuenta de jugador persistente.
 
 #### Métodos
-*   `get_server_info()`: Devuelve información sobre el servidor (nombre, número de juegos, IDs de juegos activos).
-*   `list_games()`: Devuelve un diccionario de juegos activos como objetos `RemoteGame`, indexados por su ID.
+*   `get_server_info()`: Devuelve información sobre el servidor.
+    *   **Devuelve**: Un `dict` con las siguientes claves:
+        *   `server_name` (`str`): El nombre asignado al servidor.
+        *   `games_count` (`int`): Número total de juegos actualmente en el servidor.
+        *   `active_games` (`list` de `str`): Una lista de IDs para juegos que no están en el estado `FINISHED`.
+*   `list_games()`: Devuelve un diccionario de juegos activos como objetos `RemoteGame`.
+    *   **Devuelve**: Un `dict` donde las claves son IDs de juegos (`str`) y los valores son objetos proxy `RemoteGame`.
 *   `kick_player(game_id, player_id)`: Elimina a un jugador de un juego específico por su ID.
 *   `kick_observer(game_id, observer_id)`: Elimina a un observador de un juego específico por su ID.
-*   `list_all_players()`: Devuelve una lista de todos los jugadores (conectados y persistentes), incluyendo su estado de conexión, el ID del juego asociado y su nombre.
+*   `list_all_players()`: Enumera todos los jugadores conocidos actualmente por el servidor.
+    *   **Devuelve**: Una `list` de `dict`, donde cada diccionario contiene:
+        *   `name` (`str`): El nombre del jugador.
+        *   `attributes` (`dict`): Los atributos personalizados del jugador.
+        *   `game_id` (`str` o `None`): El ID del juego en el que está el jugador, o `None` si no está en ningún juego.
+        *   `game_name` (`str` o `None`): El nombre del juego, o `None`.
+        *   `connected` (`bool`): `True` si el jugador está actualmente conectado a una sesión de juego.
+        *   `is_persistent` (`bool`): `True` si se trata de una cuenta persistente.
 *   `stop_server()`: Solicita el apagado del servidor.
 *   `restart_server()` : Solicita el reinicio del servidor (borra todos los juegos actuales).
 *   `set_logging_config(host, port)`: Configura el servidor para enviar sus registros a un servidor de registros remoto en la dirección y puerto especificados.
-*   `get_cert_expiration()`: Devuelve la fecha de expiración del certificado TLS del servidor en formato ISO.
+*   `get_cert_expiration()`: Devuelve la fecha de expiración del certificado TLS del servidor.
+    *   **Devuelve**: Un `str` que representa la fecha de expiración en formato ISO, o `None` si no se utiliza TLS.
 *   `set_logging_enabled(enabled)`: Activa (`True`) o desactiva (`False`) el registro en el servidor.
 *   `set_server_password(new_password)`: Establece una nueva contraseña para el servidor.
 *   `set_admin_password(new_password)`: Establece una nueva contraseña de administrador para el servidor.
-*   `create_group(name, admin_password=None, **attributes)`: Crea un nuevo grupo de juegos en el servidor. Devuelve un objeto proxy `RemoteGroup`.
+*   `create_group(name, admin_password=None, **attributes)`: Crea un nuevo grupo de juegos en el servidor.
+    *   **Devuelve**: Un objeto proxy `RemoteGroup` para el grupo recién creado.
 *   `remove_group(group_id)` : Elimina un grupo de juegos del servidor por su ID.
-*   `list_groups()` : Devuelve un diccionario de todos los grupos de juegos en el servidor como objetos `RemoteGroup`, indexados por su `group_id`.
+*   `list_groups()` : Devuelve todos los grupos de juegos en el servidor.
+    *   **Devuelve**: Un `dict` donde las claves son IDs de grupo (`str`) y los valores son objetos `RemoteGroup`.
 *   `set_persistent_players_enabled(enabled)`: Activa (`True`) o desactiva (`False`) la creación de cuentas de jugadores persistentes en el servidor.
 
 ---
@@ -187,7 +202,8 @@ Una clase de cliente para que los administradores de grupo gestionen juegos dent
 *   **`auth_password`** (`str`, opcional): La contraseña de la cuenta de jugador persistente.
 
 #### Métodos
-*   `list_games()`: Devuelve un diccionario de juegos pertenecientes a este grupo como objetos `RemoteGame`, indexados por su ID.
+*   `list_games()`: Devuelve un diccionario de juegos pertenecientes a este grupo.
+    *   **Devuelve**: Un `dict` donde las claves son IDs de juegos (`str`) y los valores son objetos `RemoteGame`.
 *   `kick_player(game_id, player_id)`: Elimina a un jugador de un juego específico en the grupo por su ID.
 *   `kick_observer(game_id, observer_id)`: Elimina a un observador de un juego específico en el grupo por su ID.
 *   `set_group_admin_password(new_password)`: Establece una nueva contraseña de administrador para este grupo.
@@ -205,12 +221,21 @@ El punto de entrada principal para que un cliente se conecte a un `GameServer`.
 *   **`auth_password`** (`str`, opcional): La contraseña de la cuenta de jugador persistente.
 
 #### Métodos
-*   `discover_servers(timeout=2)` (método estático): Escanea la red local en busca de instancias de `GameServer` en ejecución. Devuelve una lista de tuplas `(host, port)`.
-*   `create_game(group_id=None, **game_options)`: Solicita al servidor crear un nuevo juego. Devuelve un objeto proxy `RemoteGame`. Puede incluir un `group_id` para asociar el juego con un grupo.
-*   `list_games()`: Devuelve un diccionario de juegos activos como objetos `RemoteGame`, indexados por su ID.
-*   `create_group(name, admin_password=None, **attributes)`: Solicita al servidor crear un nuevo grupo de juegos. Devuelve un objeto proxy `RemoteGroup`.
-*   `list_groups()` : Devuelve un diccionario de grupos de juegos como objetos `RemoteGroup`, indexados por su ID.
-*   `create_account(name, password, role="player", managed_groups=None, **attributes)`: Crea una cuenta de jugador persistente en el servidor. Devuelve los datos del jugador creado.
+*   `discover_servers(timeout=2)` (método estático): Escanea la red local en busca de instancias de `GameServer` en ejecución.
+    *   **Devuelve**: Una `list` de tuplas `(host, port)` que representan los servidores descubiertos.
+*   `create_game(group_id=None, **game_options)`: Solicita al servidor crear un nuevo juego.
+    *   **Devuelve**: Un objeto proxy `RemoteGame`.
+*   `list_games()`: Devuelve todos los juegos activos.
+    *   **Devuelve**: Un `dict` donde las claves son IDs de juegos (`str`) y los valores son objetos `RemoteGame`.
+*   `create_group(name, admin_password=None, **attributes)`: Solicita al servidor crear un nuevo grupo de juegos.
+    *   **Devuelve**: Un objeto proxy `RemoteGroup`.
+*   `list_groups()` : Devuelve todos los grupos de juegos en el servidor.
+    *   **Devuelve**: Un `dict` donde las claves son IDs de grupo (`str`) y los valores son objetos `RemoteGroup`.
+*   `create_account(name, password, role="player", managed_groups=None, **attributes)`: Crea una cuenta de jugador persistente en el servidor.
+    *   **Devuelve**: Un `dict` que representa los datos del jugador creado:
+        *   `player_id` (`str`): El ID único de la cuenta.
+        *   `name` (`str`): El nombre de la cuenta.
+        *   `role` (`str`): El rol asignado.
 *   `get_server_admin()`: Devuelve una instancia de `ServerAdmin` utilizando las credenciales actuales del cliente.
 *   `get_group_admin(group_id)`: Devuelve una instancia de `GroupAdmin` para el grupo especificado utilizando las credenciales actuales del cliente.
 
@@ -222,8 +247,10 @@ Un objeto proxy que representa un grupo de juegos que se ejecuta en el servidor.
 *Normalmente no se crea este objeto directamente, sino que se obtiene de `client.create_group()` o `client.list_groups()`.*
 
 #### Métodos
-*   `create_game(**game_options)`: Crea un nuevo juego dentro de este grupo. Devuelve un objeto proxy `RemoteGame`.
-*   `list_games()`: Devuelve un diccionario de juegos pertenecientes a este grupo como objetos `RemoteGame`, indexados por su ID.
+*   `create_game(**game_options)`: Crea un nuevo juego dentro de este grupo.
+    *   **Devuelve**: Un objeto proxy `RemoteGame`.
+*   `list_games()`: Devuelve todos los juegos pertenecientes a este grupo.
+    *   **Devuelve**: Un `dict` donde las claves son IDs de juegos (`str`) y los valores son objetos `RemoteGame`.
 
 #### Propiedades
 *   **`group_id`**: El ID único del grupo.
@@ -244,8 +271,20 @@ Un objeto proxy que representa un juego que se ejecuta en el servidor.
 *   (Otros métodos son iguales a los de la clase `Game` local).
 
 #### Propiedades
-*   **`state`** : Devuelve un diccionario que contiene tanto el `GameState` como el estado personalizado. Ejemplo: `{'status': 'in_progress', 'custom': {'score': 100}}`.
-*   **`observers`** : Devuelve una lista de nombres de observadores en el juego.
+*   **`state`** : Devuelve el estado actual del juego remoto.
+    *   **Devuelve**: Un `dict` con:
+        *   `status` (`GameState`): El valor del enum del estado del juego.
+        *   `custom` (`dict`): El diccionario `custom_state` del juego.
+*   **`observers`** : Devuelve los observadores que están actualmente en el juego.
+    *   **Devuelve**: Una `list` de `dict`, cada uno con:
+        *   `id` (`str`): El ID del observador.
+        *   `name` (`str`): El nombre del observador.
+        *   `attributes` (`dict`): Los atributos del observador.
+*   **`players`** : Devuelve los jugadores que están actualmente en el juego.
+    *   **Devuelve**: Una `list` de `dict`, cada uno con:
+        *   `id` (`str`): El ID del jugador.
+        *   `name` (`str`): El nombre del jugador.
+        *   `attributes` (`dict`): Los atributos del jugador.
 
 ## Servidor de Registros Autónomo
 
@@ -312,15 +351,4 @@ Sugiere un nombre aléatorio para un jugador.
 
 ## Excepciones
 
-*   **`MultiplayerError`**: Excepción base para todos los errores específicos del módulo.
-*   **`GameLogicError`**: Para errores en las reglas del juego.
-*   **`PlayerLimitReachedError`**: Se lanza al añadir un jugador a un juego lleno.
-*   **`ObserverLimitReachedError`**: Se lanza al añadir un observador a un juego que ha alcanzado su límite de observadores.
-*   **`GameNotFoundError`**: Se lanza cuando un cliente solicita un `id` de juego que no existe en el servidor.
-*   **`NetworkError`**: Excepción base para problemas relacionados con la red.
-*   **`ConnectionError`**: Se lanza cuando un cliente no logra conectarse al servidor.
-*   **`ServerError`**: Se lanza para errores genéricos reportados por el servidor.
-*   **`AuthenticationError`**: Se lanza para fallos de autenticación de contraseña tanto del servidor como del juego.
-*   **`UserAlreadyExistsError`**: Se lanza cuando se intenta crear un `PersistentPlayer` que ya existe.
-*   **`GroupNotFoundError`**: Se lanza cuando no se encuentra un `id` de grupo en el servidor.
-*   **`AccessDeniedE
+*   **`MultiplayerError`**: Excepci�

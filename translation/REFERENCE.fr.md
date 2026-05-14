@@ -156,21 +156,36 @@ Une classe client pour les administrateurs pour gérer un `GameServer`.
 *   **`auth_password`** (`str`, optionnel) : Le mot de passe du compte joueur persistant.
 
 #### Méthodes
-*   `get_server_info()` : Retourne des informations sur le serveur (nom, nombre de parties, IDs de parties actives).
-*   `list_games()` : Retourne un dictionnaire des parties actives sous forme d'objets `RemoteGame`, indexé par leur ID.
+*   `get_server_info()` : Retourne des informations sur le serveur.
+    *   **Retourne** : Un `dict` avec les clés suivantes :
+        *   `server_name` (`str`) : Le nom assigné au serveur.
+        *   `games_count` (`int`) : Le nombre total de parties actuellement sur le serveur.
+        *   `active_games` (`list` de `str`) : Une liste des IDs des parties qui ne sont pas dans l'état `FINISHED`.
+*   `list_games()` : Retourne un dictionnaire des parties actives sous forme d'objets `RemoteGame`.
+    *   **Retourne** : Un `dict` où les clés sont les IDs de partie (`str`) et les valeurs sont des objets proxy `RemoteGame`.
 *   `kick_player(game_id, player_id)` : Retire un joueur d'une partie spécifique par son ID.
 *   `kick_observer(game_id, observer_id)` : Retire un observateur d'une partie spécifique par son ID.
-*   `list_all_players()` : Retourne une liste de tous les joueurs (connectés et persistants), incluant leur statut de connexion, leur ID de partie associé et leur nom.
+*   `list_all_players()` : Liste tous les joueurs actuellement connus par le serveur.
+    *   **Retourne** : Une `list` de `dict`, où chaque dictionnaire contient :
+        *   `name` (`str`) : Le nom du joueur.
+        *   `attributes` (`dict`) : Les attributs personnalisés du joueur.
+        *   `game_id` (`str` ou `None`) : L'ID de la partie dans laquelle se trouve le joueur, ou `None` s'il n'est pas dans une partie.
+        *   `game_name` (`str` ou `None`) : Le nom de la partie, ou `None`.
+        *   `connected` (`bool`) : `True` si le joueur est actuellement connecté à une session de jeu.
+        *   `is_persistent` (`bool`) : `True` s'il s'agit d'un compte persistant.
 *   `stop_server()` : Demande l'arrêt du serveur.
 *   `restart_server()` : Demande le redémarrage du serveur (efface toutes les parties actuelles).
 *   `set_logging_config(host, port)` : Configure le serveur pour envoyer ses logs à un serveur de logging distant à l'adresse et au port spécifiés.
-*   `get_cert_expiration()` : Retourne la date d'expiration du certificat TLS du serveur au format ISO.
+*   `get_cert_expiration()` : Retourne la date d'expiration du certificat TLS du serveur.
+    *   **Retourne** : Une `str` représentant la date d'expiration au format ISO, ou `None` si le TLS n'est pas utilisé.
 *   `set_logging_enabled(enabled)` : Active (`True`) ou désactive (`False`) le logging sur le serveur.
 *   `set_server_password(new_password)` : Définit un nouveau mot de passe pour le serveur.
 *   `set_admin_password(new_password)` : Définit un nouveau mot de passe administrateur pour le serveur.
-*   `create_group(name, admin_password=None, **attributes)` : Crée un nouveau groupe de jeux sur le serveur. Retourne un objet proxy `RemoteGroup`.
+*   `create_group(name, admin_password=None, **attributes)` : Crée un nouveau groupe de jeux sur le serveur.
+    *   **Retourne** : Un objet proxy `RemoteGroup` pour le groupe nouvellement créé.
 *   `remove_group(group_id)` : Supprime un groupe de jeux du serveur par son ID.
-*   `list_groups()` : Renvoie un dictionnaire de tous les groupes de jeux sur le serveur sous forme d'objets `RemoteGroup`, indexé par leur `group_id`.
+*   `list_groups()` : Retourne tous les groupes de jeux sur le serveur.
+    *   **Retourne** : Un `dict` où les clés sont les IDs de groupe (`str`) et les valeurs sont des objets `RemoteGroup`.
 *   `set_persistent_players_enabled(enabled)` : Active (`True`) ou désactive (`False`) la création de comptes de joueurs persistants sur le serveur.
 
 ---
@@ -187,7 +202,8 @@ Une classe cliente pour que les administrateurs de groupe gèrent les parties au
 *   **`auth_password`** (`str`, optionnel) : Le mot de passe du compte joueur persistant.
 
 #### Méthodes
-*   `list_games()` : Retourne un dictionnaire des parties appartenant à ce groupe sous forme d'objets `RemoteGame`, indexé par leur ID.
+*   `list_games()` : Retourne un dictionnaire des parties appartenant à ce groupe.
+    *   **Retourne** : Un `dict` où les clés sont les IDs de partie (`str`) et les valeurs sont des objets `RemoteGame`.
 *   `kick_player(game_id, player_id)` : Retire un joueur d'une partie spécifique dans le groupe par son ID.
 *   `kick_observer(game_id, observer_id)` : Retire un observateur d'une partie spécifique dans le groupe par son ID.
 *   `set_group_admin_password(new_password)` : Définit un nouveau mot de passe administrateur pour ce groupe.
@@ -205,12 +221,21 @@ Le point d'entrée principal pour qu'un client se connecte à un `GameServer`.
 *   **`auth_password`** (`str`, optionnel) : Le mot de passe du compte joueur persistant.
 
 #### Méthodes
-*   `discover_servers(timeout=2)` (méthode statique) : Scanne le réseau local à la recherche d'instances de `GameServer` en cours d'exécution. Retourne une liste de tuples `(host, port)`.
-*   `create_game(group_id=None, **game_options)` : Demande au serveur la création d'une nouvelle partie. Retourne un objet proxy `RemoteGame`. Peut inclure un `group_id` pour associer la partie à un groupe.
-*   `list_games()` : Retourne un dictionnaire des parties actives sous forme d'objets `RemoteGame`, indexé par leur ID.
-*   `create_group(name, admin_password=None, **attributes)` : Demande au serveur la création d'un nouveau groupe de jeux. Retourne un objet proxy `RemoteGroup`.
-*   `list_groups()` : Retourne un dictionnaire des groupes de jeux sous forme d'objets `RemoteGroup`, indexé par leur ID.
-*   `create_account(name, password, role="player", managed_groups=None, **attributes)` : Crée un compte joueur persistant sur le serveur. Retourne les données du joueur créé.
+*   `discover_servers(timeout=2)` (méthode statique) : Scanne le réseau local à la recherche d'instances de `GameServer` en cours d'exécution.
+    *   **Retourne** : Une `list` de tuples `(host, port)` représentant les serveurs découverts.
+*   `create_game(group_id=None, **game_options)` : Demande au serveur la création d'une nouvelle partie.
+    *   **Retourne** : Un objet proxy `RemoteGame`.
+*   `list_games()` : Retourne toutes les parties actives.
+    *   **Retourne** : Un `dict` où les clés sont les IDs de partie (`str`) et les valeurs sont des objets `RemoteGame`.
+*   `create_group(name, admin_password=None, **attributes)` : Demande au serveur la création d'un nouveau groupe de jeux.
+    *   **Retourne** : Un objet proxy `RemoteGroup`.
+*   `list_groups()` : Retourne tous les groupes de jeux sur le serveur.
+    *   **Retourne** : Un `dict` où les clés sont les IDs de groupe (`str`) et les valeurs sont des objets `RemoteGroup`.
+*   `create_account(name, password, role="player", managed_groups=None, **attributes)` : Crée un compte joueur persistant sur le serveur.
+    *   **Retourne** : Un `dict` représentant les données du joueur créé :
+        *   `player_id` (`str`) : L'ID unique du compte.
+        *   `name` (`str`) : Le nom du compte.
+        *   `role` (`str`) : Le rôle assigné.
 *   `get_server_admin()` : Retourne une instance de `ServerAdmin` utilisant les identifiants actuels du client.
 *   `get_group_admin(group_id)` : Retourne une instance de `GroupAdmin` pour le groupe spécifié utilisant les identifiants actuels du client.
 
@@ -222,8 +247,10 @@ Un objet proxy représentant un groupe de jeux en cours d'exécution sur le serv
 *Vous ne créez généralement pas cet objet directement, mais vous l'obtenez via `client.create_group()` ou `client.list_groups()`.*
 
 #### Méthodes
-*   `create_game(**game_options)` : Crée une nouvelle partie au sein de ce groupe. Retourne un objet proxy `RemoteGame`.
-*   `list_games()` : Retourne un dictionnaire des parties appartenant à ce groupe sous forme d'objets `RemoteGame`, indexé par leur ID.
+*   `create_game(**game_options)` : Crée une nouvelle partie au sein de ce groupe.
+    *   **Retourne** : Un objet proxy `RemoteGame`.
+*   `list_games()` : Retourne toutes les parties appartenant à ce groupe.
+    *   **Retourne** : Un `dict` où les clés sont les IDs de partie (`str`) et les valeurs sont des objets `RemoteGame`.
 
 #### Propriétés
 *   **`group_id`** : L'ID unique du groupe.
@@ -244,8 +271,20 @@ Un objet proxy représentant une partie en cours d'exécution sur le serveur.
 *   (Les autres méthodes sont identiques à la classe `Game` locale.)
 
 #### Propriétés
-*   **`state`** : Retourne un dictionnaire contenant à la fois le `GameState` et l'état personnalisé. Exemple : `{'status': 'in_progress', 'custom': {'score': 100}}`.
-*   **`observers`** : Retourne une liste des noms des observateurs dans la partie.
+*   **`state`** : Retourne l'état actuel de la partie distante.
+    *   **Retourne** : Un `dict` avec :
+        *   `status` (`GameState`) : La valeur enum de l'état du jeu.
+        *   `custom` (`dict`) : Le dictionnaire `custom_state` du jeu.
+*   **`observers`** : Retourne les observateurs actuellement dans la partie.
+    *   **Retourne** : Une `list` de `dict`, chacun contenant :
+        *   `id` (`str`) : L'ID de l'observateur.
+        *   `name` (`str`) : Le nom de l'observateur.
+        *   `attributes` (`dict`) : Les attributs de l'observateur.
+*   **`players`** : Retourne les joueurs actuellement dans la partie.
+    *   **Retourne** : Une `list` de `dict`, chacun contenant :
+        *   `id` (`str`) : L'ID du joueur.
+        *   `name` (`str`) : Le nom du joueur.
+        *   `attributes` (`dict`) : Les attributs du joueur.
 
 ## Serveur de Logging Autonome
 

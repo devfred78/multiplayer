@@ -156,21 +156,36 @@ A client class for administrators to manage a `GameServer`.
 *   **`auth_password`** (`str`, optional): The password for the persistent player account.
 
 #### Methods
-*   `get_server_info()`: Returns information about the server (name, number of games, active game IDs).
-*   `list_games()`: Returns a dictionary of active games as `RemoteGame` objects, keyed by their ID.
+*   `get_server_info()`: Returns information about the server.
+    *   **Returns**: A `dict` with the following keys:
+        *   `server_name` (`str`): The name assigned to the server.
+        *   `games_count` (`int`): Total number of games currently on the server.
+        *   `active_games` (`list` of `str`): A list of IDs for games that are not in the `FINISHED` state.
+*   `list_games()`: Returns a dictionary of active games as `RemoteGame` objects.
+    *   **Returns**: A `dict` where keys are game IDs (`str`) and values are `RemoteGame` proxy objects.
 *   `kick_player(game_id, player_id)`: Removes a player from a specific game by their ID.
 *   `kick_observer(game_id, observer_id)`: Removes an observer from a specific game by their ID.
-*   `list_all_players()`: Returns a list of all players (connected and persistent), including their connection status, associated game ID, and name.
+*   `list_all_players()`: Lists all players currently known by the server.
+    *   **Returns**: A `list` of `dict`, where each dictionary contains:
+        *   `name` (`str`): The player's name.
+        *   `attributes` (`dict`): The player's custom attributes.
+        *   `game_id` (`str` or `None`): The ID of the game the player is currently in, or `None` if not in a game.
+        *   `game_name` (`str` or `None`): The name of the game, or `None`.
+        *   `connected` (`bool`): `True` if the player is currently connected to a game session.
+        *   `is_persistent` (`bool`): `True` if this is a persistent account.
 *   `stop_server()`: Requests the server to shut down.
 *   `restart_server()`: Requests the server to restart (clears all current games).
 *   `set_logging_config(host, port)`: Configures the server to send its logs to a remote logging server at the specified address and port.
-*   `get_cert_expiration()`: Returns the expiration date of the server's TLS certificate in ISO format.
+*   `get_cert_expiration()`: Returns the expiration date of the server's TLS certificate.
+    *   **Returns**: A `str` representing the expiration date in ISO format, or `None` if TLS is not used.
 *   `set_logging_enabled(enabled)`: Enables (`True`) or disables (`False`) logging on the server.
 *   `set_server_password(new_password)`: Sets a new password for the server.
 *   `set_admin_password(new_password)`: Sets a new administrator password for the server.
-*   `create_group(name, admin_password=None, **attributes)`: Creates a new game group on the server. Returns a `RemoteGroup` proxy object.
+*   `create_group(name, admin_password=None, **attributes)`: Creates a new game group on the server.
+    *   **Returns**: A `RemoteGroup` proxy object for the newly created group.
 *   `remove_group(group_id)`: Removes a game group from the server by its ID.
-*   `list_groups()`: Returns a dictionary of all game groups on the server as `RemoteGroup` objects, keyed by their `group_id`.
+*   `list_groups()`: Returns all game groups on the server.
+    *   **Returns**: A `dict` where keys are group IDs (`str`) and values are `RemoteGroup` objects.
 *   `set_persistent_players_enabled(enabled)`: Enables (`True`) or disables (`False`) the creation of persistent player accounts on the server.
 
 ---
@@ -187,7 +202,8 @@ A client class for group administrators to manage games within a specific `GameG
 *   **`auth_password`** (`str`, optional): The password for the persistent player account.
 
 #### Methods
-*   `list_games()`: Returns a dictionary of games belonging to this group as `RemoteGame` objects, keyed by their ID.
+*   `list_games()`: Returns a dictionary of games belonging to this group.
+    *   **Returns**: A `dict` where keys are game IDs (`str`) and values are `RemoteGame` objects.
 *   `kick_player(game_id, player_id)`: Removes a player from a specific game in the group by their ID.
 *   `kick_observer(game_id, observer_id)`: Removes an observer from a specific game in the group by their ID.
 *   `set_group_admin_password(new_password)`: Sets a new administrator password for this group.
@@ -205,12 +221,21 @@ The main entry point for a client to connect to a `GameServer`.
 *   **`auth_password`** (`str`, optional): The password for the persistent player account.
 
 #### Methods
-*   `discover_servers(timeout=2)` (static method): Scans the local network for running `GameServer` instances. Returns a list of `(host, port)` tuples.
-*   `create_game(group_id=None, **game_options)`: Requests the server to create a new game. Returns a `RemoteGame` proxy object. Can include a `group_id` to associate the game with a group.
-*   `list_games()`: Returns a dictionary of active games as `RemoteGame` objects, keyed by their ID.
-*   `create_group(name, admin_password=None, **attributes)`: Requests the server to create a new game group. Returns a `RemoteGroup` proxy object.
-*   `list_groups()`: Returns a dictionary of game groups as `RemoteGroup` objects, keyed by their ID.
-*   `create_account(name, password, role="player", managed_groups=None, **attributes)`: Creates a persistent player account on the server. Returns the created player's data.
+*   `discover_servers(timeout=2)` (static method): Scans the local network for running `GameServer` instances.
+    *   **Returns**: A `list` of `(host, port)` tuples representing the discovered servers.
+*   `create_game(group_id=None, **game_options)`: Requests the server to create a new game.
+    *   **Returns**: A `RemoteGame` proxy object.
+*   `list_games()`: Returns all active games.
+    *   **Returns**: A `dict` where keys are game IDs (`str`) and values are `RemoteGame` objects.
+*   `create_group(name, admin_password=None, **attributes)`: Requests the server to create a new game group.
+    *   **Returns**: A `RemoteGroup` proxy object.
+*   `list_groups()`: Returns all game groups on the server.
+    *   **Returns**: A `dict` where keys are group IDs (`str`) and values are `RemoteGroup` objects.
+*   `create_account(name, password, role="player", managed_groups=None, **attributes)`: Creates a persistent player account on the server.
+    *   **Returns**: A `dict` representing the created player's data:
+        *   `player_id` (`str`): The unique ID of the account.
+        *   `name` (`str`): The account name.
+        *   `role` (`str`): The assigned role.
 *   `get_server_admin()`: Returns a `ServerAdmin` instance using the client's current credentials.
 *   `get_group_admin(group_id)`: Returns a `GroupAdmin` instance for the specified group using the client's current credentials.
 
@@ -222,8 +247,10 @@ A proxy object representing a game group running on the server.
 *You typically do not create this object directly, but get it from `client.create_group()` or `client.list_groups()`.*
 
 #### Methods
-*   `create_game(**game_options)`: Creates a new game within this group. Returns a `RemoteGame` proxy object.
-*   `list_games()`: Returns a dictionary of games belonging to this group as `RemoteGame` objects, keyed by their ID.
+*   `create_game(**game_options)`: Creates a new game within this group.
+    *   **Returns**: A `RemoteGame` proxy object.
+*   `list_games()`: Returns all games belonging to this group.
+    *   **Returns**: A `dict` where keys are game IDs (`str`) and values are `RemoteGame` objects.
 
 #### Properties
 *   **`group_id`**: The unique ID of the group.
@@ -244,8 +271,20 @@ A proxy object representing a game running on the server.
 *   (Other methods are the same as the local `Game` class.)
 
 #### Properties
-*   **`state`**: Returns a dictionary containing both the `GameState` and the custom state. Example: `{'status': 'in_progress', 'custom': {'score': 100}}`.
-*   **`observers`**: Returns a list of `Observer` names in the game.
+*   **`state`**: Returns the current state of the remote game.
+    *   **Returns**: A `dict` with:
+        *   `status` (`GameState`): The enum value of the game state.
+        *   `custom` (`dict`): The game's `custom_state` dictionary.
+*   **`observers`**: Returns the observers currently in the game.
+    *   **Returns**: A `list` of `dict`, each containing:
+        *   `id` (`str`): The observer's ID.
+        *   `name` (`str`): The observer's name.
+        *   `attributes` (`dict`): The observer's attributes.
+*   **`players`**: Returns the players currently in the game.
+    *   **Returns**: A `list` of `dict`, each containing:
+        *   `id` (`str`): The player's ID.
+        *   `name` (`str`): The player's name.
+        *   `attributes` (`dict`): The player's attributes.
 
 ## Standalone Logging Server
 

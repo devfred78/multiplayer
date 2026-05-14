@@ -153,23 +153,18 @@ Manages game sessions and handles network requests.
 ---
 
 ### `ServerAdmin(host='127.0.0.1', port=65432, admin_password=None, use_tls=False, auth_user=None, auth_password=None)`
-A client class for administrators to manage a `GameServer`.
+A client class for administrators to manage a `GameServer` (inherits from `GameClient`).
 
-*   **`host`** (`str`): The IP address of the server.
-*   **`port`** (`int`): The TCP port of the server.
+*   All arguments and connection settings from `GameClient`.
 *   **`admin_password`** (`str`, optional): The administrator password for the server (global).
-*   **`use_tls`** (`bool`, optional): If `True`, the client will connect using TLS. Defaults to `False`.
-*   **`auth_user`** (`str`, optional): The name of a persistent player account with administrative rights.
-*   **`auth_password`** (`str`, optional): The password for the persistent player account.
 
 #### Methods
+*   All methods from `GameClient`.
 *   `get_server_info()`: Returns information about the server.
     *   **Returns**: A `dict` with the following keys:
         *   `server_name` (`str`): The name assigned to the server.
         *   `games_count` (`int`): Total number of games currently on the server.
         *   `active_games` (`list` of `str`): A list of IDs for games that are not in the `FINISHED` state.
-*   `list_games()`: Returns a dictionary of active games as `RemoteGame` objects.
-    *   **Returns**: A `dict` where keys are game IDs (`str`) and values are `RemoteGame` proxy objects.
 *   `kick_player(game_id, player_id)`: Removes a player from a specific game by their ID.
 *   `kick_observer(game_id, observer_id)`: Removes an observer from a specific game by their ID.
 *   `list_all_players()`: Lists all players currently known by the server.
@@ -188,29 +183,20 @@ A client class for administrators to manage a `GameServer`.
 *   `set_logging_enabled(enabled)`: Enables (`True`) or disables (`False`) logging on the server.
 *   `set_server_password(new_password)`: Sets a new password for the server.
 *   `set_admin_password(new_password)`: Sets a new administrator password for the server.
-*   `create_group(name, admin_password=None, **attributes)`: Creates a new game group on the server.
-    *   **Returns**: A `RemoteGroup` proxy object for the newly created group.
 *   `remove_group(group_id)`: Removes a game group from the server by its ID.
-*   `list_groups()`: Returns all game groups on the server.
-    *   **Returns**: A `dict` where keys are group IDs (`str`) and values are `RemoteGroup` objects.
 *   `set_persistent_players_enabled(enabled)`: Enables (`True`) or disables (`False`) the creation of persistent player accounts on the server.
 
 ---
 
 ### `GroupAdmin(group_id, host='127.0.0.1', port=65432, group_admin_password=None, use_tls=False, auth_user=None, auth_password=None)`
-A client class for group administrators to manage games within a specific `GameGroup`.
+A client class for group administrators to manage games within a specific `GameGroup` (inherits from `GameClient`).
 
+*   All arguments and connection settings from `GameClient`.
 *   **`group_id`** (`str`): The unique ID of the group to manage.
-*   **`host`** (`str`): The IP address of the server.
-*   **`port`** (`int`): The TCP port of the server.
 *   **`group_admin_password`** (`str`, optional): The administrative password for this group.
-*   **`use_tls`** (`bool`, optional): If `True`, the client will connect using TLS. Defaults to `False`.
-*   **`auth_user`** (`str`, optional): The name of a persistent player account with administrative rights for this group.
-*   **`auth_password`** (`str`, optional): The password for the persistent player account.
 
 #### Methods
-*   `list_games()`: Returns a dictionary of games belonging to this group.
-    *   **Returns**: A `dict` where keys are game IDs (`str`) and values are `RemoteGame` objects.
+*   All methods from `GameClient`.
 *   `kick_player(game_id, player_id)`: Removes a player from a specific game in the group by their ID.
 *   `kick_observer(game_id, observer_id)`: Removes an observer from a specific game in the group by their ID.
 *   `set_group_admin_password(new_password)`: Sets a new administrator password for this group.
@@ -245,6 +231,7 @@ The main entry point for a client to connect to a `GameServer`.
         *   `role` (`PlayerRole`): The assigned role.
 *   `get_server_admin()`: Returns a `ServerAdmin` instance using the client's current credentials.
 *   `get_group_admin(group_id)`: Returns a `GroupAdmin` instance for the specified group using the client's current credentials.
+*   `configure_logging(host, port, name=None)`: Configures the client to send its logs to a remote logging server.
 
 ---
 
@@ -524,3 +511,15 @@ finally:
     # Gracefully stop the server
     server.stop()
 ```
+                                                                    Virus Database File
+Version: 8.21.0.64
+FUP: 0
+License date: 12.5.2026
+VDF date: 12.5.2026
+Minimum engine: 8.3.0.0
+Signatures: 7721
+Required linked VDF: 8.21.0.64
+Source: 8.21.0.64
+Compiler: 1.6.0.0
+
+ xÒ„∆å1c«é:tË—¢Eä(P°BÑ#Fç6lÿ∞a√á;vÏŸ≥∆ú*òÛ%Nù)¡ÍŸ≤p¬’¡Q®W±x˜OÅ–´Q∑vÏÿ∞a√á

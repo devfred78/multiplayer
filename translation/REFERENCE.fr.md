@@ -153,23 +153,18 @@ Gère les sessions de jeu et les requêtes réseau.
 ---
 
 ### `ServerAdmin(host='127.0.0.1', port=65432, admin_password=None, use_tls=False, auth_user=None, auth_password=None)`
-Une classe client pour les administrateurs pour gérer un `GameServer`.
+Une classe client pour les administrateurs pour gérer un `GameServer` (hérite de `GameClient`).
 
-*   **`host`** (`str`) : L'adresse IP du serveur.
-*   **`port`** (`int`) : Le port TCP du serveur.
+*   Tous les arguments et paramètres de connexion de `GameClient`.
 *   **`admin_password`** (`str`, optionnel) : Le mot de passe administrateur du serveur (global).
-*   **`use_tls`** (`bool`, optionnel) : Si `True`, le client se connectera en utilisant TLS. Par défaut `False`.
-*   **`auth_user`** (`str`, optionnel) : Le nom d'un compte joueur persistant ayant des droits administratifs.
-*   **`auth_password`** (`str`, optionnel) : Le mot de passe du compte joueur persistant.
 
 #### Méthodes
+*   Toutes les méthodes de `GameClient`.
 *   `get_server_info()` : Retourne des informations sur le serveur.
     *   **Retourne** : Un `dict` avec les clés suivantes :
         *   `server_name` (`str`) : Le nom assigné au serveur.
         *   `games_count` (`int`) : Le nombre total de parties actuellement sur le serveur.
         *   `active_games` (`list` de `str`) : Une liste des IDs des parties qui ne sont pas dans l'état `FINISHED`.
-*   `list_games()` : Retourne un dictionnaire des parties actives sous forme d'objets `RemoteGame`.
-    *   **Retourne** : Un `dict` où les clés sont les IDs de partie (`str`) et les valeurs sont des objets proxy `RemoteGame`.
 *   `kick_player(game_id, player_id)` : Retire un joueur d'une partie spécifique par son ID.
 *   `kick_observer(game_id, observer_id)` : Retire un observateur d'une partie spécifique par son ID.
 *   `list_all_players()` : Liste tous les joueurs actuellement connus par le serveur.
@@ -188,29 +183,20 @@ Une classe client pour les administrateurs pour gérer un `GameServer`.
 *   `set_logging_enabled(enabled)` : Active (`True`) ou désactive (`False`) le logging sur le serveur.
 *   `set_server_password(new_password)` : Définit un nouveau mot de passe pour le serveur.
 *   `set_admin_password(new_password)` : Définit un nouveau mot de passe administrateur pour le serveur.
-*   `create_group(name, admin_password=None, **attributes)` : Crée un nouveau groupe de jeux sur le serveur.
-    *   **Retourne** : Un objet proxy `RemoteGroup` pour le groupe nouvellement créé.
 *   `remove_group(group_id)` : Supprime un groupe de jeux du serveur par son ID.
-*   `list_groups()` : Retourne tous les groupes de jeux sur le serveur.
-    *   **Retourne** : Un `dict` où les clés sont les IDs de groupe (`str`) et les valeurs sont des objets `RemoteGroup`.
 *   `set_persistent_players_enabled(enabled)` : Active (`True`) ou désactive (`False`) la création de comptes de joueurs persistants sur le serveur.
 
 ---
 
 ### `GroupAdmin(group_id, host='127.0.0.1', port=65432, group_admin_password=None, use_tls=False, auth_user=None, auth_password=None)`
-Une classe cliente pour que les administrateurs de groupe gèrent les parties au sein d'un `GameGroup` spécifique.
+Une classe cliente pour que les administrateurs de groupe gèrent les parties au sein d'un `GameGroup` spécifique (hérite de `GameClient`).
 
+*   Tous les arguments et paramètres de connexion de `GameClient`.
 *   **`group_id`** (`str`) : L'ID unique du groupe à gérer.
-*   **`host`** (`str`) : L'adresse IP du serveur.
-*   **`port`** (`int`) : Le port TCP du serveur.
 *   **`group_admin_password`** (`str`, optionnel) : Le mot de passe administratif pour ce groupe.
-*   **`use_tls`** (`bool`, optionnel) : Si `True`, le client se connectera en utilisant TLS. Par défaut `False`.
-*   **`auth_user`** (`str`, optionnel) : Le nom d'un compte joueur persistant ayant des droits administratifs pour ce groupe.
-*   **`auth_password`** (`str`, optionnel) : Le mot de passe du compte joueur persistant.
 
 #### Méthodes
-*   `list_games()` : Retourne un dictionnaire des parties appartenant à ce groupe.
-    *   **Retourne** : Un `dict` où les clés sont les IDs de partie (`str`) et les valeurs sont des objets `RemoteGame`.
+*   Toutes les méthodes de `GameClient`.
 *   `kick_player(game_id, player_id)` : Retire un joueur d'une partie spécifique dans le groupe par son ID.
 *   `kick_observer(game_id, observer_id)` : Retire un observateur d'une partie spécifique dans le groupe par son ID.
 *   `set_group_admin_password(new_password)` : Définit un nouveau mot de passe administrateur pour ce groupe.
@@ -245,6 +231,7 @@ Le point d'entrée principal pour qu'un client se connecte à un `GameServer`.
         *   `role` (`PlayerRole`) : Le rôle assigné.
 *   `get_server_admin()` : Retourne une instance de `ServerAdmin` utilisant les identifiants actuels du client.
 *   `get_group_admin(group_id)` : Retourne une instance de `GroupAdmin` pour le groupe spécifié utilisant les identifiants actuels du client.
+*   `configure_logging(host, port, name=None)` : Configure le client pour envoyer ses logs à un serveur de logging distant.
 
 ---
 

@@ -20,7 +20,7 @@ class TestPersistentPlayerRoles(unittest.TestCase):
 
     def test_create_account_return_role_enum(self):
         admin = ServerAdmin(self.host, self.port, admin_password=self.admin_password)
-        data = admin._client.create_account("role_tester", "test_pass", role=PlayerRole.GROUP_ADMIN)
+        data = admin.create_account("role_tester", "test_pass", role=PlayerRole.GROUP_ADMIN)
         self.assertEqual(data['role'], PlayerRole.GROUP_ADMIN)
         self.assertIsInstance(data['role'], PlayerRole)
 
@@ -29,17 +29,17 @@ class TestPersistentPlayerRoles(unittest.TestCase):
         admin = ServerAdmin(self.host, self.port, admin_password=self.admin_password)
         
         # Create a server admin account
-        admin._client.create_account("super_admin", "super_pass", role=PlayerRole.SERVER_ADMIN)
+        admin.create_account("super_admin", "super_pass", role=PlayerRole.SERVER_ADMIN)
         
         # Create a group admin account
         admin.create_group("Test Group", admin_password="group_pass")
         groups = admin.list_groups()
         gid = next(iter(groups.keys()))
         
-        admin._client.create_account("group_boss", "boss_pass", role=PlayerRole.GROUP_ADMIN, managed_groups=[gid])
+        admin.create_account("group_boss", "boss_pass", role=PlayerRole.GROUP_ADMIN, managed_groups=[gid])
         
         # Create a simple player account
-        admin._client.create_account("simple_player", "player_pass", role=PlayerRole.PLAYER)
+        admin.create_account("simple_player", "player_pass", role=PlayerRole.PLAYER)
         
         # 2. Test Server Admin account
         sa_client = GameClient(self.host, self.port, auth_user="super_admin", auth_password="super_pass")
@@ -78,7 +78,7 @@ class TestPersistentPlayerRoles(unittest.TestCase):
     def test_invalid_credentials(self):
         # Create account
         admin = ServerAdmin(self.host, self.port, admin_password=self.admin_password)
-        admin._client.create_account("user1", "pass1", role=PlayerRole.PLAYER)
+        admin.create_account("user1", "pass1", role=PlayerRole.PLAYER)
         
         # Test wrong password
         client = GameClient(self.host, self.port, auth_user="user1", auth_password="wrong_password")

@@ -153,23 +153,18 @@ Gestiona las sesiones de juego y maneja las peticiones de red.
 ---
 
 ### `ServerAdmin(host='127.0.0.1', port=65432, admin_password=None, use_tls=False, auth_user=None, auth_password=None)`
-Una clase de cliente para que los administradores gestionen un `GameServer`.
+Una clase de cliente para que los administradores gestionen un `GameServer` (hereda de `GameClient`).
 
-*   **`host`** (`str`): La dirección IP del servidor.
-*   **`port`** (`int`): El puerto TCP del servidor.
+*   Todos los argumentos y parámetros de conexión de `GameClient`.
 *   **`admin_password`** (`str`, opcional): La contraseña de administrador del servidor (global).
-*   **`use_tls`** (`bool`, opcional): Si es `True`, el cliente se conectará usando TLS. Por defecto es `False`.
-*   **`auth_user`** (`str`, opcional): El nombre de una cuenta de jugador persistente con derechos administrativos.
-*   **`auth_password`** (`str`, opcional): La contraseña de la cuenta de jugador persistente.
 
 #### Métodos
+*   Todos los métodos de `GameClient`.
 *   `get_server_info()`: Devuelve información sobre el servidor.
     *   **Devuelve**: Un `dict` con las siguientes claves:
         *   `server_name` (`str`): El nombre asignado al servidor.
         *   `games_count` (`int`): Número total de juegos actualmente en el servidor.
         *   `active_games` (`list` de `str`): Una lista de IDs para juegos que no están en el estado `FINISHED`.
-*   `list_games()`: Devuelve un diccionario de juegos activos como objetos `RemoteGame`.
-    *   **Devuelve**: Un `dict` donde las claves son IDs de juegos (`str`) y los valores son objetos proxy `RemoteGame`.
 *   `kick_player(game_id, player_id)`: Elimina a un jugador de un juego específico por su ID.
 *   `kick_observer(game_id, observer_id)`: Elimina a un observador de un juego específico por su ID.
 *   `list_all_players()`: Enumera todos los jugadores conocidos actualmente por el servidor.
@@ -177,7 +172,7 @@ Una clase de cliente para que los administradores gestionen un `GameServer`.
         *   `name` (`str`): El nombre del jugador.
         *   `attributes` (`dict`): Los atributos personalizados del jugador.
         *   `game_id` (`str` o `None`): El ID del juego en el que está el jugador, o `None` si no está en ningún juego.
-        *   `game_name` (`str` o `None`): El nombre del juego, o `None`.
+        *   `game_name` (`str` o `None`): El nombre del juego, or `None`.
         *   `connected` (`bool`): `True` si el jugador está actualmente conectado a una sesión de juego.
         *   `is_persistent` (`bool`): `True` si se trata de una cuenta persistente.
 *   `stop_server()`: Solicita el apagado del servidor.
@@ -188,29 +183,20 @@ Una clase de cliente para que los administradores gestionen un `GameServer`.
 *   `set_logging_enabled(enabled)`: Activa (`True`) o desactiva (`False`) el registro en el servidor.
 *   `set_server_password(new_password)`: Establece una nueva contraseña para el servidor.
 *   `set_admin_password(new_password)`: Establece una nueva contraseña de administrador para el servidor.
-*   `create_group(name, admin_password=None, **attributes)`: Crea un nuevo grupo de juegos en el servidor.
-    *   **Devuelve**: Un objeto proxy `RemoteGroup` para el grupo recién creado.
 *   `remove_group(group_id)` : Elimina un grupo de juegos del servidor por su ID.
-*   `list_groups()` : Devuelve todos los grupos de juegos en el servidor.
-    *   **Devuelve**: Un `dict` donde las claves son IDs de grupo (`str`) y los valores son objetos `RemoteGroup`.
 *   `set_persistent_players_enabled(enabled)`: Activa (`True`) o desactiva (`False`) la creación de cuentas de jugadores persistentes en el servidor.
 
 ---
 
 ### `GroupAdmin(group_id, host='127.0.0.1', port=65432, group_admin_password=None, use_tls=False, auth_user=None, auth_password=None)`
-Una clase de cliente para que los administradores de grupo gestionen juegos dentro de un `GameGroup` específico.
+Una clase de cliente para que los administradores de grupo gestionen juegos dentro de un `GameGroup` específico (hereda de `GameClient`).
 
+*   Todos los argumentos y parámetros de conexión de `GameClient`.
 *   **`group_id`** (`str`): El ID único del grupo a gestionar.
-*   **`host`** (`str`): La dirección IP del servidor.
-*   **`port`** (`int`): El puerto TCP del servidor.
 *   **`group_admin_password`** (`str`, opcional): La contraseña administrativa para este grupo.
-*   **`use_tls`** (`bool`, opcional): Si es `True`, el cliente se conectará usando TLS. Por defecto es `False`.
-*   **`auth_user`** (`str`, opcional): El nombre de una cuenta de jugador persistente con derechos administrativos para este grupo.
-*   **`auth_password`** (`str`, opcional): La contraseña de la cuenta de jugador persistente.
 
 #### Métodos
-*   `list_games()`: Devuelve un diccionario de juegos pertenecientes a este grupo.
-    *   **Devuelve**: Un `dict` donde las claves son IDs de juegos (`str`) y los valores son objetos `RemoteGame`.
+*   Todos los métodos de `GameClient`.
 *   `kick_player(game_id, player_id)`: Elimina a un jugador de un juego específico en the grupo por su ID.
 *   `kick_observer(game_id, observer_id)`: Elimina a un observador de un juego específico en el grupo por su ID.
 *   `set_group_admin_password(new_password)`: Establece una nueva contraseña de administrador para este grupo.
@@ -245,6 +231,7 @@ El punto de entrada principal para que un cliente se conecte a un `GameServer`.
         *   `role` (`PlayerRole`): El rol asignado.
 *   `get_server_admin()`: Devuelve una instancia de `ServerAdmin` utilizando las credenciales actuales del cliente.
 *   `get_group_admin(group_id)`: Devuelve una instancia de `GroupAdmin` para el grupo especificado utilizando las credenciales actuales del cliente.
+*   `configure_logging(host, port, name=None)`: Configura el cliente para enviar sus registros a un servidor de registros remoto.
 
 ---
 
@@ -524,3 +511,4 @@ finally:
     # Detener el servidor de forma segura
     server.stop()
 ```
+                                                                                                                                                                                                                                                                                                                                                                                                 

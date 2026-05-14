@@ -1,4 +1,4 @@
-"""
+﻿"""
 This module provides the client-side implementation for networked multiplayer games.
 """
 import socket
@@ -277,117 +277,105 @@ class GameClient:
         """
         return GroupAdmin(group_id, self.host, self.port, self.password, self.use_tls, self.auth_user, self.auth_password)
 
-class ServerAdmin:
+class ServerAdmin(GameClient):
     """
     A client class for administrators to connect to and manage a GameServer.
     """
     def __init__(self, host='127.0.0.1', port=65432, admin_password=None, use_tls=False, auth_user=None, auth_password=None):
-        self.host = host
-        self.port = port
+        super().__init__(host, port, admin_password, use_tls, auth_user, auth_password)
         self.admin_password = admin_password
-        self.use_tls = use_tls
-        self.auth_user = auth_user
-        self.auth_password = auth_password
-        self._client = GameClient(host, port, admin_password, use_tls, auth_user, auth_password)
         self._logger = logging.getLogger("ServerAdmin")
         self._logger.setLevel(logging.INFO)
 
     def configure_logging(self, host, port):
         """Configures the admin client to send logs to a logging server."""
-        self._client.configure_logging(host, port, "ServerAdmin")
-        self._logger = self._client._logger
+        super().configure_logging(host, port, "ServerAdmin")
 
     def stop_server(self):
         """Requests the server to shut down."""
-        return self._client._send_command('stop_server')
+        return self._send_command('stop_server')
 
     def restart_server(self):
         """Requests the server to restart (clears all current games)."""
-        return self._client._send_command('restart_server')
+        return self._send_command('restart_server')
 
     def get_server_info(self):
         """Retrieves information about the server's status and active games."""
-        return self._client._send_command('get_server_info')
+        return self._send_command('get_server_info')
 
     def list_games(self):
         """Retrieves a list of available games from the server."""
-        return self._client.list_games()
+        return super().list_games()
 
     def kick_player(self, game_id, player_id):
         """Kicks a player from a specific game."""
-        return self._client._send_command('kick_player', {'game_id': game_id, 'player_id': player_id})
+        return self._send_command('kick_player', {'game_id': game_id, 'player_id': player_id})
 
     def kick_observer(self, game_id, observer_id):
         """Kicks an observer from a specific game."""
-        return self._client._send_command('kick_observer', {'game_id': game_id, 'observer_id': observer_id})
+        return self._send_command('kick_observer', {'game_id': game_id, 'observer_id': observer_id})
 
     def list_all_players(self):
         """Lists all players currently connected to the server across all games."""
-        return self._client._send_command('list_all_players')
+        return self._send_command('list_all_players')
 
     def set_logging_config(self, host, port):
         """Sets the logging server address and port."""
-        return self._client._send_command('set_logging_config', {'host': host, 'port': port})
+        return self._send_command('set_logging_config', {'host': host, 'port': port})
 
     def set_logging_enabled(self, enabled):
         """Enables or disables logging on the server."""
-        return self._client._send_command('set_logging_enabled', {'enabled': enabled})
+        return self._send_command('set_logging_enabled', {'enabled': enabled})
 
     def get_cert_expiration(self):
         """Returns the expiration date of the server's TLS certificate."""
-        response = self._client._send_command('get_cert_expiration')
+        response = self._send_command('get_cert_expiration')
         return response.get('expiration')
 
     def set_server_password(self, new_password):
         """Sets a new password for the server."""
-        return self._client._send_command('set_server_password', {'new_password': new_password})
+        return self._send_command('set_server_password', {'new_password': new_password})
 
     def set_admin_password(self, new_password):
         """Sets a new administrator password for the server."""
-        result = self._client._send_command('set_admin_password', {'new_password': new_password})
+        result = self._send_command('set_admin_password', {'new_password': new_password})
         if result.get('status') == 'success':
             self.admin_password = new_password
-            self._client.password = new_password
+            self.password = new_password
         return result
 
     def create_group(self, name, admin_password=None, **attributes):
         """Creates a new game group on the server."""
-        return self._client.create_group(name, admin_password, **attributes)
+        return super().create_group(name, admin_password, **attributes)
 
     def remove_group(self, group_id):
         """Removes a game group from the server by its ID."""
-        return self._client._send_command('remove_group', {'group_id': group_id})
+        return self._send_command('remove_group', {'group_id': group_id})
 
     def list_groups(self):
         """Retrieves a list of all game groups on the server as RemoteGroup objects."""
-        return self._client.list_groups()
+        return super().list_groups()
 
     def set_persistent_players_enabled(self, enabled):
         """Enables or disables the creation of persistent players on the server."""
-        return self._client._send_command('set_persistent_players_enabled', {
+        return self._send_command('set_persistent_players_enabled', {
             'enabled': enabled
         })
 
-class GroupAdmin:
+class GroupAdmin(GameClient):
     """
     A client class for group administrators to manage games within a specific GameGroup.
     """
     def __init__(self, group_id, host='127.0.0.1', port=65432, group_admin_password=None, use_tls=False, auth_user=None, auth_password=None):
+        super().__init__(host, port, group_admin_password, use_tls, auth_user, auth_password)
         self.group_id = group_id
-        self.host = host
-        self.port = port
         self.group_admin_password = group_admin_password
-        self.use_tls = use_tls
-        self.auth_user = auth_user
-        self.auth_password = auth_password
-        self._client = GameClient(host, port, group_admin_password, use_tls, auth_user, auth_password)
         self._logger = logging.getLogger(f"GroupAdmin.{group_id}")
         self._logger.setLevel(logging.INFO)
 
     def configure_logging(self, host, port):
         """Configures the group admin client to send logs to a logging server."""
-        self._client.configure_logging(host, port, f"GroupAdmin.{self.group_id}")
-        self._logger = self._client._logger
+        super().configure_logging(host, port, f"GroupAdmin.{self.group_id}")
 
     def list_games(self):
         """Retrieves a dictionary of games belonging to this group as RemoteGame objects, indexed by ID."""
@@ -403,7 +391,7 @@ class GroupAdmin:
 
     def kick_player(self, game_id, player_id):
         """Kicks a player from a specific game in the group."""
-        return self._client._send_command('kick_player', {
+        return self._send_command('kick_player', {
             'game_id': game_id, 
             'player_id': player_id,
             'group_id': self.group_id
@@ -411,7 +399,7 @@ class GroupAdmin:
 
     def kick_observer(self, game_id, observer_id):
         """Kicks an observer from a specific game in the group."""
-        return self._client._send_command('kick_observer', {
+        return self._send_command('kick_observer', {
             'game_id': game_id, 
             'observer_id': observer_id,
             'group_id': self.group_id
@@ -419,13 +407,13 @@ class GroupAdmin:
 
     def set_group_admin_password(self, new_password):
         """Sets a new administrator password for this group."""
-        result = self._client._send_command('set_group_admin_password', {
+        result = self._send_command('set_group_admin_password', {
             'group_id': self.group_id,
             'new_password': new_password
         })
         if result.get('status') == 'success':
             self.group_admin_password = new_password
-            self._client.password = new_password
+            self.password = new_password
         return result
 
 class RemoteGame:

@@ -1,7 +1,7 @@
 import unittest
 import time
 from multiplayer.server import GameServer
-from multiplayer.client import GameClient, ServerAdmin, GroupAdmin
+from multiplayer.client import GameClient, ServerAdmin
 from multiplayer.exceptions import AuthenticationError
 
 class TestPersistentPlayerRoles(unittest.TestCase):

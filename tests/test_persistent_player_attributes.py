@@ -2,7 +2,7 @@ import pytest
 import time
 from multiplayer.server import GameServer
 from multiplayer.client import GameClient
-from multiplayer.game import PersistentPlayer, Player
+from multiplayer.game import PersistentPlayer
 
 def wait_for_server(port, timeout=5):
     start_time = time.time()

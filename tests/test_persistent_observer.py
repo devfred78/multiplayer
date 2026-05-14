@@ -1,8 +1,8 @@
 import pytest
 import time
-from multiplayer.game import Game, PersistentPlayer, Observer
+from multiplayer.game import PersistentPlayer
 from multiplayer.server import GameServer
-from multiplayer.client import GameClient, RemoteGame
+from multiplayer.client import GameClient
 
 def test_persistent_player_as_observer():
     server = GameServer(port=65435)
@@ -37,12 +37,12 @@ def test_persistent_player_as_observer():
         
         # 5. Vérifier la fusion des attributs spécifiques à la session
         bob_client = GameClient(port=65435)
-        bob_client.create_account("Bob", "pass", role="User")
+        bob_client.create_account("Bob", "pass", role="player", user_type="User")
         bob = PersistentPlayer("Bob", "pass", temp_status="watching")
         remote_game.add_observer(bob)
         
         bob_observer = [o for o in remote_game.observers if o.name == "Bob"][0]
-        assert bob_observer.attributes["role"] == "User"
+        assert bob_observer.attributes["user_type"] == "User"
         assert bob_observer.attributes["temp_status"] == "watching"
         
     finally:

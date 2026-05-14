@@ -20,7 +20,7 @@ from cryptography.hazmat.primitives import serialization
 import enum
 
 from .game import Game, Player, Observer, GameState, PersistentPlayer
-from .exceptions import GameLogicError, PlayerLimitReachedError, ObserverLimitReachedError, AuthenticationError, UserAlreadyExistsError
+from .exceptions import GameLogicError, PlayerLimitReachedError, ObserverLimitReachedError, AuthenticationError
 
 # Custom JSON Encoder to handle enums
 class EnumEncoder(json.JSONEncoder):
@@ -234,7 +234,8 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                                     if gname == mg and g.ID == group_id:
                                         found = True
                                         break
-                                if found: break
+                                if found:
+                                    break
                             if found:
                                 authorized = True
                         # 4. Group admin password matches
@@ -285,7 +286,7 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
 
 def _execute_command(games, groups, action, params, server_name=None, use_tls=False, certfile=None, server_passwords=None, persistent_players=None):
     """Executes a command on the game objects and returns a response."""
-    from .game import GameGroup, PersistentPlayer, PlayerRole
+    from .game import GameGroup, PlayerRole
     try:
         # Server-level actions
         if action == 'set_persistent_players_enabled':

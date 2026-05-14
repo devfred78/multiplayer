@@ -4,7 +4,7 @@ This module provides classes for managing a multiplayer game.
 
 import enum
 import uuid
-from .exceptions import GameLogicError, PlayerLimitReachedError, ObserverLimitReachedError, AuthenticationError, UserAlreadyExistsError
+from .exceptions import GameLogicError, PlayerLimitReachedError, ObserverLimitReachedError, AuthenticationError
 
 class GameState(enum.Enum):
     """

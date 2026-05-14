@@ -227,7 +227,7 @@ A client class for administrators to manage a `GameServer` (inherits from `GameC
 *   `set_server_password(new_password)`: Sets a new password for the server.
 *   `set_admin_password(new_password)`: Sets a new administrator password for the server.
 *   `remove_group(group_id)`: Removes a game group from the server by its ID.
-*   `set_persistent_players_enabled(enabled)`: Enables (`True`) or disables (`False`) the creation of persistent player accounts on the server.
+*   `set_persistent_players_enabled(enabled)`: Enables (`True`) or disables (`False`) the creation of persistent player accounts on the server. When disabled, existing persistent players remain active and usable.
 *   `set_server_hidden(hidden)`: Sets the server as hidden (`True`) or visible (`False`) for network discovery.
 
 ---

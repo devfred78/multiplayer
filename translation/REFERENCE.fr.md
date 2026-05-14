@@ -227,7 +227,7 @@ Une classe client pour les administrateurs pour gérer un `GameServer` (hérite 
 *   `set_server_password(new_password)` : Définit un nouveau mot de passe pour le serveur.
 *   `set_admin_password(new_password)` : Définit un nouveau mot de passe administrateur pour le serveur.
 *   `remove_group(group_id)` : Supprime un groupe de jeux du serveur par son ID.
-*   `set_persistent_players_enabled(enabled)` : Active (`True`) ou désactive (`False`) la création de comptes de joueurs persistants sur le serveur.
+*   `set_persistent_players_enabled(enabled)` : Active (`True`) ou désactive (`False`) la création de comptes de joueurs persistants sur le serveur. En cas de désactivation, les joueurs persistants créés précédemment restent actifs et utilisables.
 *   `set_server_hidden(hidden)` : Définit le serveur comme caché (`True`) ou visible (`False`) pour la découverte réseau.
 
 ---

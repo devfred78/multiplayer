@@ -227,7 +227,7 @@ Una clase de cliente para que los administradores gestionen un `GameServer` (her
 *   `set_server_password(new_password)`: Establece una nueva contraseña para el servidor.
 *   `set_admin_password(new_password)`: Establece una nueva contraseña de administrador para el servidor.
 *   `remove_group(group_id)` : Elimina un grupo de juegos del servidor por su ID.
-*   `set_persistent_players_enabled(enabled)`: Activa (`True`) o desactiva (`False`) la creación de cuentas de jugadores persistentes en el servidor.
+*   `set_persistent_players_enabled(enabled)`: Activa (`True`) o desactiva (`False`) la creación de cuentas de jugadores persistentes en el servidor. Cuando se desactiva, los jugadores persistentes creados anteriormente permanecen activos y utilizables.
 *   `set_server_hidden(hidden)`: Establece el servidor como oculto (`True`) o visible (`False`) para el descubrimiento de red.
 
 ---

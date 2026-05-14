@@ -34,6 +34,7 @@ on:
         description: 'Version tag to build'
         type: choice
         options:
+          - v0.12.0
           - v0.11.0
           - v0.10.1
           - v0.10.0
@@ -50,7 +51,7 @@ on:
           - v0.5.2
           - v0.5.1
           - v0.5.0
-        default: v0.11.0
+        default: v0.12.0
       push_latest:
         description: 'Also tag as synology-latest'
         type: boolean

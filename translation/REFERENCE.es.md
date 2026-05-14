@@ -480,7 +480,7 @@ remote_game = client.create_game(**game_options)
 print(f"Atributos del juego: {remote_game.attributes}")
 ```
 
-### Ejemplo 6: Gestión del Servidor
+### 6. Gestión del Servidor
 Este ejemplo muestra cómo lanzar y gestionar un servidor de juegos.
 
 ```python

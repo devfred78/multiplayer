@@ -378,6 +378,7 @@ Suggests a random name for a player.
 *   **`ServerError`**: Raised for generic errors reported by the server.
 *   **`AuthenticationError`**: Raised for both server and game password authentication failures.
 *   **`PlayerAlreadyInGameError`**: Raised when trying to add a player or observer that is already in the game.
+*   **`KickedError`**: Raised when a player or observer has been kicked from a game.
 *   **`GroupNotFoundError`**: Raised when a group `id` is not found on the server.
 
 ## Examples

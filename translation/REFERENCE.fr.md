@@ -378,6 +378,7 @@ Suggère un nom aléatoire pour un joueur.
 *   **`ServerError`** : Levée pour les erreurs génériques signalées par le serveur.
 *   **`AuthenticationError`** : Levée pour les échecs d'authentification par mot de passe du serveur et de la partie.
 *   **`PlayerAlreadyInGameError`** : Levée lorsqu'on tente d'ajouter un joueur ou un observateur qui est déjà présent dans la partie.
+*   **`KickedError`** : Levée lorsqu'un joueur ou un observateur a été éjecté de la partie par un administrateur.
 *   **`UserAlreadyExistsError`** : Levée lors de la tentative de création d'un `PersistentPlayer` avec un nom déjà utilisé.
 *   **`GroupNotFoundError`** : Levée lorsqu'un `id` de groupe n'est pas trouvé sur le serveur.
 

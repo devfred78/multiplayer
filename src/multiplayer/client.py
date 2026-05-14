@@ -477,6 +477,7 @@ class RemoteGame:
         self._logger = logging.getLogger("RemoteGame")
         self._logger.setLevel(logging.INFO)
         self._logger.propagate = True
+        self._my_id = None # Store our player/observer ID once we join
         # RemoteGame should ideally use the same logger name if possible
         # but for now we just ensure it propagates to the same destination.
 
@@ -492,7 +493,39 @@ class RemoteGame:
         full_params = {'game_id': self.game_id}
         if params:
             full_params.update(params)
-        return self._client._send_command(action, full_params)
+        
+        response = self._client._send_command(action, full_params)
+        
+        # Unpack data if success
+        if isinstance(response, dict) and response.get('status') == 'success':
+            data = response.get('data')
+            
+            # Check if we've been kicked
+            if self._my_id:
+                # Helper to check if ID is in kicked_ids list
+                def check_kicked(resp_data):
+                    if isinstance(resp_data, dict) and 'kicked_ids' in resp_data:
+                        kicked_ids = resp_data['kicked_ids']
+                        if self._my_id in kicked_ids:
+                            raise exceptions.KickedError(f"Player/Observer with ID {self._my_id} has been kicked from the game.")
+
+                check_kicked(data)
+                
+                # Proactive check for other actions to ensure "immediate" notification
+                if action not in ['get_game_state', 'get_players', 'get_observers']:
+                    try:
+                        # We use the internal client to avoid infinite recursion
+                        state_resp = self._client._send_command('get_game_state', {'game_id': self.game_id})
+                        if state_resp.get('status') == 'success':
+                            check_kicked(state_resp.get('data'))
+                    except exceptions.KickedError:
+                        raise
+                    except Exception:
+                        pass
+            
+            return data
+        
+        return response
 
     def add_player(self, player, password=None):
         """
@@ -511,6 +544,19 @@ class RemoteGame:
             params['persistent_player_password'] = player.password
             
         self._send_command('add_player', params)
+        
+        # Sync ID if the server assigned one (though Player already generates one, 
+        # the server might have used a different one if it's a persistent player)
+        # Actually, let's just make sure _my_id matches what the server has
+        players = self.players # This calls get_players and populates our ID if found by name
+        for p in players:
+            if p.name == player.name:
+                self._my_id = p.ID
+                player._force_id(p.ID)
+                break
+        
+        if self._my_id is None:
+            self._my_id = player.ID
 
     def add_observer(self, observer, password=None):
         """
@@ -529,6 +575,17 @@ class RemoteGame:
             params['persistent_player_password'] = observer.password
             
         self._send_command('add_observer', params)
+        
+        # Sync ID
+        observers = self.observers
+        for o in observers:
+            if o.name == observer.name:
+                self._my_id = o.ID
+                observer._force_id(o.ID)
+                break
+                
+        if self._my_id is None:
+            self._my_id = observer.ID
 
     def start(self):
         """Starts the remote game."""

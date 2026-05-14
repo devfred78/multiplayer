@@ -377,6 +377,7 @@ Sugiere un nombre aléatorio para un jugador.
 *   **ServerError**: Se lanza para errores genéricos del servidor.
 *   **AuthenticationError**: Se lanza para fallos de autenticación.
 *   **PlayerAlreadyInGameError**: Se lanza al intentar añadir un jugador u observador que ya está presente en el juego.
+*   **KickedError**: Se lanza cuando un jugador u observador ha sido expulsado del juego por un administrador.
 *   **UserAlreadyExistsError**: Se lanza al intentar crear un usuario que ya existe.
 *   **`GroupNotFoundError`**: Se lanza cuando no se encuentra un `id` de grupo en el servidor.
 

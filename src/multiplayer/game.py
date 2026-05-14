@@ -180,6 +180,7 @@ class Game:
         self.state = GameState.PENDING
         self.current_player_index = 0
         self.custom_state = {}
+        self.kicked_ids = set() # Track players/observers who have been kicked
         self._id = str(uuid.uuid4())
 
     @property
@@ -243,6 +244,7 @@ class Game:
         if player_to_remove:
             removed_player_index = self.players.index(player_to_remove)
             self.players.remove(player_to_remove)
+            self.kicked_ids.add(player_id)
             
             if self.turn_based and self.state == GameState.IN_PROGRESS:
                 if not self.players:
@@ -260,6 +262,7 @@ class Game:
         observer_to_remove = next((o for o in self.observers if o.ID == observer_id), None)
         if observer_to_remove:
             self.observers.remove(observer_to_remove)
+            self.kicked_ids.add(observer_id)
 
     def start(self):
         """

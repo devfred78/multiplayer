@@ -307,7 +307,7 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
 
                 with lock:
                     try:
-                        response = _execute_command(games, groups, action, params, server_name=server_name, use_tls=use_tls, certfile=certfile, server_passwords=server_passwords, persistent_players=persistent_players)
+                        response = _execute_command(games, groups, action, params, server_name=server_name, use_tls=use_tls, certfile=certfile, server_passwords=server_passwords, persistent_players=persistent_players, logger=logger)
                     except Exception as e:
                         response = {'status': 'error', 'type': e.__class__.__name__, 'message': str(e)}
                 conn.sendall(json.dumps(response, cls=EnumEncoder).encode('utf-8'))
@@ -317,9 +317,12 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
     finally:
         logger.info(f"Disconnected from {addr}")
 
-def _execute_command(games, groups, action, params, server_name=None, use_tls=False, certfile=None, server_passwords=None, persistent_players=None):
+def _execute_command(games, groups, action, params, server_name=None, use_tls=False, certfile=None, server_passwords=None, persistent_players=None, logger=None):
     """Executes a command on the game objects and returns a response."""
     from .game import GameGroup, PlayerRole
+    import logging as logging_module
+    if logger is None:
+        logger = logging_module.getLogger("GameServer")
     try:
         # Server-level actions
         if action == 'set_persistent_players_enabled':
@@ -721,7 +724,7 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
                 return {'status': 'success', 'data': None}
         
         elif action == 'get_game_state':
-            return {'status': 'success', 'data': {'status': game.state, 'custom': game.custom_state}}
+            return {'status': 'success', 'data': {'status': game.state, 'custom': game.custom_state, 'kicked_ids': list(game.kicked_ids)}}
         
         elif action == 'get_players':
             player_list = [{'id': p.ID, 'name': p.name, 'attributes': p.attributes} for p in game.players]
@@ -737,6 +740,8 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
         
         elif action == 'kick_player':
             player_id = params.get('player_id')
+            # Use the logger passed to the function or global one
+            logger.info(f"Kicking player {player_id} from game {game_id}")
             group_id = params.get('group_id')
             if group_id:
                 group = None
@@ -746,7 +751,10 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
                         break
                 if not group or game not in group.games:
                      return {'status': 'error', 'message': f'Game {game_id} does not belong to group ID {group_id}'}
+            
+            logger.info(f"DEBUG: Before kick, players={[p.ID for p in game.players]}, kicked={game.kicked_ids}")
             game.remove_player(player_id)
+            logger.info(f"DEBUG: After kick, players={[p.ID for p in game.players]}, kicked={game.kicked_ids}")
             return {'status': 'success'}
         
         elif action == 'kick_observer':

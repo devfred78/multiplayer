@@ -45,3 +45,7 @@ class UserAlreadyExistsError(MultiplayerError):
 class PlayerAlreadyInGameError(GameLogicError):
     """Raised when trying to add a player or observer that is already in the game."""
     pass
+
+class KickedError(MultiplayerError):
+    """Raised when a player or observer has been kicked from a game."""
+    pass

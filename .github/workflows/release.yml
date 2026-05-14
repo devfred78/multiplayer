@@ -5,6 +5,12 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Simuler la release sans la créer'
+        required: false
+        default: false
+        type: boolean
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -12,8 +18,8 @@ env:
 jobs:
   build:
     name: Build wheels on ${{ matrix.os }}
-    # Only run if the ref is a tag starting with 'v'
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Run if the ref is a tag starting with 'v' OR if triggered manually via workflow_dispatch
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -130,6 +136,7 @@ jobs:
           merge-multiple: true
 
       - name: Create Release
+        if: github.event.inputs.dry_run != 'true'
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*.whl

@@ -157,14 +157,15 @@ class Observer:
 
 class Game:
     """
-    Represents a multiplayer game.
-
+    Represents a game instance.
+    
     Args:
-        name (str, optional): The name of the game session. Defaults to None.
-        max_players (int, optional): The maximum number of players allowed in the game. Defaults to None.
-        max_observers (int, optional): The maximum number of observers allowed in the game. Defaults to None.
-        turn_based (bool, optional): Whether the game is turn-based or simultaneous. Defaults to False.
-        password (str, optional): A password to protect this specific game.
+        name (str, optional): Name of the game.
+        max_players (int, optional): Maximum number of players.
+        max_observers (int, optional): Maximum number of observers.
+        turn_based (bool): Whether the game is turn-based.
+        password (str, optional): Password to join as a player.
+        observer_password (str, optional): Password to join as an observer.
         **kwargs: Additional attributes for the game.
     """
     def __init__(self, name=None, max_players=None, max_observers=None, turn_based=False, password=None, observer_password=None, **kwargs):

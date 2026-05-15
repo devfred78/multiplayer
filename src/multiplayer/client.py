@@ -19,7 +19,15 @@ RESPONSE_MESSAGE_FORMAT = b'!15sH64s' # 15-char IP, unsigned short port, 64-char
 
 class GameClient:
     """
-    A client for connecting to a GameServer.
+    Client for interacting with a GameServer.
+    
+    Args:
+        host (str): Server host.
+        port (int): Server port.
+        password (str, optional): Server password.
+        use_tls (bool): Enable TLS for connection.
+        auth_user (str, optional): Persistent player name for authentication.
+        auth_password (str, optional): Persistent player password.
     """
     def __init__(self, host='127.0.0.1', port=65432, password=None, use_tls=False, auth_user=None, auth_password=None):
         self.host = host
@@ -336,7 +344,7 @@ class GameClient:
 
 class ServerAdmin(GameClient):
     """
-    A client class for administrators to connect to and manage a GameServer.
+    Admin client with full server-level permissions.
     """
     def __init__(self, host='127.0.0.1', port=65432, admin_password=None, use_tls=False, auth_user=None, auth_password=None):
         super().__init__(host, port, admin_password, use_tls, auth_user, auth_password)
@@ -451,7 +459,10 @@ class ServerAdmin(GameClient):
 
 class GroupAdmin(GameClient):
     """
-    A client class for group administrators to manage games within a specific GameGroup.
+    Admin client with permissions restricted to a specific game group.
+    
+    Args:
+        group_id (str): ID of the group to manage.
     """
     def __init__(self, group_id, host='127.0.0.1', port=65432, group_admin_password=None, use_tls=False, auth_user=None, auth_password=None):
         super().__init__(host, port, group_admin_password, use_tls, auth_user, auth_password)
@@ -516,7 +527,10 @@ class GroupAdmin(GameClient):
 
 class RemoteGame:
     """
-    A proxy for a Game object on a remote server.
+    A proxy object for a game running on a GameServer.
+    
+    Args:
+        game_id (str): ID of the game on the server.
     """
     def __init__(self, game_id, host='127.0.0.1', port=65432, password=None, use_tls=False, auth_user=None, auth_password=None):
         self.game_id = game_id
@@ -705,7 +719,10 @@ class RemoteGame:
 
 class RemoteGroup:
     """
-    A proxy for a GameGroup object on a remote server.
+    A proxy object for a game group running on a GameServer.
+    
+    Args:
+        group_id (str): ID of the group on the server.
     """
     def __init__(self, group_id, host='127.0.0.1', port=65432, password=None, use_tls=False, auth_user=None, auth_password=None):
         self.group_id = group_id

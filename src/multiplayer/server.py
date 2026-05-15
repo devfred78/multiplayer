@@ -24,6 +24,9 @@ from .exceptions import GameLogicError, PlayerLimitReachedError, ObserverLimitRe
 
 # Custom JSON Encoder to handle enums
 class EnumEncoder(json.JSONEncoder):
+    """
+    Custom JSON Encoder to handle enums.
+    """
     def default(self, obj):
         if isinstance(obj, enum.Enum):
             return obj.value
@@ -36,7 +39,15 @@ DISCOVERY_MESSAGE = b'multiplayer_game_discovery_request'
 RESPONSE_MESSAGE_FORMAT = b'!15sH64s' # 15-char IP, unsigned short port, 64-char name
 
 def _generate_self_signed_cert(domain="localhost"):
-    """Generates a temporary self-signed certificate and key."""
+    """
+    Generates a temporary self-signed TLS certificate and key.
+    
+    Args:
+        domain (str): The domain name for the certificate.
+        
+    Returns:
+        tuple: (cert_path, key_path) of the temporary files.
+    """
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     subject = issuer = x509.Name([
         x509.NameAttribute(NameOID.COMMON_NAME, domain),
@@ -70,7 +81,15 @@ def _generate_self_signed_cert(domain="localhost"):
     return cert_file.name, key_file.name
 
 def get_cert_expiration(cert_path):
-    """Returns the expiration date of a PEM certificate."""
+    """
+    Gets the expiration date of a PEM certificate.
+    
+    Args:
+        cert_path (str): Path to the certificate file.
+        
+    Returns:
+        str: ISO format date string or error message if failed.
+    """
     try:
         with open(cert_path, "rb") as f:
             cert_data = f.read()
@@ -79,8 +98,14 @@ def get_cert_expiration(cert_path):
     except Exception as e:
         return f"Error reading certificate: {e}"
 
-def _run_server_process(host, port, password, admin_password, use_tls, certfile, keyfile, logging_host=None, logging_port=None, logger_name="GameServer", name=None, persistent_players_enabled=True, unencrypted_port=None, hidden=False, discovery_event=None, tls_domain=None, tls_self_signed=None, persistence_type=None, persistence_path=None):
-    """The main server loop that listens for and handles connections."""
+def _run_server_process(host, port, password, admin_password, use_tls, certfile, keyfile, 
+                        logging_host=None, logging_port=None, logger_name="GameServer", name=None, 
+                        persistent_players_enabled=True, unencrypted_port=None, hidden=False, 
+                        discovery_event=None, tls_domain=None, tls_self_signed=None, 
+                        persistence_type=None, persistence_path=None):
+    """
+    The main server loop that listens for and handles connections.
+    """
     from .data.persistence import create_datastore
     datastore = create_datastore(persistence_type, persistence_path)
     
@@ -192,8 +217,11 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
              except Exception:
                  pass
 
-def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_name="GameServer", server_name=None, use_tls=False, certfile=None, persistent_players=None, datastore=None):
-    """Handles a single client connection."""
+def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_name="GameServer", 
+                   server_name=None, use_tls=False, certfile=None, persistent_players=None, datastore=None):
+    """
+    Handles a single client connection.
+    """
     logger = logging.getLogger(logger_name)
     logger.info(f"Connected by {addr}")
     try:
@@ -360,8 +388,11 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
     finally:
         logger.info(f"Disconnected from {addr}")
 
-def _execute_command(games, groups, action, params, server_name=None, use_tls=False, certfile=None, server_passwords=None, persistent_players=None, logger=None):
-    """Executes a command on the game objects and returns a response."""
+def _execute_command(games, groups, action, params, server_name=None, use_tls=False, 
+                     certfile=None, server_passwords=None, persistent_players=None, logger=None):
+    """
+    Executes a command on the game objects and returns a response.
+    """
     from .game import GameGroup, PlayerRole
     import logging as logging_module
     if logger is None:
@@ -869,8 +900,31 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
 class GameServer:
     """
     Manages multiple Game instances and handles network requests from clients.
+    
+    Args:
+        host (str): Host to listen on.
+        port (int): Port to listen on.
+        password (str, optional): Server password.
+        admin_password (str, optional): Admin password.
+        use_tls (bool): Enable TLS encryption.
+        tls_domain (str): Domain for self-signed cert.
+        tls_cert (str, optional): Path to cert file.
+        tls_key (str, optional): Path to key file.
+        tls_self_signed (bool): Generate self-signed cert if missing.
+        logging_host (str, optional): IPC logging host.
+        logging_port (int, optional): IPC logging port.
+        logger_name (str): Name for the logger.
+        name (str, optional): Human-readable server name.
+        unencrypted_port (int, optional): Port for unencrypted traffic if TLS is on.
+        hidden (bool): Hide from discovery.
+        persistence_type (str, optional): 'json' or 'sqlite'.
+        persistence_path (str, optional): Path to persistence file.
     """
-    def __init__(self, host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, logger_name="GameServer", name=None, unencrypted_port=None, hidden=False, persistence_type=None, persistence_path=None):
+    def __init__(self, host='0.0.0.0', port=65432, password=None, admin_password=None, 
+                 use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, 
+                 tls_self_signed=True, logging_host=None, logging_port=None, 
+                 logger_name="GameServer", name=None, unencrypted_port=None, 
+                 hidden=False, persistence_type=None, persistence_path=None):
         self.host = host
         self.port = port
         self.unencrypted_port = unencrypted_port

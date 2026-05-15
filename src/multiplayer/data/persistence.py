@@ -8,15 +8,30 @@ from ..game import Game, GameGroup, PersistentPlayer, GameState, PlayerRole
 class DataStore(ABC):
     @abstractmethod
     def load(self):
-        """Loads data from the store. Returns (games, groups, persistent_players)"""
+        """
+        Loads data from the store. 
+        
+        Returns:
+            tuple: (games, groups, persistent_players)
+        """
         pass
 
     @abstractmethod
     def save(self, games, groups, persistent_players):
-        """Saves data to the store."""
+        """
+        Saves data to the store.
+        
+        Args:
+            games (dict): Dictionary of games.
+            groups (dict): Dictionary of game groups.
+            persistent_players (dict): Dictionary of persistent players.
+        """
         pass
 
 class MemoryDataStore(DataStore):
+    """
+    An in-memory data store that does not persist anything.
+    """
     def load(self):
         return {}, {}, {}
 
@@ -24,6 +39,12 @@ class MemoryDataStore(DataStore):
         pass
 
 class JSONDataStore(DataStore):
+    """
+    A data store that persists data to a JSON file.
+    
+    Args:
+        file_path (str): The path to the JSON file.
+    """
     def __init__(self, file_path):
         self.file_path = file_path
         self.logger = logging.getLogger("GameServer")
@@ -133,6 +154,12 @@ class JSONDataStore(DataStore):
             self.logger.error(f"Failed to save data to JSON: {e}")
 
 class SQLiteDataStore(DataStore):
+    """
+    A data store that persists data to a SQLite database.
+    
+    Args:
+        db_path (str): The path to the SQLite database file.
+    """
     def __init__(self, db_path):
         self.db_path = db_path
         self.logger = logging.getLogger("GameServer")

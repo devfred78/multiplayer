@@ -79,7 +79,15 @@ def get_available_categories(category_type="all"):
     return list({**_BUILTIN_GAME_CATEGORIES, **_BUILTIN_PLAYER_CATEGORIES, **_CUSTOM_GAME_CATEGORIES, **_CUSTOM_PLAYER_CATEGORIES}.keys())
 
 def _get_names_from_source(source):
-    """Internal helper to load names from a list, a file path, or a package resource."""
+    """
+    Internal helper to load names from a list, a file path, or a package resource.
+    
+    Args:
+        source (list or str or Path): The source of names.
+        
+    Returns:
+        list: A list of names.
+    """
     if isinstance(source, list):
         return source
     
@@ -157,7 +165,9 @@ def _get_names_from_source(source):
     return None
 
 def _suggest_from_category(category, valid_builtin_cats, valid_custom_cats):
-    """Internal helper to suggest a name from a specific category."""
+    """
+    Internal helper to suggest a name from a specific category.
+    """
     if category in valid_custom_cats:
         source = valid_custom_cats[category]
     elif category in valid_builtin_cats:

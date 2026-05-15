@@ -623,21 +623,13 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
                         player_map[player.name] = {
                             'name': player.name,
                             'attributes': player.attributes, # Note: This takes attributes from the first game found
-                            'game_id': {},
-                            'game_name': {},
+                            'games': {},
                             'connected': True,
-                            'is_persistent': is_persistent,
-                            'game_details': [] # Added to track game-specific attributes
+                            'is_persistent': is_persistent
                         }
                     
-                    player_map[player.name]['game_id'][gid] = game_name
-                    player_map[player.name]['game_name'][gid] = game_name  # Key is gid, value is name
+                    player_map[player.name]['games'][gid] = game_name
                     player_map[player.name]['connected'] = True
-                    player_map[player.name]['game_details'].append({
-                        'game_id': gid,
-                        'game_name': game_name,
-                        'attributes': player.attributes
-                    })
 
             # Then, add persistent players who are NOT connected
             if persistent_players:
@@ -646,8 +638,7 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
                         player_map[name] = {
                             'name': p_player.name,
                             'attributes': p_player.attributes,
-                            'game_id': {},
-                            'game_name': {},
+                            'games': {},
                             'connected': False,
                             'is_persistent': True
                         }

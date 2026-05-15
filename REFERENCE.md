@@ -232,12 +232,7 @@ A client class for administrators to manage a `GameServer` (inherits from `GameC
     *   **Returns**: A `list` of `dict`, where each dictionary contains:
         *   `name` (`str`): The player's name.
         *   `attributes` (`dict`): The player's custom attributes.
-        *   `game_id` (`dict`): A dictionary where keys are game IDs (`str`) and values are game names (`str`), representing the games the player is currently in.
-        *   `game_name` (`dict`): A dictionary where keys are game IDs (`str`) and values are game names (`str`). This is essentially the same as `game_id` for easy access.
-        *   `game_details` (`list` of `dict`): A detailed list of the games the player is in, where each entry contains:
-            *   `game_id` (`str`): The ID of the game.
-            *   `game_name` (`str`): The name of the game.
-            *   `attributes` (`dict`): The specific attributes of the player in this game (merged with persistent attributes if applicable).
+        *   `games` (`dict`): A dictionary where keys are game IDs (`str`) and values are game names (`str`), representing the games the player is currently in.
         *   `connected` (`bool`): `True` if the player is currently connected to a game session.
         *   `is_persistent` (`bool`): `True` if this is a persistent account.
 *   `stop_server()`: Requests the server to shut down.

@@ -229,7 +229,7 @@ A client class for administrators to manage a `GameServer` (inherits from `GameC
 *   `kick_player(game_id, player_id)`: Removes a player from a specific game by their ID.
 *   `kick_observer(game_id, observer_id)`: Removes an observer from a specific game by their ID.
 *   `list_all_players()`: Lists all players currently known by the server.
-    *   **Returns**: A `list` of `dict`, where each dictionary contains:
+    *   **Returns**: A `dict` where keys are player IDs (`str`) and values are dictionaries containing:
         *   `name` (`str`): The player's name.
         *   `attributes` (`dict`): The player's custom attributes.
         *   `games` (`dict`): A dictionary where keys are game IDs (`str`) and values are game names (`str`), representing the games the player is currently in.

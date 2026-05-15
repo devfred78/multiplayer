@@ -229,7 +229,7 @@ Une classe client pour les administrateurs pour gérer un `GameServer` (hérite 
 *   `kick_player(game_id, player_id)` : Retire un joueur d'une partie spécifique par son ID.
 *   `kick_observer(game_id, observer_id)` : Retire un observateur d'une partie spécifique par son ID.
 *   `list_all_players()` : Liste tous les joueurs actuellement connus par le serveur.
-    *   **Retourne** : Une `list` de `dict`, où chaque dictionnaire contient :
+    *   **Retourne** : Un `dict` où les clés sont les ID des joueurs (`str`) et les valeurs sont des dictionnaires contenant :
         *   `name` (`str`) : Le nom du joueur.
         *   `attributes` (`dict`) : Les attributs personnalisés du joueur.
         *   `games` (`dict`) : Un dictionnaire où les clés sont les ID des parties (`str`) et les valeurs sont les noms des parties (`str`), représentant les parties dans lesquelles le joueur est actuellement présent.

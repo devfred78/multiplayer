@@ -102,11 +102,11 @@ def test_admin_list_all_players():
         
         assert len(players_info) == 3
         
-        alice = next(p for p in players_info if p['name'] == 'Alice')
+        alice = next(p for p in players_info.values() if p['name'] == 'Alice')
         assert g1.game_id in alice['games']
         assert alice['games'][g1.game_id] == 'Game1'
         
-        charlie = next(p for p in players_info if p['name'] == 'Charlie')
+        charlie = next(p for p in players_info.values() if p['name'] == 'Charlie')
         assert g2.game_id in charlie['games']
         assert charlie['games'][g2.game_id] == 'Game2'
     finally:

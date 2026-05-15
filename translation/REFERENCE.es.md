@@ -229,7 +229,7 @@ Una clase de cliente para que los administradores gestionen un `GameServer` (her
 *   `kick_player(game_id, player_id)`: Elimina a un jugador de un juego específico por su ID.
 *   `kick_observer(game_id, observer_id)`: Elimina a un observador de un juego específico por su ID.
 *   `list_all_players()`: Enumera todos los jugadores conocidos actualmente por el servidor.
-    *   **Devuelve**: Una `list` de `dict`, donde cada diccionario contiene:
+    *   **Devuelve**: Un `dict` donde las claves son los ID de los jugadores (`str`) y los valores son diccionarios que contienen:
         *   `name` (`str`): El nombre del jugador.
         *   `attributes` (`dict`): Los atributos personalizados del jugador.
         *   `games` (`dict`): Un diccionario donde las claves son los ID de los juegos (`str`) y los valores son los nombres de los juegos (`str`), representando los juegos en los que el jugador está actualmente.

@@ -619,8 +619,8 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
                 for player in game.players:
                     is_persistent = persistent_players is not None and player.name in persistent_players
                     
-                    if player.name not in player_map:
-                        player_map[player.name] = {
+                    if player.ID not in player_map:
+                        player_map[player.ID] = {
                             'name': player.name,
                             'attributes': player.attributes, # Note: This takes attributes from the first game found
                             'games': {},
@@ -628,14 +628,14 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
                             'is_persistent': is_persistent
                         }
                     
-                    player_map[player.name]['games'][gid] = game_name
-                    player_map[player.name]['connected'] = True
+                    player_map[player.ID]['games'][gid] = game_name
+                    player_map[player.ID]['connected'] = True
 
             # Then, add persistent players who are NOT connected
             if persistent_players:
                 for name, p_player in persistent_players.items():
-                    if name not in player_map:
-                        player_map[name] = {
+                    if p_player.ID not in player_map:
+                        player_map[p_player.ID] = {
                             'name': p_player.name,
                             'attributes': p_player.attributes,
                             'games': {},
@@ -643,7 +643,7 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
                             'is_persistent': True
                         }
                         
-            return {'status': 'success', 'data': list(player_map.values())}
+            return {'status': 'success', 'data': player_map}
 
         elif action == 'get_cert_expiration':
             if not use_tls or not certfile:

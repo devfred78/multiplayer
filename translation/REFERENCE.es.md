@@ -194,6 +194,11 @@ El punto de entrada principal para que un cliente se conecte a un `GameServer`.
     *   **Error**: `AuthenticationError` si el cliente no está autenticado con una cuenta persistente o no tiene permisos de `SERVER_ADMIN`.
 *   `get_group_admin(group_id)`: Devuelve una instancia de `GroupAdmin` para el grupo especificado utilizando las credenciales actuales del cliente.
     *   **Error**: `AuthenticationError` si el cliente no está autenticado con una cuenta persistente o no tiene permisos de administración para el grupo especificado.
+*   `register_remote_game(game_id)`: Crea y devuelve un objeto `RemoteGame` asociado con el ID de juego especificado.
+    *   **`game_id`** (`str`): El ID del juego para asociar con el `RemoteGame`.
+    *   **Devuelve**: Un objeto `RemoteGame`.
+*   `unregister_remote_game(remote_game)`: Destruye un objeto `RemoteGame` y limpia sus recursos internos.
+    *   **`remote_game`** (`RemoteGame`): El objeto `RemoteGame` a destruir.
 *   `set_logging_for_client(host, port, name=None)`: Configura el cliente para enviar sus registros a un servidor de registros remoto.
 
 ---

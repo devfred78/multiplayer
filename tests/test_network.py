@@ -295,3 +295,28 @@ def test_game_password_failure(game_server):
     with pytest.raises(AuthenticationError, match="Invalid password for this game"):
         game.add_player(Player("Alice"), password="wrong_game_password")
 
+def test_register_unregister_remote_game(game_server):
+    """Tests GameClient methods register_remote_game and unregister_remote_game."""
+    client = GameClient(port=TEST_PORT)
+    
+    # Create a game first to have a valid ID
+    game = client.create_game(name="Test Registration")
+    game_id = game.game_id
+    
+    # Register a new RemoteGame for the same ID
+    from multiplayer.client import RemoteGame
+    remote_game = client.register_remote_game(game_id)
+    
+    assert isinstance(remote_game, RemoteGame)
+    assert remote_game.game_id == game_id
+    assert remote_game.host == client.host
+    assert remote_game.port == client.port
+    
+    # Verify it works by calling a method
+    assert remote_game.state['status'] == 'pending'
+    
+    # Unregister
+    client.unregister_remote_game(remote_game)
+    # After unregister, _client should be None
+    assert not hasattr(remote_game, '_client') or remote_game._client is None
+

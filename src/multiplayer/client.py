@@ -299,6 +299,37 @@ class GameClient:
             
         return admin
 
+    def register_remote_game(self, game_id):
+        """
+        Creates and returns a RemoteGame object associated with the specified game ID.
+        
+        Args:
+            game_id (str): The ID of the game to associate with the RemoteGame.
+            
+        Returns:
+            RemoteGame: An object associated with the game.
+        """
+        return RemoteGame(
+            game_id, 
+            host=self.host, 
+            port=self.port, 
+            password=self.password, 
+            use_tls=self.use_tls, 
+            auth_user=self.auth_user, 
+            auth_password=self.auth_password
+        )
+
+    def unregister_remote_game(self, remote_game):
+        """
+        Destroys a RemoteGame object.
+        
+        Args:
+            remote_game (RemoteGame): The RemoteGame object to destroy.
+        """
+        if hasattr(remote_game, '_client'):
+            remote_game._client = None
+        del remote_game
+
 class ServerAdmin(GameClient):
     """
     A client class for administrators to connect to and manage a GameServer.

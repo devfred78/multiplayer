@@ -313,15 +313,9 @@ A proxy object representing a game running on the server.
         *   `status` (`GameState`): The enum value of the game state.
         *   `custom` (`dict`): The game's `custom_state` dictionary.
 *   **`observers`**: Returns the observers currently in the game.
-    *   **Returns**: A `list` of `dict`, each containing:
-        *   `id` (`str`): The observer's ID.
-        *   `name` (`str`): The observer's name.
-        *   `attributes` (`dict`): The observer's attributes.
+    *   **Returns**: A `list` of `Observer` objects.
 *   **`players`**: Returns the players currently in the game.
-    *   **Returns**: A `list` of `dict`, each containing:
-        *   `id` (`str`): The player's ID.
-        *   `name` (`str`): The player's name.
-        *   `attributes` (`dict`): The player's attributes.
+    *   **Returns**: A `list` of `Player` objects.
 
 ## Standalone Logging Server
 
@@ -409,6 +403,7 @@ Suggests a random name for a player. If `category` is `None`, a random player-re
 *   **`ConnectionError`**: Raised when a client fails to connect to the server.
 *   **`ServerError`**: Raised for generic errors reported by the server.
 *   **`AuthenticationError`**: Raised for both server and game password authentication failures.
+*   **`UserAlreadyExistsError`**: Raised when trying to create a persistent player account with a name that is already taken.
 *   **`PlayerAlreadyInGameError`**: Raised when trying to add a player or observer that is already in the game.
 *   **`KickedError`**: Raised when a player or observer has been kicked from a game.
 *   **`GroupNotFoundError`**: Raised when a group `id` is not found on the server.
@@ -446,7 +441,6 @@ from multiplayer.client import GameClient
 from multiplayer.data import PlayerRole
 
 client = GameClient(host="localhost", port=65432)
-client.connect()
 
 # Create a persistent account
 account = client.create_account(
@@ -455,8 +449,6 @@ account = client.create_account(
     role=PlayerRole.PLAYER
 )
 print(f"Account created for {account['name']} with role {account['role']}")
-
-client.disconnect()
 ```
 
 ### 3. Group and Game Management (Admin)
@@ -465,17 +457,22 @@ Creating a group and a game session as a Group Admin.
 ```python
 from multiplayer.client import GameClient
 
-client = GameClient(host="localhost", port=65432)
-client.connect(password="server_pass")
+# Login using a persistent account with administrative rights
+client = GameClient(
+    host="localhost", 
+    port=65432, 
+    auth_user="AdminUser", 
+    auth_password="admin_pass"
+)
 
-# Login as group admin
-admin = client.login("AdminUser", "admin_pass")
+# Get an admin proxy for the server
+admin = client.get_server_admin()
 
 # Create a group and a game inside it
 group = admin.create_group("Tournament A")
 remote_game = group.create_game(name="Final Match", max_players=2)
 
-print(f"Game '{remote_game.ID}' created in group '{group.name}'")
+print(f"Game '{remote_game.game_id}' created in group '{group.group_id}'")
 ```
 
 ### 4. Turn-Based Game with Observers
@@ -486,25 +483,25 @@ from multiplayer.client import GameClient
 from multiplayer.game import Player
 
 client = GameClient(host="localhost", port=65432)
-client.connect()
 
 # Get the list of active games from the server
 active_games = client.list_games()
 print(f"Active games on server: {list(active_games.keys())}")
 
-# Join the first active game as a player
-game_id = list(active_games.keys())[0]
-remote_game = client.register_remote_game(game_id)
-me = Player("Dave")
-remote_game.add_player(me)
+if active_games:
+    # Join the first active game as a player
+    game_id = list(active_games.keys())[0]
+    remote_game = client.register_remote_game(game_id)
+    me = Player("Dave")
+    remote_game.add_player(me)
 
-# Advance turn (if it's your turn)
-if remote_game.current_player.name == "Dave":
-    remote_game.next_turn()
+    # Advance turn (if it's your turn)
+    if remote_game.current_player.name == "Dave":
+        remote_game.next_turn()
 
-# List observers
-for obs in remote_game.observers:
-    print(f"Spectator: {obs['name']}")
+    # List observers
+    for obs in remote_game.observers:
+        print(f"Spectator: {obs.name}")
 ```
 
 ### 5. Advanced: TLS, Custom Attributes, and Logging
@@ -516,7 +513,6 @@ from multiplayer.game import Game
 
 # Connect using TLS
 client = GameClient(host="game.example.com", port=65432, use_tls=True)
-client.connect()
 
 # Create a game with custom metadata
 game_options = {
@@ -526,9 +522,10 @@ game_options = {
 }
 remote_game = client.create_game(**game_options)
 
-# Logs are automatically sent to the log server 
-# if the GameServer was configured with --port
-print(f"Game attributes: {remote_game.attributes}")
+# If the client is configured to send logs to a log server, 
+# the remote game proxy will automatically propagate this.
+client.set_logging_for_client("logserver.example.com", 5000)
+remote_game.configure_logging("logserver.example.com", 5000)
 ```
 
 ### 6. Server Management

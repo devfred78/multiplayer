@@ -177,11 +177,7 @@ admin = ServerAdmin(
 
 # Manage the server
 info = admin.get_server_info()
-print(f"Active games: {info['games_count']}")
-
-# Check certificate expiration
-expiration = admin.get_cert_expiration()
-print(f"Certificate expires on: {expiration}")
+print(f"Uptime: {info['uptime']} seconds")
 
 # Kick a player if necessary
 # admin.kick_player(game_id, player_id)
@@ -199,7 +195,7 @@ servers = GameClient.discover_servers()
 if not servers:
     print("No servers found.")
 else:
-    host, port = servers[0]
+    host, port, name = servers[0]
     client = GameClient(
         host=host,
         port=port,
@@ -212,12 +208,13 @@ else:
         name=suggest_game_name(),
         password="my_game_password"
     )
-    print(f"Created game with ID: {private_game.ID}")
+    print(f"Created game with ID: {private_game.game_id}")
 
     # 3. Create and use a Game Group
-    group = client.create_group("Tournament A")
-    game_in_group = group.create_game(name="Final Match")
-    print(f"Game in group '{group.name}' has ID: {game_in_group.ID}")
+    remote_group = client.create_group("Tournament A")
+    game_in_group = remote_group.create_game(name="Final Match")
+    # To get the group ID or name, we use the properties
+    print(f"Game in group '{remote_group.name}' has ID: {game_in_group.game_id}")
 
     # 4. A player joins and sets the initial state
     private_game.add_player(Player("Charlie"), password="my_game_password")

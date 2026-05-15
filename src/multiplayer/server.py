@@ -507,9 +507,16 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             group_games = {}
             for gid, g in games.items():
                 if g in group.games and g.state != GameState.FINISHED:
-                    attrs = g.attributes.copy()
-                    attrs['name'] = g.name
-                    group_games[gid] = attrs
+                    group_games[gid] = {
+                        'name': g.name,
+                        'state': g.state,
+                        'attributes': g.attributes,
+                        'players_count': len(g.players),
+                        'max_players': g.max_players,
+                        'observers_count': len(g.observers),
+                        'max_observers': g.max_observers,
+                        'custom_state': g.custom_state
+                    }
             return {'status': 'success', 'data': group_games}
         
         elif action == 'get_group_info':
@@ -534,9 +541,16 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             game_list = {}
             for gid, g in games.items():
                 if g.state != GameState.FINISHED:
-                    attrs = g.attributes.copy()
-                    attrs['name'] = g.name
-                    game_list[gid] = attrs
+                    game_list[gid] = {
+                        'name': g.name,
+                        'state': g.state,
+                        'attributes': g.attributes,
+                        'players_count': len(g.players),
+                        'max_players': g.max_players,
+                        'observers_count': len(g.observers),
+                        'max_observers': g.max_observers,
+                        'custom_state': g.custom_state
+                    }
             return {'status': 'success', 'data': game_list}
         
         elif action == 'stop_server':

@@ -5,7 +5,6 @@ import sys
 from pathlib import Path
 from logging.handlers import SocketHandler
 from multiplayer import GameClient, Player, exceptions
-from multiplayer.client import RemoteGame
 
 def setup_logging(log_port, player_name):
     # Root logger configuration
@@ -70,7 +69,7 @@ def run_client(player_name, game_id, host, port, is_creator, min_players, log_ho
             logger.error(f"Game '{game_id}' not found after retries.")
             return
 
-        game_proxy = RemoteGame(actual_game_id, host=host, port=port)
+        game_proxy = client.register_remote_game(actual_game_id)
         if log_host and log_port:
             game_proxy.configure_logging(log_host, log_port, f"Client-{player_name}")
             logger = game_proxy._logger

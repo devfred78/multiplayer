@@ -178,8 +178,16 @@ The main entry point for a client to connect to a `GameServer`.
         *   `observer_password` (`str`): Specific password for observers.
         *   Any other keyword argument will be stored as a custom attribute in the game's `attributes` property.
     *   **Returns**: A `RemoteGame` proxy object.
-*   `list_games()`: Returns all active games.
-    *   **Returns**: A `dict` where keys are game IDs (`str`) and values are `RemoteGame` objects.
+*   `list_games()`: Returns all active games (status different from `GameState.FINISHED`).
+    *   **Returns**: A `dict` where keys are game IDs (`str`) and values are dictionaries containing game properties:
+        *   `name` (`str`): The name of the game session.
+        *   `state` (`str`): The current state of the game (e.g., `"pending"`, `"in_progress"`).
+        *   `attributes` (`dict`): Custom attributes of the game.
+        *   `players_count` (`int`): Number of players currently in the game.
+        *   `max_players` (`int`): Maximum number of players allowed.
+        *   `observers_count` (`int`): Number of observers currently in the game.
+        *   `max_observers` (`int`): Maximum number of observers allowed.
+        *   `custom_state` (`dict`): The game's custom state.
 *   `create_group(name, admin_password=None, **attributes)`: Requests the server to create a new game group.
     *   **Returns**: A `RemoteGroup` proxy object.
 *   `list_groups()`: Returns all game groups on the server.
@@ -270,7 +278,7 @@ A proxy object representing a game group running on the server.
 *   `create_game(**game_options)`: Creates a new game within this group. Supports the same `game_options` as `GameClient.create_game()`.
     *   **Returns**: A `RemoteGame` proxy object.
 *   `list_games()`: Returns all games belonging to this group.
-    *   **Returns**: A `dict` where keys are game IDs (`str`) and values are `RemoteGame` objects.
+    *   **Returns**: A `dict` where keys are game IDs (`str`) and values are dictionaries containing game properties (same format as `GameClient.list_games()`).
 
 #### Properties
 *   **`group_id`**: The unique ID of the group.
@@ -467,7 +475,7 @@ print(f"Active games on server: {list(active_games.keys())}")
 
 # Join the first active game as a player
 game_id = list(active_games.keys())[0]
-remote_game = active_games[game_id]
+remote_game = client.register_remote_game(game_id)
 me = Player("Dave")
 remote_game.add_player(me)
 
@@ -544,6 +552,4 @@ Version: 8.21.0.64
 FUP: 0
 License date: 12.5.2026
 VDF date: 12.5.2026
-Minimum engine: 8.3.0.0
-Signatures: 7721
-Required linked VDF: 
+Mi

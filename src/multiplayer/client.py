@@ -140,10 +140,17 @@ class GameClient:
                 }
                 conn.sendall(json.dumps(command).encode('utf-8'))
                 
-                response_data = conn.recv(1024)
-                if not response_data:
+                chunks = []
+                while True:
+                    chunk = conn.recv(4096)
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+                
+                if not chunks:
                     raise exceptions.ConnectionError("Server closed the connection without a response (possible TLS mismatch).")
                 
+                response_data = b"".join(chunks)
                 response = json.loads(response_data.decode('utf-8'))
                 
                 if response.get('status') == 'error':
@@ -191,20 +198,8 @@ class GameClient:
         return remote_game
 
     def list_games(self):
-        """Retrieves a dictionary of active games as RemoteGame objects, indexed by ID."""
-        games_data = self._send_command('list_games')
-        
-        remote_games = {}
-        for gid in games_data:
-            remote_games[gid] = RemoteGame(gid, self.host, self.port, self.password, self.use_tls, self.auth_user, self.auth_password)
-            
-            # Propagate logging configuration if any
-            for h in self._logger.handlers:
-                if isinstance(h, SocketHandler):
-                    remote_games[gid].set_logging_for_client(h.host, h.port)
-                    break
-                    
-        return remote_games
+        """Retrieves a dictionary of active games (status different from GameState.FINISHED) organized by ID."""
+        return self._send_command('list_games')
 
     def create_group(self, name, admin_password=None, **attributes):
         """Requests the server to create a new game group and returns a proxy to it."""
@@ -458,7 +453,7 @@ class GroupAdmin(GameClient):
         super().set_logging_for_client(host, port, f"GroupAdmin.{self.group_id}")
 
     def list_games(self):
-        """Retrieves a dictionary of games belonging to this group as RemoteGame objects, indexed by ID."""
+        """Retrieves a dictionary of games belonging to this group, indexed by ID."""
         remote_group = RemoteGroup(self.group_id, self.host, self.port, self.group_admin_password, self.use_tls, self.auth_user, self.auth_password)
         
         # Propagate logging configuration if any
@@ -711,20 +706,8 @@ class RemoteGroup:
         return self._client.create_game(group_id=self.group_id, **game_options)
 
     def list_games(self):
-        """Lists all games in this group."""
-        games_data = self._client._send_command('list_group_games', {'group_id': self.group_id})
-        
-        remote_games = {}
-        for gid in games_data:
-            remote_games[gid] = RemoteGame(gid, self.host, self.port, self._client.password, self._client.use_tls, self._client.auth_user, self._client.auth_password)
-            
-            # Propagate logging configuration if any
-            for h in self._logger.handlers:
-                if isinstance(h, SocketHandler):
-                    remote_games[gid].set_logging_for_client(h.host, h.port)
-                    break
-                    
-        return remote_games
+        """Lists all games in this group as a dictionary of game data indexed by ID."""
+        return self._client._send_command('list_group_games', {'group_id': self.group_id})
 
     @property
     def name(self):

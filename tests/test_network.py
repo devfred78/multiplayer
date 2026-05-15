@@ -117,6 +117,8 @@ def test_create_and_list_games(game_server):
     # Game should be in the list
     games_list = client.list_games()
     assert game.game_id in games_list
+    assert games_list[game.game_id]['name'] == "Test Game"
+    assert games_list[game.game_id]['state'] == 'pending'
     
     # After stopping, it should not be in the list
     game.stop()
@@ -212,6 +214,7 @@ def test_tls_data_exchange(tls_custom_game_server):
     # List games
     games = client.list_games()
     assert game.game_id in games
+    assert games[game.game_id]['name'] == "TLS Game"
     
     # Verify player in state
     players = game.players
@@ -319,4 +322,30 @@ def test_register_unregister_remote_game(game_server):
     client.unregister_remote_game(remote_game)
     # After unregister, _client should be None
     assert not hasattr(remote_game, '_client') or remote_game._client is None
+
+def test_list_games_format(game_server):
+    """Tests that list_games returns the expected data format."""
+    client = GameClient(port=TEST_PORT)
+    game = client.create_game(name="FormatTest", max_players=4, max_observers=10, type="battle")
+    game_id = game.game_id
+    
+    games = client.list_games()
+    assert game_id in games
+    data = games[game_id]
+    
+    assert data['name'] == "FormatTest"
+    assert data['state'] == 'pending'
+    assert data['attributes']['type'] == "battle"
+    assert data['players_count'] == 0
+    assert data['max_players'] == 4
+    assert data['observers_count'] == 0
+    assert data['max_observers'] == 10
+    assert data['custom_state'] == {}
+    
+    # Add a player and check count
+    game.add_player(Player("Bob"))
+    games = client.list_games()
+    assert games[game_id]['players_count'] == 1
+    
+    game.stop()
 

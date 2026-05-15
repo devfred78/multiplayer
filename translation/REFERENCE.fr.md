@@ -178,8 +178,16 @@ Le point d'entrée principal pour qu'un client se connecte à un `GameServer`.
         *   `observer_password` (`str`) : Mot de passe spécifique pour les observateurs.
         *   Tout autre argument nommé sera stocké en tant qu'attribut personnalisé dans la propriété `attributes` de la partie.
     *   **Retourne** : Un objet proxy `RemoteGame`.
-*   `list_games()` : Retourne toutes les parties actives.
-    *   **Retourne** : Un `dict` où les clés sont les IDs de partie (`str`) et les valeurs sont des objets `RemoteGame`.
+*   `list_games()` : Retourne toutes les parties actives (statut différent de `GameState.FINISHED`).
+    *   **Retourne** : Un `dict` où les clés sont les IDs de partie (`str`) et les valeurs sont des dictionnaires contenant les propriétés de la partie :
+        *   `name` (`str`) : Le nom de la session de jeu.
+        *   `state` (`str`) : L'état actuel de la partie (par exemple, `"pending"`, `"in_progress"`).
+        *   `attributes` (`dict`) : Attributs personnalisés de la partie.
+        *   `players_count` (`int`) : Nombre de joueurs actuellement dans la partie.
+        *   `max_players` (`int`) : Nombre maximum de joueurs autorisés.
+        *   `observers_count` (`int`) : Nombre d'observateurs actuellement dans la partie.
+        *   `max_observers` (`int`) : Nombre maximum d'observateurs autorisés.
+        *   `custom_state` (`dict`) : L'état personnalisé de la partie.
 *   `create_group(name, admin_password=None, **attributes)` : Demande au serveur la création d'un nouveau groupe de jeux.
     *   **Retourne** : Un objet proxy `RemoteGroup`.
 *   `list_groups()` : Retourne tous les groupes de jeux sur le serveur.
@@ -270,7 +278,7 @@ Un objet proxy représentant un groupe de jeux en cours d'exécution sur le serv
 *   `create_game(**game_options)` : Crée une nouvelle partie au sein de ce groupe. Supporte les mêmes `game_options` que `GameClient.create_game()`.
     *   **Retourne** : Un objet proxy `RemoteGame`.
 *   `list_games()` : Retourne toutes les parties appartenant à ce groupe.
-    *   **Retourne** : Un `dict` où les clés sont les IDs de partie (`str`) et les valeurs sont des objets `RemoteGame`.
+    *   **Retourne** : Un `dict` où les clés sont les IDs de partie (`str`) et les valeurs sont des dictionnaires contenant les propriétés de la partie (même format que `GameClient.list_games()`).
 
 #### Propriétés
 *   **`group_id`** : L'ID unique du groupe.
@@ -468,7 +476,7 @@ print(f"Parties actives sur le serveur : {list(active_games.keys())}")
 
 # Rejoindre la première partie active en tant que joueur
 game_id = list(active_games.keys())[0]
-remote_game = active_games[game_id]
+remote_game = client.register_remote_game(game_id)
 me = Player("Dave")
 remote_game.add_player(me)
 

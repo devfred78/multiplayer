@@ -178,8 +178,16 @@ El punto de entrada principal para que un cliente se conecte a un `GameServer`.
         *   `observer_password` (`str`): Contraseña específica para los observadores.
         *   Cualquier otro argumento con nombre se almacenará como un atributo personalizado en la propiedad `attributes` del juego.
     *   **Devuelve**: Un objeto proxy `RemoteGame`.
-*   `list_games()`: Devuelve todos los juegos activos.
-    *   **Devuelve**: Un `dict` donde las claves son IDs de juegos (`str`) y los valores son objetos `RemoteGame`.
+*   `list_games()`: Devuelve todos los juegos activos (estado diferente de `GameState.FINISHED`).
+    *   **Devuelve**: Un `dict` donde las claves son IDs de juegos (`str`) y los valores son diccionarios que contienen las propiedades del juego:
+        *   `name` (`str`): El nombre de la sesión de juego.
+        *   `state` (`str`): El estado actual del juego (por ejemplo, `"pending"`, `"in_progress"`).
+        *   `attributes` (`dict`): Atributos personalizados del juego.
+        *   `players_count` (`int`): Número de jugadores actualmente en el juego.
+        *   `max_players` (`int`): Número máximo de jugadores permitidos.
+        *   `observers_count` (`int`): Número de observadores actualmente en el juego.
+        *   `max_observers` (`int`): Número máximo de observadores permitidos.
+        *   `custom_state` (`dict`): El estado personalizado del juego.
 *   `create_group(name, admin_password=None, **attributes)`: Solicita al servidor crear un nuevo grupo de juegos.
     *   **Devuelve**: Un objeto proxy `RemoteGroup`.
 *   `list_groups()` : Devuelve todos los grupos de juegos en el servidor.
@@ -270,7 +278,7 @@ Un objeto proxy que representa un grupo de juegos que se ejecuta en el servidor.
 *   `create_game(**game_options)`: Crea un nuevo juego dentro de este grupo. Soporta las mismas `game_options` que `GameClient.create_game()`.
     *   **Devuelve**: Un objeto proxy `RemoteGame`.
 *   `list_games()`: Devuelve todos los juegos pertenecientes a este grupo.
-    *   **Devuelve**: Un `dict` donde las claves son IDs de juegos (`str`) y los valores son objetos `RemoteGame`.
+    *   **Devuelve**: Un `dict` donde las claves son IDs de juegos (`str`) y los valores son diccionarios que contienen las propiedades del juego (mismo formato que `GameClient.list_games()`).
 
 #### Propiedades
 *   **`group_id`**: El ID único del grupo.
@@ -467,7 +475,7 @@ print(f"Partidas activas en el servidor: {list(active_games.keys())}")
 
 # Unirse a la primera partida activa como jugador
 game_id = list(active_games.keys())[0]
-remote_game = active_games[game_id]
+remote_game = client.register_remote_game(game_id)
 me = Player("Dave")
 remote_game.add_player(me)
 

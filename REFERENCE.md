@@ -354,6 +354,8 @@ Starts a standalone game server.
 *   **`--unencrypted-port`** (`int`): Port for unencrypted connections. Only relevant when `--use-tls` is enabled. This allows the server to be reachable via both TLS and plain text on different ports.
 *   **`--name`** (`str`): Human-readable name for the server instance.
 *   **`--hidden`**: Hides the server from network discovery.
+*   **`--persistence`** (`str`): Type of persistence for players and games. Choices: `none` (default), `json`, `sqlite`.
+*   **`--persistence-path`** (`str`): Path to the persistence file (e.g., `server_data.json` or `server_data.db`).
 
 ## Utility Functions
 

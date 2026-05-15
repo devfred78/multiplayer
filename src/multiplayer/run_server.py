@@ -23,6 +23,8 @@ def main():
     parser.add_argument("--logger-name", default="GameServer", help="Name of the logger (default: GameServer)")
     parser.add_argument("--name", help="Human-readable name for the server instance")
     parser.add_argument("--hidden", action="store_true", help="Hide the server from network discovery")
+    parser.add_argument("--persistence", choices=["json", "sqlite", "none"], default="none", help="Persistence type (default: none)")
+    parser.add_argument("--persistence-path", help="Path to the persistence file (e.g. server_data.json or server_data.db)")
 
     args = parser.parse_args()
 
@@ -77,7 +79,9 @@ def main():
         logger_name=args.logger_name,
         name=args.name,
         unencrypted_port=args.unencrypted_port,
-        hidden=args.hidden
+        hidden=args.hidden,
+        persistence_type=args.persistence if args.persistence != "none" else None,
+        persistence_path=args.persistence_path
     )
 
     try:

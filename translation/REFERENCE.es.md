@@ -354,6 +354,8 @@ Inicia un servidor de juegos autónomo.
 *   **`--unencrypted-port`** (`int`): Puerto para conexiones no cifradas. Solo es relevante cuando `--use-tls` está habilitado. Esto permite que el servidor sea accesible tanto a través de TLS como de texto plano en diferentes puertos.
 *   **`--name`** (`str`): Nombre legible para humanos para la instancia del servidor.
 *   **`--hidden`**: Oculta el servidor del descubrimiento de red.
+*   **`--persistence`** (`str`): Tipo de persistencia para jugadores y partidas. Opciones: `none` (por defecto), `json`, `sqlite`.
+*   **`--persistence-path`** (`str`): Ruta al archivo de persistencia (ej. `server_data.json` o `server_data.db`).
 
 ## Funciones de Utilidad
 

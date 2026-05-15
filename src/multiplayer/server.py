@@ -79,8 +79,11 @@ def get_cert_expiration(cert_path):
     except Exception as e:
         return f"Error reading certificate: {e}"
 
-def _run_server_process(host, port, password, admin_password, use_tls, certfile, keyfile, logging_host=None, logging_port=None, logger_name="GameServer", name=None, persistent_players_enabled=True, unencrypted_port=None, hidden=False, discovery_event=None, tls_domain=None, tls_self_signed=None):
+def _run_server_process(host, port, password, admin_password, use_tls, certfile, keyfile, logging_host=None, logging_port=None, logger_name="GameServer", name=None, persistent_players_enabled=True, unencrypted_port=None, hidden=False, discovery_event=None, tls_domain=None, tls_self_signed=None, persistence_type=None, persistence_path=None):
     """The main server loop that listens for and handles connections."""
+    from .data.persistence import create_datastore
+    datastore = create_datastore(persistence_type, persistence_path)
+    
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.INFO)
     if logging_host and logging_port:
@@ -99,8 +102,11 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
     if name:
         server_start_msg += f" (Name: {name})"
     logger.info(server_start_msg)
-    games = {}
-    persistent_players = {}
+    
+    games, groups, persistent_players = datastore.load()
+    if games or groups or persistent_players:
+        logger.info(f"Loaded {len(games)} games, {len(groups)} groups, and {len(persistent_players)} persistent players from storage.")
+    
     games_lock = threading.Lock()
     context = None
     if use_tls:
@@ -122,7 +128,6 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
         unencrypted_bindsocket.bind((host, unencrypted_port))
         unencrypted_bindsocket.listen()
 
-    groups = {} # Store GameGroup objects
     import time
     server_passwords = {
         'server': password, 
@@ -161,7 +166,7 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
                     newsocket, fromaddr = s.accept()
                     is_tls_conn = (s == bindsocket and use_tls)
                     conn = context.wrap_socket(newsocket, server_side=True) if is_tls_conn else newsocket
-                    thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, groups, games_lock, server_passwords, logger_name, name, is_tls_conn, certfile, persistent_players))
+                    thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, groups, games_lock, server_passwords, logger_name, name, is_tls_conn, certfile, persistent_players, datastore))
                     thread.daemon = True
                     thread.start()
                 except (ssl.SSLError, OSError) as e:
@@ -187,7 +192,7 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
              except Exception:
                  pass
 
-def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_name="GameServer", server_name=None, use_tls=False, certfile=None, persistent_players=None):
+def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_name="GameServer", server_name=None, use_tls=False, certfile=None, persistent_players=None, datastore=None):
     """Handles a single client connection."""
     logger = logging.getLogger(logger_name)
     logger.info(f"Connected by {addr}")
@@ -338,6 +343,14 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                 with lock:
                     try:
                         response = _execute_command(games, groups, action, params, server_name=server_name, use_tls=use_tls, certfile=certfile, server_passwords=server_passwords, persistent_players=persistent_players, logger=logger)
+                        # Sync to datastore after successful command if it might have changed state
+                        if datastore and action in [
+                            'create_persistent_player', 'update_persistent_player', 'remove_persistent_player',
+                            'create_game', 'stop_game', 'pause_game', 'resume_game', 'set_custom_state',
+                            'create_group', 'remove_group', 'set_server_password', 'set_admin_password',
+                            'set_persistent_players_enabled', 'set_server_hidden'
+                        ]:
+                            datastore.save(games, groups, persistent_players)
                     except Exception as e:
                         response = {'status': 'error', 'type': e.__class__.__name__, 'message': str(e)}
                 conn.sendall(json.dumps(response, cls=EnumEncoder).encode('utf-8'))
@@ -856,7 +869,7 @@ class GameServer:
     """
     Manages multiple Game instances and handles network requests from clients.
     """
-    def __init__(self, host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, logger_name="GameServer", name=None, unencrypted_port=None, hidden=False):
+    def __init__(self, host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, logger_name="GameServer", name=None, unencrypted_port=None, hidden=False, persistence_type=None, persistence_path=None):
         self.host = host
         self.port = port
         self.unencrypted_port = unencrypted_port
@@ -872,6 +885,8 @@ class GameServer:
         self.logger_name = logger_name
         self.name = name
         self.hidden = hidden
+        self.persistence_type = persistence_type
+        self.persistence_path = persistence_path
         self._server_process = None
         self._discovery_thread = None
         self._stop_discovery = threading.Event()
@@ -941,7 +956,7 @@ class GameServer:
         if self.hidden:
             self._hidden_event.set()
             
-        self._server_process = ctx.Process(target=_run_server_process, args=(self.host, self.port, self.password, self.admin_password, self.use_tls, certfile, keyfile, self.logging_host, self.logging_port, self.logger_name, self.name, True, self.unencrypted_port, self.hidden, self._hidden_event, self.tls_domain, self.tls_self_signed))
+        self._server_process = ctx.Process(target=_run_server_process, args=(self.host, self.port, self.password, self.admin_password, self.use_tls, certfile, keyfile, self.logging_host, self.logging_port, self.logger_name, self.name, True, self.unencrypted_port, self.hidden, self._hidden_event, self.tls_domain, self.tls_self_signed, self.persistence_type, self.persistence_path))
         self._server_process.daemon = True
         self._server_process.start()
         self._stop_discovery.clear()

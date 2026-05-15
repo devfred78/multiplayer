@@ -79,7 +79,7 @@ def get_cert_expiration(cert_path):
     except Exception as e:
         return f"Error reading certificate: {e}"
 
-def _run_server_process(host, port, password, admin_password, use_tls, certfile, keyfile, logging_host=None, logging_port=None, logger_name="GameServer", name=None, persistent_players_enabled=True, unencrypted_port=None, hidden=False, discovery_event=None):
+def _run_server_process(host, port, password, admin_password, use_tls, certfile, keyfile, logging_host=None, logging_port=None, logger_name="GameServer", name=None, persistent_players_enabled=True, unencrypted_port=None, hidden=False, discovery_event=None, tls_domain=None, tls_self_signed=None):
     """The main server loop that listens for and handles connections."""
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.INFO)
@@ -123,7 +123,21 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
         unencrypted_bindsocket.listen()
 
     groups = {} # Store GameGroup objects
-    server_passwords = {'server': password, 'admin': admin_password, 'persistent_players_enabled': persistent_players_enabled, 'hidden': hidden}
+    import time
+    server_passwords = {
+        'server': password, 
+        'admin': admin_password, 
+        'persistent_players_enabled': persistent_players_enabled, 
+        'hidden': hidden, 
+        'start_time': time.time(),
+        'host': host,
+        'port': port,
+        'unencrypted_port': unencrypted_port,
+        'tls_domain': tls_domain,
+        'tls_self_signed': tls_self_signed,
+        'logging_host': logging_host,
+        'logging_port': logging_port
+    }
     
     import select
     
@@ -236,6 +250,22 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                         if admin_password is None and user_role != PlayerRole.SERVER_ADMIN:
                             raise AuthenticationError("Admin actions are disabled on this server")
                         raise AuthenticationError("Invalid admin credentials")
+                    
+                    # For get_server_info, we need more info than just server_passwords
+                    if action == 'get_server_info':
+                        params['__server_info__'] = {
+                            'host': server_passwords.get('host') or command.get('client_host'),
+                            'port': server_passwords.get('port') or command.get('client_port'),
+                            'unencrypted_port': server_passwords.get('unencrypted_port'),
+                            'use_tls': use_tls,
+                            'tls_domain': server_passwords.get('tls_domain'),
+                            'tls_self_signed': server_passwords.get('tls_self_signed'),
+                            'logging_host': server_passwords.get('logging_host'),
+                            'logging_port': server_passwords.get('logging_port'),
+                            'hidden': server_passwords.get('hidden', False),
+                            'name': server_name,
+                            'certfile': certfile
+                        }
                 
                 elif is_group_admin_action and group_id:
                     with lock:
@@ -575,10 +605,51 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             return result
         
         elif action == 'get_server_info':
+            import time
+            server_info = params.get('__server_info__', {})
+            
+            uptime = 0
+            if server_passwords is not None:
+                start_time = server_passwords.get('start_time')
+                if start_time:
+                    uptime = time.time() - start_time
+            
+            cert_expiration = None
+            if use_tls and certfile:
+                cert_expiration = get_cert_expiration(certfile)
+            
+            # Check if logging is active
+            logger_instance = logging.getLogger("GameServer")
+            logging_active = logger_instance.getEffectiveLevel() <= logging.INFO
+            
+            # Persistent players creation active
+            persistent_players_active = True
+            if server_passwords is not None:
+                persistent_players_active = server_passwords.get('persistent_players_enabled', True)
+            
+            # Number of clients connected - we can estimate this by active threads
+            # but more accurately, we could track it. For now, let's use threading.active_count() - 2 
+            # (main thread + discovery thread). This is not perfect if other threads exist.
+            # However, GameServer runs in a separate process, so it should be relatively accurate.
+            connected_clients = threading.active_count() - 2
+            if connected_clients < 0: connected_clients = 0
+
             return {'status': 'success', 'data': {
-                'server_name': server_name,
-                'games_count': len(games),
-                'active_games': [gid for gid, g in games.items() if g.state != GameState.FINISHED]
+                'name': server_info.get('name'),
+                'host': server_info.get('host'),
+                'port': server_info.get('port'),
+                'unencrypted_port': server_info.get('unencrypted_port'),
+                'use_tls': server_info.get('use_tls'),
+                'tls_domain': server_info.get('tls_domain'),
+                'tls_self_signed': server_info.get('tls_self_signed'),
+                'logging_host': server_info.get('logging_host'),
+                'logging_port': server_info.get('logging_port'),
+                'hidden': server_info.get('hidden'),
+                'uptime': uptime,
+                'cert_expiration': cert_expiration,
+                'logging_active': logging_active,
+                'persistent_players_active': persistent_players_active,
+                'connected_clients': connected_clients
             }}
         
         elif action == 'set_logging_for_server':
@@ -645,11 +716,6 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
                         
             return {'status': 'success', 'data': player_map}
 
-        elif action == 'get_cert_expiration':
-            if not use_tls or not certfile:
-                return {'status': 'error', 'message': 'TLS is not enabled or no certificate provided'}
-            expiration = get_cert_expiration(certfile)
-            return {'status': 'success', 'expiration': expiration}
 
         # Game-specific actions
         game_id = params.get('game_id')
@@ -875,7 +941,7 @@ class GameServer:
         if self.hidden:
             self._hidden_event.set()
             
-        self._server_process = ctx.Process(target=_run_server_process, args=(self.host, self.port, self.password, self.admin_password, self.use_tls, certfile, keyfile, self.logging_host, self.logging_port, self.logger_name, self.name, True, self.unencrypted_port, self.hidden, self._hidden_event))
+        self._server_process = ctx.Process(target=_run_server_process, args=(self.host, self.port, self.password, self.admin_password, self.use_tls, certfile, keyfile, self.logging_host, self.logging_port, self.logger_name, self.name, True, self.unencrypted_port, self.hidden, self._hidden_event, self.tls_domain, self.tls_self_signed))
         self._server_process.daemon = True
         self._server_process.start()
         self._stop_discovery.clear()

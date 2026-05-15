@@ -223,9 +223,21 @@ A client class for administrators to manage a `GameServer` (inherits from `GameC
     *   **Returns**: A `dict` with the same format as `GameClient.list_games()`.
 *   `get_server_info()`: Returns information about the server.
     *   **Returns**: A `dict` with the following keys:
-        *   `server_name` (`str`): The name assigned to the server.
-        *   `games_count` (`int`): Total number of games currently on the server.
-        *   `active_games` (`list` of `str`): A list of IDs for games that are not in the `FINISHED` state.
+        *   `name` (`str`): The name assigned to the server instance.
+        *   `host` (`str`): The host address the server is listening on.
+        *   `port` (`int`): The primary TCP port for the server.
+        *   `unencrypted_port` (`int`): The port for unencrypted connections (if TLS is enabled).
+        *   `use_tls` (`bool`): `True` if TLS encryption is enabled.
+        *   `tls_domain` (`str`): The domain name used for the TLS certificate.
+        *   `tls_self_signed` (`bool`): `True` if the server is using a self-signed certificate.
+        *   `logging_host` (`str`): The host of the remote logging server.
+        *   `logging_port` (`int`): The port of the remote logging server.
+        *   `hidden` (`bool`): `True` if the server is hidden from network discovery.
+        *   `uptime` (`float`): Duration in seconds since the server started.
+        *   `cert_expiration` (`str`): Expiration date of the TLS certificate (ISO format), or `None`.
+        *   `logging_active` (`bool`): `True` if server-side logging is currently enabled.
+        *   `persistent_players_active` (`bool`): `True` if the creation of new persistent accounts is allowed.
+        *   `connected_clients` (`int`): Current number of active client connections.
 *   `kick_player(game_id, player_id)`: Removes a player from a specific game by their ID.
 *   `kick_observer(game_id, observer_id)`: Removes an observer from a specific game by their ID.
 *   `list_all_players()`: Lists all players currently known by the server.
@@ -238,8 +250,6 @@ A client class for administrators to manage a `GameServer` (inherits from `GameC
 *   `stop_server()`: Requests the server to shut down.
 *   `restart_server()`: Requests the server to restart (clears all current games).
 *   `set_logging_for_server(host, port)`: Configures the server to send its logs to a remote logging server at the specified address and port.
-*   `get_cert_expiration()`: Returns the expiration date of the server's TLS certificate.
-    *   **Returns**: A `str` representing the expiration date in ISO format, or `None` if TLS is not used.
 *   `set_logging_enabled(enabled)`: Enables (`True`) or disables (`False`) logging on the server.
 *   `set_server_password(new_password)`: Sets a new password for the server.
 *   `set_admin_password(new_password)`: Sets a new administrator password for the server.
@@ -541,4 +551,4 @@ try:
     while True:
         time.sleep(1)
 except KeyboardInterrupt:
-    print("
+    print("                                                                                                                                                                                                       

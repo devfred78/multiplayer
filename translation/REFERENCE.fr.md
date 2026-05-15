@@ -223,9 +223,21 @@ Une classe client pour les administrateurs pour gérer un `GameServer` (hérite 
     *   **Retourne** : Un `dict` avec le même format que `GameClient.list_games()`.
 *   `get_server_info()` : Retourne des informations sur le serveur.
     *   **Retourne** : Un `dict` avec les clés suivantes :
-        *   `server_name` (`str`) : Le nom assigné au serveur.
-        *   `games_count` (`int`) : Le nombre total de parties actuellement sur le serveur.
-        *   `active_games` (`list` de `str`) : Une liste des IDs des parties qui ne sont pas dans l'état `FINISHED`.
+        *   `name` (`str`) : Le nom assigné à l'instance du serveur.
+        *   `host` (`str`) : L'adresse hôte sur laquelle le serveur écoute.
+        *   `port` (`int`) : Le port TCP principal du serveur.
+        *   `unencrypted_port` (`int`) : Le port pour les connexions non chiffrées (si le TLS est activé).
+        *   `use_tls` (`bool`) : `True` si le chiffrement TLS est activé.
+        *   `tls_domain` (`str`) : Le nom de domaine utilisé pour le certificat TLS.
+        *   `tls_self_signed` (`bool`) : `True` si le serveur utilise un certificat auto-signé.
+        *   `logging_host` (`str`) : L'hôte du serveur de logging distant.
+        *   `logging_port` (`int`) : Le port du serveur de logging distant.
+        *   `hidden` (`bool`) : `True` si le serveur est caché de la découverte réseau.
+        *   `uptime` (`float`) : Durée en secondes depuis le démarrage du serveur.
+        *   `cert_expiration` (`str`) : Date d'expiration du certificat TLS (format ISO), ou `None`.
+        *   `logging_active` (`bool`) : `True` si le logging côté serveur est actuellement activé.
+        *   `persistent_players_active` (`bool`) : `True` si la création de nouveaux comptes persistants est autorisée.
+        *   `connected_clients` (`int`) : Nombre actuel de connexions clients actives.
 *   `kick_player(game_id, player_id)` : Retire un joueur d'une partie spécifique par son ID.
 *   `kick_observer(game_id, observer_id)` : Retire un observateur d'une partie spécifique par son ID.
 *   `list_all_players()` : Liste tous les joueurs actuellement connus par le serveur.
@@ -238,8 +250,6 @@ Une classe client pour les administrateurs pour gérer un `GameServer` (hérite 
 *   `stop_server()` : Demande l'arrêt du serveur.
 *   `restart_server()` : Demande le redémarrage du serveur (efface toutes les parties actuelles).
 *   `set_logging_for_server(host, port)` : Configure le serveur pour envoyer ses logs à un serveur de logging distant à l'adresse et au port spécifiés.
-*   `get_cert_expiration()` : Retourne la date d'expiration du certificat TLS du serveur.
-    *   **Retourne** : Une `str` représentant la date d'expiration au format ISO, ou `None` si le TLS n'est pas utilisé.
 *   `set_logging_enabled(enabled)` : Active (`True`) ou désactive (`False`) le logging sur le serveur.
 *   `set_server_password(new_password)` : Définit un nouveau mot de passe pour le serveur.
 *   `set_admin_password(new_password)` : Définit un nouveau mot de passe administrateur pour le serveur.

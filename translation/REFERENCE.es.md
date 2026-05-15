@@ -223,9 +223,21 @@ Una clase de cliente para que los administradores gestionen un `GameServer` (her
     *   **Devuelve**: Un `dict` con el mismo formato que `GameClient.list_games()`.
 *   `get_server_info()`: Devuelve información sobre el servidor.
     *   **Devuelve**: Un `dict` con las siguientes claves:
-        *   `server_name` (`str`): El nombre asignado al servidor.
-        *   `games_count` (`int`): Número total de juegos actualmente en el servidor.
-        *   `active_games` (`list` de `str`): Una lista de IDs para juegos que no están en el estado `FINISHED`.
+        *   `name` (`str`): El nombre asignado a la instancia del servidor.
+        *   `host` (`str`): La dirección host en la que escucha el servidor.
+        *   `port` (`int`): El puerto TCP principal del servidor.
+        *   `unencrypted_port` (`int`): El puerto para conexiones no cifradas (si TLS está habilitado).
+        *   `use_tls` (`bool`): `True` si el cifrado TLS está habilitado.
+        *   `tls_domain` (`str`): El nombre de dominio utilizado para el certificado TLS.
+        *   `tls_self_signed` (`bool`): `True` si el servidor utiliza un certificado autofirmado.
+        *   `logging_host` (`str`): El host del servidor de registros remoto.
+        *   `logging_port` (`int`): El puerto del servidor de registros remoto.
+        *   `hidden` (`bool`): `True` si el servidor está oculto del descubrimiento de red.
+        *   `uptime` (`float`): Duración en segundos desde que se inició el servidor.
+        *   `cert_expiration` (`str`): Fecha de expiración del certificado TLS (formato ISO), o `None`.
+        *   `logging_active` (`bool`): `True` si el registro en el lado del servidor está habilitado actualmente.
+        *   `persistent_players_active` (`bool`): `True` si se permite la creación de nuevas cuentas persistentes.
+        *   `connected_clients` (`int`): Número actual de conexiones de clientes activas.
 *   `kick_player(game_id, player_id)`: Elimina a un jugador de un juego específico por su ID.
 *   `kick_observer(game_id, observer_id)`: Elimina a un observador de un juego específico por su ID.
 *   `list_all_players()`: Enumera todos los jugadores conocidos actualmente por el servidor.
@@ -238,8 +250,6 @@ Una clase de cliente para que los administradores gestionen un `GameServer` (her
 *   `stop_server()`: Solicita el apagado del servidor.
 *   `restart_server()` : Solicita el reinicio del servidor (borra todos los juegos actuales).
 *   `set_logging_for_server(host, port)`: Configura el servidor para enviar sus registros a un servidor de registros remoto en la dirección y puerto especificados.
-*   `get_cert_expiration()`: Devuelve la fecha de expiración del certificado TLS del servidor.
-    *   **Devuelve**: Un `str` que representa la fecha de expiración en formato ISO, o `None` si no se utiliza TLS.
 *   `set_logging_enabled(enabled)`: Activa (`True`) o desactiva (`False`) el registro en el servidor.
 *   `set_server_password(new_password)`: Establece una nueva contraseña para el servidor.
 *   `set_admin_password(new_password)`: Establece una nueva contraseña de administrador para el servidor.

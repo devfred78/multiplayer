@@ -137,6 +137,8 @@ class GameClient:
                     'password': self.password,
                     'auth_user': self.auth_user,
                     'auth_password': self.auth_password,
+                    'client_host': self.host,
+                    'client_port': self.port
                 }
                 conn.sendall(json.dumps(command).encode('utf-8'))
                 
@@ -355,7 +357,7 @@ class ServerAdmin(GameClient):
         return self._send_command('restart_server')
 
     def get_server_info(self):
-        """Retrieves information about the server's status and active games."""
+        """Retrieves information about the server's status and configuration."""
         return self._send_command('get_server_info')
 
     def list_all_server_games(self):
@@ -389,10 +391,6 @@ class ServerAdmin(GameClient):
         """Enables or disables logging on the server."""
         return self._send_command('set_logging_enabled', {'enabled': enabled})
 
-    def get_cert_expiration(self):
-        """Returns the expiration date of the server's TLS certificate."""
-        response = self._send_command('get_cert_expiration')
-        return response.get('expiration')
 
     def set_server_password(self, new_password):
         """Sets a new password for the server."""

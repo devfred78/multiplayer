@@ -355,7 +355,7 @@ Starts a standalone game server.
 *   **`--name`** (`str`): Human-readable name for the server instance.
 *   **`--hidden`**: Hides the server from network discovery.
 *   **`--persistence`** (`str`): Type of persistence for players and games. Choices: `none` (default), `json`, `sqlite`.
-*   **`--persistence-path`** (`str`): Path to the persistence file (e.g., `server_data.json` or `server_data.db`).
+*   **`--persistence-path`** (`str`): Path to the persistence file (e.g., `server_data.json` or `server_data.db`). If the file does not exist, it will be created automatically on first use. If the directory does not exist or is not writable, the server will fail to start.
 
 ## Utility Functions
 

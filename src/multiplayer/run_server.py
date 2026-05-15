@@ -64,6 +64,25 @@ def main():
         else:
             print(f"Warning: Could not find both a certificate and a key in {args.tls_cert_dir}. Falling back to other options.")
 
+    if args.persistence_path:
+        persistence_path = os.path.abspath(args.persistence_path)
+        if os.path.isdir(persistence_path):
+            print(f"Error: Persistence path '{args.persistence_path}' is a directory.")
+            sys.exit(1)
+        
+        parent_dir = os.path.dirname(persistence_path)
+        if not os.path.exists(parent_dir):
+            print(f"Error: Parent directory '{parent_dir}' does not exist.")
+            sys.exit(1)
+        
+        if not os.access(parent_dir, os.W_OK):
+            print(f"Error: Parent directory '{parent_dir}' is not writable.")
+            sys.exit(1)
+        
+        if os.path.exists(persistence_path) and not os.access(persistence_path, os.W_OK):
+            print(f"Error: Persistence file '{args.persistence_path}' is not writable.")
+            sys.exit(1)
+
     server = GameServer(
         host=args.host,
         port=args.port,
@@ -90,6 +109,9 @@ def main():
         while True:
             time.sleep(1)
             if server._server_process and not server._server_process.is_alive():
+                if server._server_process.exitcode != 0:
+                    print(f"Server process exited with code {server._server_process.exitcode}")
+                    sys.exit(server._server_process.exitcode)
                 break
     except KeyboardInterrupt:
         print("\nStopping server...")
@@ -97,3 +119,5 @@ def main():
     except EOFError:
         print("\nStopping server...")
         server.stop()
+if __name__ == "__main__":
+    main()

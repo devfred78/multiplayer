@@ -139,17 +139,21 @@ class SQLiteDataStore(DataStore):
         self._init_db()
 
     def _init_db(self):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute('''CREATE TABLE IF NOT EXISTS persistent_players 
-                          (name TEXT PRIMARY KEY, password TEXT, role TEXT, managed_groups TEXT, attributes TEXT)''')
-        cursor.execute('''CREATE TABLE IF NOT EXISTS games 
-                          (id TEXT PRIMARY KEY, name TEXT, state TEXT, attributes TEXT, max_players INTEGER, 
-                           max_observers INTEGER, turn_based INTEGER, password TEXT, observer_password TEXT, custom_state TEXT)''')
-        cursor.execute('''CREATE TABLE IF NOT EXISTS groups 
-                          (name TEXT PRIMARY KEY, attributes TEXT, game_ids TEXT)''')
-        conn.commit()
-        conn.close()
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute('''CREATE TABLE IF NOT EXISTS persistent_players 
+                              (name TEXT PRIMARY KEY, password TEXT, role TEXT, managed_groups TEXT, attributes TEXT)''')
+            cursor.execute('''CREATE TABLE IF NOT EXISTS games 
+                              (id TEXT PRIMARY KEY, name TEXT, state TEXT, attributes TEXT, max_players INTEGER, 
+                               max_observers INTEGER, turn_based INTEGER, password TEXT, observer_password TEXT, custom_state TEXT)''')
+            cursor.execute('''CREATE TABLE IF NOT EXISTS groups 
+                              (name TEXT PRIMARY KEY, attributes TEXT, game_ids TEXT)''')
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            self.logger.error(f"Failed to initialize SQLite database at {self.db_path}: {e}")
+            raise
 
     def load(self):
         try:

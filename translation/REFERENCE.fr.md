@@ -355,7 +355,7 @@ Démarre un serveur de jeu autonome.
 *   **`--name`** (`str`) : Nom lisible par l'homme pour l'instance du serveur.
 *   **`--hidden`** : Cache le serveur de la découverte réseau.
 *   **`--persistence`** (`str`) : Type de persistance pour les joueurs et les parties. Choix : `none` (par défaut), `json`, `sqlite`.
-*   **`--persistence-path`** (`str`) : Chemin vers le fichier de persistance (ex: `server_data.json` ou `server_data.db`).
+*   **`--persistence-path`** (`str`) : Chemin vers le fichier de persistance (ex: `server_data.json` ou `server_data.db`). Si le fichier n'existe pas, il sera créé automatiquement lors de la première utilisation. Si le répertoire n'existe pas ou n'est pas accessible en écriture, le serveur ne démarrera pas.
 
 ## Fonctions Utilitaires
 

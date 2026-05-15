@@ -81,7 +81,7 @@ game2 = Game("Match 2")
 group.add_game(game1)
 group.add_game(game2)
 
-print(f"ID del Match 1: {game1.ID}")
+print(f"ID del Match 1: {game1.game_id}")
 # > ID del Match 1: 550e8400-e29b-41d4-a716-446655440000
 
 print(f"El grupo '{group.name}' tiene {len(group.games)} juegos.")
@@ -177,11 +177,7 @@ admin = ServerAdmin(
 
 # Gestionar el servidor
 info = admin.get_server_info()
-print(f"Partidas activas: {info['games_count']}")
-
-# Verificar la expiración del certificado
-expiration = admin.get_cert_expiration()
-print(f"El certificado expira el: {expiration}")
+print(f"Uptime: {info['uptime']} segundos")
 
 # Expulsar a un jugador si es necesario
 # admin.kick_player(game_id, player_id)
@@ -212,12 +208,12 @@ else:
         name=suggest_game_name(),
         password="mi_contraseña_de_partida"
     )
-    print(f"Partida creada con ID: {private_game.ID}")
+    print(f"Partida creada con ID: {private_game.game_id}")
 
     # 3. Crear y usar un grupo de juegos
     group = client.create_group("Torneo A")
     game_in_group = group.create_game(name="Match Final")
-    print(f"La partida en el grupo '{group.name}' tiene el ID: {game_in_group.ID}")
+    print(f"La partida en el grupo '{group.name}' tiene el ID: {game_in_group.game_id}")
 
     # 4. Un jugador se une y establece el estado inicial
     private_game.add_player(Player("Charlie"), password="mi_contraseña_de_partida")

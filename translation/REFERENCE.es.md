@@ -180,7 +180,8 @@ El punto de entrada principal para que un cliente se conecte a un `GameServer`.
     *   **Devuelve**: Un objeto proxy `RemoteGame`.
 *   `list_games()`: Devuelve todos los juegos activos (estado diferente de `GameState.FINISHED`).
     *   **Devuelve**: Un `dict` donde las claves son IDs de juegos (`str`) y los valores son diccionarios que contienen las propiedades del juego:
-        *   `name` (`str`): El nombre de la sesión de jeu.
+        *   `game_id` (`str`): El ID único de la sesión de juego.
+        *   `name` (`str`): El nombre de la sesión de juego.
         *   `state` (`GameState`): El estado actual del juego (por ejemplo, `GameState.PENDING`, `GameState.IN_PROGRESS`).
         *   `attributes` (`dict`): Atributos personalizados del juego.
         *   `players_count` (`int`): Número de jugadores actualmente en el juego.
@@ -198,6 +199,8 @@ El punto de entrada principal para que un cliente se conecte a un `GameServer`.
         *   `player_id` (`str`): El ID único de la cuenta.
         *   `name` (`str`): El nombre de la cuenta.
         *   `role` (`PlayerRole`): El rol asignado.
+        *   `attributes` (`dict`): Los atributos personalizados del jugador.
+        *   `managed_groups` (`list`): Lista de IDs de grupos que el jugador puede gestionar.
 *   `get_server_admin()`: Devuelve una instancia de `ServerAdmin` utilizando las credenciales actuales del cliente.
     *   **Error**: `AuthenticationError` si el cliente no está autenticado con una cuenta persistente o no tiene permisos de `SERVER_ADMIN`.
 *   `get_group_admin(group_id)`: Devuelve una instancia de `GroupAdmin` para el grupo especificado utilizando las credenciales actuales del cliente.
@@ -299,12 +302,13 @@ Un objeto proxy que representa un grupo de juegos que se ejecuta en el servidor.
 ### `RemoteGame`
 Un objeto proxy que representa un juego que se ejecuta en el servidor.
 
-*Normalmente no se crea este objeto directamente, sino que se obtiene de `client.create_game()`.*
+*Normalmente no se crea este objeto directamente, sino que se obtiene de `client.create_game()` o `client.register_remote_game()`.*
 
 #### Métodos
 *   `add_player(player, password=None)`: Añade un `Player` o un `PersistentPlayer` al juego remoto. Se requiere la contraseña si el juego está protegido por contraseña. Si el jugador es un `PersistentPlayer`, los atributos proporcionados en el objeto `player` se fusionarán con los atributos globales de la cuenta para esta sesión de juego.
 *   `add_observer(observer, password=None)`: Añade un `Observer` o un `PersistentPlayer` al juego remoto. Se requiere la contraseña si `observer_password` (o `password`) está configurado para el juego. Si el observador es un `PersistentPlayer`, los atributos proporcionados en el objeto `observer` se fusionarán con los atributos globales de la cuenta para esta sesión de juego.
 *   `set_state(new_state)`: Sobrescribe el diccionario `custom_state` del juego en el servidor.
+*   `configure_logging(host, port, name=None)`: Configura el proxy del juego remoto para enviar registros a un servidor de registros remoto.
 *   (Otros métodos son iguales a los de la clase `Game` local).
 
 #### Propiedades
@@ -471,7 +475,7 @@ admin = client.get_server_admin()
 group = admin.create_group("Torneo A")
 remote_game = group.create_game(name="Partido Final", max_players=2)
 
-print(f"Juego '{remote_game.game_id}' creado en el grupo '{group.group_id}'")
+print(f"Juego creado con ID: {remote_game.game_id}")
 ```
 
 ### 4. Juego por Turnos con Observadores

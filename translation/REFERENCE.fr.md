@@ -179,25 +179,28 @@ Le point d'entrÃ©e principal pour qu'un client se connecte Ã  un `GameServer
         *   Tout autre argument nommÃ© sera stockÃ© en tant qu'attribut personnalisÃ© dans la propriÃ©tÃ© `attributes` de la partie.
     *   **Retourne** : Un objet proxy `RemoteGame`.
 *   `list_games()` : Retourne toutes les parties actives (statut diffÃ©rent de `GameState.FINISHED`).
-    *   **Retourne** : Un `dict` oÃ¹ les clÃ©s sont les IDs de partie (`str`) et les valeurs sont des dictionnaires contenant les propriÃ©tÃ©s de la partie :
+    *   **Retourne** : Un `dict` où les clés sont les IDs de partie (`str`) et les valeurs sont des dictionnaires contenant les propriétés de la partie :
+        *   `game_id` (`str`) : L'ID unique de la session de jeu.
         *   `name` (`str`) : Le nom de la session de jeu.
-        *   `state` (`GameState`) : L'Ã©tat actuel de la partie (par exemple, `GameState.PENDING`, `GameState.IN_PROGRESS`).
-        *   `attributes` (`dict`) : Attributs personnalisÃ©s de la partie.
+        *   `state` (`GameState`) : L'état actuel de la partie (par exemple, `GameState.PENDING`, `GameState.IN_PROGRESS`).
+        *   `attributes` (`dict`) : Attributs personnalisés de la partie.
         *   `players_count` (`int`) : Nombre de joueurs actuellement dans la partie.
-        *   `max_players` (`int`) : Nombre maximum de joueurs autorisÃ©s.
+        *   `max_players` (`int`) : Nombre maximum de joueurs autorisés.
         *   `observers_count` (`int`) : Nombre d'observateurs actuellement dans la partie.
-        *   `max_observers` (`int`) : Nombre maximum d'observateurs autorisÃ©s.
-        *   `custom_state` (`dict`) : L'Ã©tat personnalisÃ© de la partie.
+        *   `max_observers` (`int`) : Nombre maximum d'observateurs autorisés.
+        *   `custom_state` (`dict`) : L'état personnalisé de la partie.
 *   `create_group(name, admin_password=None, **attributes)` : Demande au serveur la crÃ©ation d'un nouveau groupe de jeux.
     *   **Retourne** : Un objet proxy `RemoteGroup`.
 *   `list_groups()` : Retourne tous les groupes de jeux sur le serveur.
     *   **Retourne** : Un `dict` oÃ¹ les clÃ©s sont les IDs de groupe (`str`) et les valeurs sont des objets `RemoteGroup`.
 *   `create_account(name, password, role=PlayerRole.PLAYER, managed_groups=None, **attributes)` : CrÃ©e un compte joueur persistant sur le serveur.
     *   **Erreur** : `UserAlreadyExistsError` si un compte avec le mÃªme nom existe dÃ©jÃ .
-    *   **Retourne** : Un `dict` reprÃ©sentant les donnÃ©es du joueur crÃ©Ã© :
+    *   **Retourne** : Un `dict` représentant les données du joueur créé :
         *   `player_id` (`str`) : L'ID unique du compte.
         *   `name` (`str`) : Le nom du compte.
-        *   `role` (`PlayerRole`) : Le rÃ´le assignÃ©.
+        *   `role` (`PlayerRole`) : Le rôle assigné.
+        *   `attributes` (`dict`) : Les attributs personnalisés du joueur.
+        *   `managed_groups` (`list`) : Liste des IDs de groupes que le joueur peut gérer.
 *   `get_server_admin()` : Retourne une instance de `ServerAdmin` utilisant les identifiants actuels du client.
     *   **Erreur** : `AuthenticationError` si le client n'est pas authentifiÃ© avec un compte persistant ou n'a pas les droits `SERVER_ADMIN`.
 *   `get_group_admin(group_id)` : Retourne une instance de `GroupAdmin` pour le groupe spÃ©cifiÃ© utilisant les identifiants actuels du client.
@@ -297,15 +300,16 @@ Un objet proxy reprÃ©sentant un groupe de jeux en cours d'exÃ©cution sur le 
 ---
 
 ### `RemoteGame`
-Un objet proxy reprÃ©sentant une partie en cours d'exÃ©cution sur le serveur.
+Un objet proxy représentant une partie en cours d'exécution sur le serveur.
 
-*Vous ne crÃ©ez gÃ©nÃ©ralement pas cet objet directement, mais vous l'obtenez via `client.create_game()`.*
+*Vous ne créez généralement pas cet objet directement, mais vous l'obtenez via `client.create_game()` ou `client.register_remote_game()`.*
 
-#### MÃ©thodes
-*   `add_player(player, password=None)` : Ajoute un `Player` ou un `PersistentPlayer` Ã  la partie distante. Le mot de passe est requis si la partie est protÃ©gÃ©e. Si le joueur est un `PersistentPlayer`, les attributs fournis dans l'objet `player` seront fusionnÃ©s avec les attributs globaux du compte pour cette session de jeu.
-*   `add_observer(observer, password=None)` : Ajoute un `Observer` ou un `PersistentPlayer` Ã  la partie distante. Le mot de passe est requis si `observer_password` (ou `password`) est dÃ©fini pour la partie. Si l'observateur est un `PersistentPlayer`, les attributs fournis dans l'objet `observer` seront fusionnÃ©s avec les attributs globaux du compte pour cette session de jeu.
-*   `set_state(new_state)` : Ã‰crase le dictionnaire `custom_state` de la partie sur le serveur.
-*   (Les autres mÃ©thodes sont identiques Ã  la classe `Game` locale.)
+#### Méthodes
+*   `add_player(player, password=None)` : Ajoute un `Player` ou un `PersistentPlayer` à la partie distante. Le mot de passe est requis si la partie est protégée. Si le joueur est un `PersistentPlayer`, les attributs fournis dans l'objet `player` seront fusionnés avec les attributs globaux du compte pour cette session de jeu.
+*   `add_observer(observer, password=None)` : Ajoute un `Observer` ou un `PersistentPlayer` à la partie distante. Le mot de passe est requis si `observer_password` (ou `password`) est défini pour la partie. Si l'observateur est un `PersistentPlayer`, les attributs fournis dans l'objet `observer` seront fusionnés avec les attributs globaux du compte pour cette session de jeu.
+*   `set_state(new_state)` : Écrase le dictionnaire `custom_state` de la partie sur le serveur.
+*   `configure_logging(host, port, name=None)` : Configure le proxy de jeu distant pour envoyer des logs à un serveur de logging distant.
+*   (Les autres méthodes sont identiques à la classe `Game` locale.)
 
 #### PropriÃ©tÃ©s
 *   **`state`** : Retourne l'Ã©tat actuel de la partie distante.
@@ -472,7 +476,7 @@ admin = client.get_server_admin()
 group = admin.create_group("Tournoi A")
 remote_game = group.create_game(name="Match Final", max_players=2)
 
-print(f"Partie '{remote_game.game_id}' crÃ©Ã©e dans le groupe '{group.group_id}'")
+print(f"Partie créée avec l'ID : {remote_game.game_id}")
 ```
 
 ### 4. Jeu au tour par tour avec observateurs

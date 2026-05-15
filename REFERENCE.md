@@ -180,6 +180,7 @@ The main entry point for a client to connect to a `GameServer`.
     *   **Returns**: A `RemoteGame` proxy object.
 *   `list_games()`: Returns all active games (status different from `GameState.FINISHED`).
     *   **Returns**: A `dict` where keys are game IDs (`str`) and values are dictionaries containing game properties:
+        *   `game_id` (`str`): The unique ID of the game session.
         *   `name` (`str`): The name of the game session.
         *   `state` (`GameState`): The current state of the game (e.g., `GameState.PENDING`, `GameState.IN_PROGRESS`).
         *   `attributes` (`dict`): Custom attributes of the game.
@@ -198,6 +199,8 @@ The main entry point for a client to connect to a `GameServer`.
         *   `player_id` (`str`): The unique ID of the account.
         *   `name` (`str`): The account name.
         *   `role` (`PlayerRole`): The assigned role.
+        *   `attributes` (`dict`): The custom attributes of the player.
+        *   `managed_groups` (`list`): List of group IDs the player can manage.
 *   `get_server_admin()`: Returns a `ServerAdmin` instance using the client's current credentials.
     *   **Raises**: `AuthenticationError` if the client is not authenticated with a persistent account or does not have `SERVER_ADMIN` permissions.
 *   `get_group_admin(group_id)`: Returns a `GroupAdmin` instance for the specified group using the client's current credentials.
@@ -299,12 +302,13 @@ A proxy object representing a game group running on the server.
 ### `RemoteGame`
 A proxy object representing a game running on the server.
 
-*You typically do not create this object directly, but get it from `client.create_game()`.*
+*You typically do not create this object directly, but get it from `client.create_game()` or `client.register_remote_game()`.*
 
 #### Methods
 *   `add_player(player, password=None)`: Adds a `Player` to the remote game. The `password` is required if the game is password-protected. If the player is a `PersistentPlayer`, the attributes provided in the `player` object will be merged with the global attributes of the account for this game session.
 *   `add_observer(observer, password=None)`: Adds an `Observer` to the remote game. The `password` is required if `observer_password` (or `password`) is set for the game. If the observer is a `PersistentPlayer`, the attributes provided in the `observer` object will be merged with the global attributes of the account for this game session.
 *   `set_state(new_state)`: Overwrites the game's `custom_state` dictionary on the server.
+*   `configure_logging(host, port, name=None)`: Configures the remote game proxy to send logs to a remote logging server.
 *   (Other methods are the same as the local `Game` class.)
 
 #### Properties

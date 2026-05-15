@@ -81,7 +81,7 @@ game2 = Game("Match 2")
 group.add_game(game1)
 group.add_game(game2)
 
-print(f"ID du Match 1 : {game1.ID}")
+print(f"ID du Match 1 : {game1.game_id}")
 # > ID du Match 1 : 550e8400-e29b-41d4-a716-446655440000
 
 print(f"Le groupe '{group.name}' contient {len(group.games)} parties.")
@@ -177,11 +177,7 @@ admin = ServerAdmin(
 
 # Gérer le serveur
 info = admin.get_server_info()
-print(f"Parties actives : {info['games_count']}")
-
-# Vérifier l'expiration du certificat
-expiration = admin.get_cert_expiration()
-print(f"Le certificat expire le : {expiration}")
+print(f"Uptime : {info['uptime']} secondes")
 
 # Expulser un joueur si nécessaire
 # admin.kick_player(game_id, player_id)
@@ -212,12 +208,12 @@ else:
         name=suggest_game_name(),
         password="mon_mot_de_passe_partie"
     )
-    print(f"Partie créée avec l'ID : {private_game.ID}")
+    print(f"Partie créée avec l'ID : {private_game.game_id}")
 
     # 3. Créer et utiliser un groupe de jeux
     group = client.create_group("Tournoi A")
     game_in_group = group.create_game(name="Match Final")
-    print(f"La partie dans le groupe '{group.name}' a l'ID : {game_in_group.ID}")
+    print(f"La partie dans le groupe '{group.name}' a l'ID : {game_in_group.game_id}")
 
     # 4. Un joueur rejoint et définit l'état initial
     private_game.add_player(Player("Charlie"), password="mon_mot_de_passe_partie")
@@ -295,3 +291,4 @@ Ensuite, vous pouvez lancer les tests depuis la racine du projet :
 ```sh
 pytest
 ```
+                                                                                                                                      

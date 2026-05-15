@@ -188,7 +188,6 @@ Le point d'entrée principal pour qu'un client se connecte à un `GameServer`.
         *   `observers_count` (`int`) : Nombre d'observateurs actuellement dans la partie.
         *   `max_observers` (`int`) : Nombre maximum d'observateurs autorisés.
         *   `custom_state` (`dict`) : L'état personnalisé de la partie.
-        *   `include_finished` (`bool`, optionnel) : Si `True`, retourne également les parties dans l'état `GameState.FINISHED`. Disponible uniquement pour les actions nécessitant des permissions élevées.
 *   `create_group(name, admin_password=None, **attributes)` : Demande au serveur la création d'un nouveau groupe de jeux.
     *   **Retourne** : Un objet proxy `RemoteGroup`.
 *   `list_groups()` : Retourne tous les groupes de jeux sur le serveur.

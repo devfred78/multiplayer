@@ -188,7 +188,6 @@ The main entry point for a client to connect to a `GameServer`.
         *   `observers_count` (`int`): Number of observers currently in the game.
         *   `max_observers` (`int`): Maximum number of observers allowed.
         *   `custom_state` (`dict`): The game's custom state.
-        *   `include_finished` (`bool`, optional): If `True`, also returns games in the `GameState.FINISHED` state. Only available for actions requiring higher permissions.
 *   `create_group(name, admin_password=None, **attributes)`: Requests the server to create a new game group.
     *   **Returns**: A `RemoteGroup` proxy object.
 *   `list_groups()`: Returns all game groups on the server.

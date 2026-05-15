@@ -22,7 +22,7 @@ For a detailed technical description of all classes and functions, see the [API 
 *   **Multi-Layered Security:** Supports server passwords, admin passwords, and per-game passwords, with optional TLS v1.3 encryption. Passwords can be updated dynamically by administrators.
 *   **Automatic Server Discovery:** Clients can automatically find running servers on the local network.
 *   **Extensible Name Suggestions:** Includes a utility function to suggest creative names for games and players.
-*   **Multiple Games:** The server can manage multiple game sessions simultaneously, and the game list is now filtered to hide finished games.
+*   **Multiple Games:** The server can manage multiple game sessions simultaneously. By default, the game list for standard clients is filtered to hide finished games, but administrators can access all sessions.
 *   **Robust Error Handling:** A clear set of custom exceptions for both game logic and network issues.
 *   **Persistent Player Accounts:** Ability for players to create an account with a password for repeated use across the server.
 

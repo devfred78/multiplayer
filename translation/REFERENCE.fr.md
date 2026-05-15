@@ -188,6 +188,7 @@ Le point d'entrée principal pour qu'un client se connecte à un `GameServer`.
         *   `observers_count` (`int`) : Nombre d'observateurs actuellement dans la partie.
         *   `max_observers` (`int`) : Nombre maximum d'observateurs autorisés.
         *   `custom_state` (`dict`) : L'état personnalisé de la partie.
+        *   `include_finished` (`bool`, optionnel) : Si `True`, retourne également les parties dans l'état `GameState.FINISHED`. Disponible uniquement pour les actions nécessitant des permissions élevées.
 *   `create_group(name, admin_password=None, **attributes)` : Demande au serveur la création d'un nouveau groupe de jeux.
     *   **Retourne** : Un objet proxy `RemoteGroup`.
 *   `list_groups()` : Retourne tous les groupes de jeux sur le serveur.
@@ -219,6 +220,8 @@ Une classe client pour les administrateurs pour gérer un `GameServer` (hérite 
 
 #### Méthodes
 *   Toutes les méthodes de `GameClient`.
+*   `list_games()` : Récupère un dictionnaire de toutes les parties (même celles avec `GameState.FINISHED`) organisé par ID.
+    *   **Retourne** : Un `dict` avec le même format que `GameClient.list_games()`.
 *   `get_server_info()` : Retourne des informations sur le serveur.
     *   **Retourne** : Un `dict` avec les clés suivantes :
         *   `server_name` (`str`) : Le nom assigné au serveur.
@@ -277,7 +280,7 @@ Un objet proxy représentant un groupe de jeux en cours d'exécution sur le serv
 #### Méthodes
 *   `create_game(**game_options)` : Crée une nouvelle partie au sein de ce groupe. Supporte les mêmes `game_options` que `GameClient.create_game()`.
     *   **Retourne** : Un objet proxy `RemoteGame`.
-*   `list_games()` : Retourne toutes les parties appartenant à ce groupe.
+*   `list_games()` : Retourne toutes les parties, y compris celles dans l'état `GameState.FINISHED`.
     *   **Retourne** : Un `dict` où les clés sont les IDs de partie (`str`) et les valeurs sont des dictionnaires contenant les propriétés de la partie (même format que `GameClient.list_games()`).
 
 #### Propriétés

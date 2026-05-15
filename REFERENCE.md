@@ -188,6 +188,7 @@ The main entry point for a client to connect to a `GameServer`.
         *   `observers_count` (`int`): Number of observers currently in the game.
         *   `max_observers` (`int`): Maximum number of observers allowed.
         *   `custom_state` (`dict`): The game's custom state.
+        *   `include_finished` (`bool`, optional): If `True`, also returns games in the `GameState.FINISHED` state. Only available for actions requiring higher permissions.
 *   `create_group(name, admin_password=None, **attributes)`: Requests the server to create a new game group.
     *   **Returns**: A `RemoteGroup` proxy object.
 *   `list_groups()`: Returns all game groups on the server.
@@ -219,6 +220,8 @@ A client class for administrators to manage a `GameServer` (inherits from `GameC
 
 #### Methods
 *   All methods from `GameClient`.
+*   `list_games()`: Retrieves a dictionary of all games (even those with `GameState.FINISHED`) organized by ID.
+    *   **Returns**: A `dict` with the same format as `GameClient.list_games()`.
 *   `get_server_info()`: Returns information about the server.
     *   **Returns**: A `dict` with the following keys:
         *   `server_name` (`str`): The name assigned to the server.
@@ -277,7 +280,7 @@ A proxy object representing a game group running on the server.
 #### Methods
 *   `create_game(**game_options)`: Creates a new game within this group. Supports the same `game_options` as `GameClient.create_game()`.
     *   **Returns**: A `RemoteGame` proxy object.
-*   `list_games()`: Returns all games belonging to this group.
+*   `list_games()`: Returns all games, including those in the `GameState.FINISHED` state.
     *   **Returns**: A `dict` where keys are game IDs (`str`) and values are dictionaries containing game properties (same format as `GameClient.list_games()`).
 
 #### Properties

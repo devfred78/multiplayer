@@ -538,9 +538,10 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             }
 
         elif action == 'list_games':
+            include_finished = params.get('include_finished', False)
             game_list = {}
             for gid, g in games.items():
-                if g.state != GameState.FINISHED:
+                if include_finished or g.state != GameState.FINISHED:
                     game_list[gid] = {
                         'name': g.name,
                         'state': g.state,

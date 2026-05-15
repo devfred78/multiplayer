@@ -22,7 +22,7 @@ Pour une description technique détaillée de toutes les classes et fonctions, c
 *   **Sécurité à Plusieurs Niveaux :** Supporte les mots de passe serveur, administrateur et par partie, avec un chiffrement TLS v1.3 optionnel. Les mots de passe peuvent être mis à jour dynamiquement par les administrateurs.
 *   **Découverte Automatique de Serveurs :** Les clients peuvent trouver automatiquement les serveurs en cours d'exécution sur le réseau local.
 *   **Suggestions de Noms Extensibles :** Inclut une fonction utilitaire pour suggérer des noms créatifs pour les parties et les joueurs.
-*   **Parties Multiples :** Le serveur peut gérer plusieurs sessions de jeu simultanément, et la liste des parties est maintenant filtrée pour cacher les parties terminées.
+*   **Parties Multiples :** Le serveur peut gérer plusieurs sessions de jeu simultanément. Par défaut, la liste des parties pour les clients standards est filtrée pour cacher les parties terminées, mais les administrateurs peuvent accéder à toutes les sessions.
 *   **Gestion Robuste des Erreurs :** Un ensemble clair d'exceptions personnalisées pour la logique de jeu et les problèmes réseau.
 *   **Comptes Joueurs Persistants :** Possibilité pour les joueurs de créer un compte avec un mot de passe pour une utilisation répétée sur le serveur.
 

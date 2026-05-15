@@ -220,7 +220,7 @@ Una clase de cliente para que los administradores gestionen un `GameServer` (her
 
 #### Métodos
 *   Todos los métodos de `GameClient`.
-*   `list_games()`: Recupera un diccionario de todos los juegos (incluso aquellos con `GameState.FINISHED`) organizado por ID.
+*   `list_all_server_games()`: Recupera un diccionario de todos los juegos en el servidor (incluidos aquellos con `GameState.FINISHED`) organizado por ID.
     *   **Devuelve**: Un `dict` con el mismo formato que `GameClient.list_games()`.
 *   `get_server_info()`: Devuelve información sobre el servidor.
     *   **Devuelve**: Un `dict` con las siguientes claves:
@@ -266,7 +266,9 @@ Una clase de cliente para que los administradores de grupo gestionen juegos dent
 
 #### Métodos
 *   Todos los métodos de `GameClient`.
-*   `kick_player(game_id, player_id)`: Elimina a un jugador de un juego específico en the grupo por su ID.
+*   `list_all_group_games()`: Recupera un diccionario de todos los juegos pertenecientes a este grupo (incluidos aquellos con `GameState.FINISHED`) organizado por ID.
+    *   **Devuelve**: Un `dict` con el mismo formato que `GameClient.list_games()`.
+*   `kick_player(game_id, player_id)`: Elimina a un jugador de un juego específico en el grupo por su ID.
 *   `kick_observer(game_id, observer_id)`: Elimina a un observador de un juego específico en el grupo por su ID.
 *   `set_group_admin_password(new_password)`: Establece una nueva contraseña de administrador para este grupo.
 
@@ -280,8 +282,8 @@ Un objeto proxy que representa un grupo de juegos que se ejecuta en el servidor.
 #### Métodos
 *   `create_game(**game_options)`: Crea un nuevo juego dentro de este grupo. Soporta las mismas `game_options` que `GameClient.create_game()`.
     *   **Devuelve**: Un objeto proxy `RemoteGame`.
-*   `list_games()`: Devuelve todos los juegos, incluidos aquellos en el estado `GameState.FINISHED`.
-    *   **Devuelve**: Un `dict` donde las claves son IDs de juegos (`str`) y los valores son diccionarios que contienen las propiedades del juego (mismo formato que `GameClient.list_games()`).
+*   `list_games()`: Devuelve los juegos activos pertenecientes a este grupo (estado diferente de `GameState.FINISHED`).
+    *   **Devuelve**: Un `dict` donde las claves sont IDs de juegos (`str`) y los valores son diccionarios que contienen las propiedades del juego (mismo formato que `GameClient.list_games()`).
 
 #### Propiedades
 *   **`group_id`**: El ID único del grupo.

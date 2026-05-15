@@ -496,6 +496,7 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
 
         elif action == 'list_group_games':
             group_id = params.get('group_id')
+            include_finished = params.get('include_finished', False)
             group = None
             for g in groups.values():
                 if g.ID == group_id:
@@ -506,7 +507,7 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             # We need to find the GIDs for the games in the group
             group_games = {}
             for gid, g in games.items():
-                if g in group.games and g.state != GameState.FINISHED:
+                if g in group.games and (include_finished or g.state != GameState.FINISHED):
                     group_games[gid] = {
                         'name': g.name,
                         'state': g.state,

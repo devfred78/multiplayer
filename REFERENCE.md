@@ -220,7 +220,7 @@ A client class for administrators to manage a `GameServer` (inherits from `GameC
 
 #### Methods
 *   All methods from `GameClient`.
-*   `list_games()`: Retrieves a dictionary of all games (even those with `GameState.FINISHED`) organized by ID.
+*   `list_all_server_games()`: Retrieves a dictionary of all games on the server (including those with `GameState.FINISHED`) organized by ID.
     *   **Returns**: A `dict` with the same format as `GameClient.list_games()`.
 *   `get_server_info()`: Returns information about the server.
     *   **Returns**: A `dict` with the following keys:
@@ -266,6 +266,8 @@ A client class for group administrators to manage games within a specific `GameG
 
 #### Methods
 *   All methods from `GameClient`.
+*   `list_all_group_games()`: Retrieves a dictionary of all games belonging to this group (including those with `GameState.FINISHED`) organized by ID.
+    *   **Returns**: A `dict` with the same format as `GameClient.list_games()`.
 *   `kick_player(game_id, player_id)`: Removes a player from a specific game in the group by their ID.
 *   `kick_observer(game_id, observer_id)`: Removes an observer from a specific game in the group by their ID.
 *   `set_group_admin_password(new_password)`: Sets a new administrator password for this group.
@@ -280,7 +282,7 @@ A proxy object representing a game group running on the server.
 #### Methods
 *   `create_game(**game_options)`: Creates a new game within this group. Supports the same `game_options` as `GameClient.create_game()`.
     *   **Returns**: A `RemoteGame` proxy object.
-*   `list_games()`: Returns all games, including those in the `GameState.FINISHED` state.
+*   `list_games()`: Returns active games belonging to this group (status different from `GameState.FINISHED`).
     *   **Returns**: A `dict` where keys are game IDs (`str`) and values are dictionaries containing game properties (same format as `GameClient.list_games()`).
 
 #### Properties
@@ -545,14 +547,4 @@ try:
     while True:
         time.sleep(1)
 except KeyboardInterrupt:
-    print("Stopping server...")
-finally:
-    # Gracefully stop the server
-    server.stop()
-```
-                                                                    Virus Database File
-Version: 8.21.0.64
-FUP: 0
-License date: 12.5.2026
-VDF date: 12.5.2026
-Mi
+    print("

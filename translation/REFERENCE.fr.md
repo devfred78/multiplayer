@@ -220,7 +220,7 @@ Une classe client pour les administrateurs pour gérer un `GameServer` (hérite 
 
 #### Méthodes
 *   Toutes les méthodes de `GameClient`.
-*   `list_games()` : Récupère un dictionnaire de toutes les parties (même celles avec `GameState.FINISHED`) organisé par ID.
+*   `list_all_server_games()` : Récupère un dictionnaire de toutes les parties sur le serveur (y compris celles avec `GameState.FINISHED`) organisé par ID.
     *   **Retourne** : Un `dict` avec le même format que `GameClient.list_games()`.
 *   `get_server_info()` : Retourne des informations sur le serveur.
     *   **Retourne** : Un `dict` avec les clés suivantes :
@@ -266,6 +266,8 @@ Une classe cliente pour que les administrateurs de groupe gèrent les parties au
 
 #### Méthodes
 *   Toutes les méthodes de `GameClient`.
+*   `list_all_group_games()` : Récupère un dictionnaire de toutes les parties appartenant à ce groupe (y compris celles avec `GameState.FINISHED`) organisé par ID.
+    *   **Retourne** : Un `dict` avec le même format que `GameClient.list_games()`.
 *   `kick_player(game_id, player_id)` : Retire un joueur d'une partie spécifique dans le groupe par son ID.
 *   `kick_observer(game_id, observer_id)` : Retire un observateur d'une partie spécifique dans le groupe par son ID.
 *   `set_group_admin_password(new_password)` : Définit un nouveau mot de passe administrateur pour ce groupe.
@@ -280,7 +282,7 @@ Un objet proxy représentant un groupe de jeux en cours d'exécution sur le serv
 #### Méthodes
 *   `create_game(**game_options)` : Crée une nouvelle partie au sein de ce groupe. Supporte les mêmes `game_options` que `GameClient.create_game()`.
     *   **Retourne** : Un objet proxy `RemoteGame`.
-*   `list_games()` : Retourne toutes les parties, y compris celles dans l'état `GameState.FINISHED`.
+*   `list_games()` : Retourne les parties actives appartenant à ce groupe (état différent de `GameState.FINISHED`).
     *   **Retourne** : Un `dict` où les clés sont les IDs de partie (`str`) et les valeurs sont des dictionnaires contenant les propriétés de la partie (même format que `GameClient.list_games()`).
 
 #### Propriétés

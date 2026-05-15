@@ -47,7 +47,7 @@ class TestPersistentPlayerRoles(unittest.TestCase):
         
         # Should be able to list players (server admin action)
         players = sa_admin.list_all_players()
-        self.assertIsInstance(players, list)
+        self.assertIsInstance(players, dict)
         
         # 3. Test Group Admin account
         ga_client = GameClient(self.host, self.port, auth_user="group_boss", auth_password="boss_pass")

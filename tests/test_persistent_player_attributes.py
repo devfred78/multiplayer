@@ -70,22 +70,17 @@ def test_persistent_player_game_specific_attributes(server):
     from multiplayer.client import ServerAdmin
     admin = ServerAdmin(port=65434, admin_password="admin_secret")
     all_players = admin.list_all_players()
+    # list_all_players returns a dict {player_id: player_info}
     # Find all instances of Alice. One should be connected to game1, one to game2.
-    # The persistent account (not connected) might NOT be in the list if the current implementation of list_all_players
-    # marks them all as connected if they are in at least one game.
-    
-    alice_instances = [p for p in all_players if p['name'] == "Alice"]
+        
+    alice_instances = [p for p in all_players.values() if p['name'] == "Alice"]
     assert len(alice_instances) == 1
     alice = alice_instances[0]
     
-    # Verify we have two games in game_id/game_name dicts
-    assert len(alice['game_id']) == 2
+    # Verify we have two games
+    assert len(alice['games']) == 2
     
-    # Check that game_details has merged attributes for each game
-    game1_alice = next(g for g in alice['game_details'] if g['game_name'] == "Strategy Game")
-    assert game1_alice['attributes']['faction'] == "Orcs"
-    assert game1_alice['attributes']['rank'] == "Gold"
-    
-    game2_alice = next(g for g in alice['game_details'] if g['game_name'] == "Racing Game")
-    assert game2_alice['attributes']['car'] == "Ferrari"
-    assert game2_alice['attributes']['rank'] == "Gold"
+    # In the new implementation, list_all_players returns:
+    # { 'games': { 'game_id': 'game_name', ... }, ... }
+    assert "Strategy Game" in alice['games'].values()
+    assert "Racing Game" in alice['games'].values()

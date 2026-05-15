@@ -645,7 +645,8 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             # (main thread + discovery thread). This is not perfect if other threads exist.
             # However, GameServer runs in a separate process, so it should be relatively accurate.
             connected_clients = threading.active_count() - 2
-            if connected_clients < 0: connected_clients = 0
+            if connected_clients < 0:
+                connected_clients = 0
 
             return {'status': 'success', 'data': {
                 'name': server_info.get('name'),

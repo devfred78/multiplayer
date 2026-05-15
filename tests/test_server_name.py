@@ -9,7 +9,7 @@ def test_server_name_initialization():
     try:
         admin = ServerAdmin(port=65447, admin_password="admin_secret")
         info = admin.get_server_info()
-        assert info.get('server_name') == server_name
+        assert info.get('name') == server_name
     finally:
         server.stop()
 

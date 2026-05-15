@@ -9,7 +9,7 @@ def test_admin_authentication_success():
     try:
         admin = ServerAdmin(port=65440, admin_password="admin_secret")
         info = admin.get_server_info()
-        assert 'games_count' in info
+        assert 'uptime' in info
     finally:
         server.stop()
 
@@ -70,14 +70,14 @@ def test_admin_restart_server():
         client.create_game(name="GameToClear")
         
         admin = ServerAdmin(port=65444, admin_password="admin_secret")
-        info = admin.get_server_info()
-        assert info['games_count'] == 1
+        games = admin.list_all_server_games()
+        assert len(games) == 1
         
         admin.restart_server()
         time.sleep(1) # Laisse le temps au thread de vider les jeux
         
-        info = admin.get_server_info()
-        assert info['games_count'] == 0
+        games = admin.list_all_server_games()
+        assert len(games) == 0
     finally:
         server.stop()
 
@@ -112,8 +112,8 @@ def test_admin_list_all_players():
     finally:
         server.stop()
 
-def test_admin_get_cert_expiration():
-    """Tests retrieving the TLS certificate expiration date."""
+def test_admin_get_server_info_tls():
+    """Tests retrieving server info including TLS data."""
     server = GameServer(
         port=65447, 
         admin_password="admin_secret", 
@@ -124,10 +124,11 @@ def test_admin_get_cert_expiration():
     time.sleep(1)
     try:
         admin = ServerAdmin(port=65447, admin_password="admin_secret", use_tls=True)
-        expiration = admin.get_cert_expiration()
+        info = admin.get_server_info()
+        assert info['use_tls'] is True
+        expiration = info['cert_expiration']
         assert expiration is not None
         # Should be a date string, e.g., "2027-04-26 12:00:00"
-        # We just check it's a non-empty string for now
         assert isinstance(expiration, str)
         assert len(expiration) > 10
     finally:

@@ -42,7 +42,7 @@ def test_admin_set_logging_config_init():
         # Check if server is running
         admin = ServerAdmin(port=65441, admin_password=admin_password)
         info = admin.get_server_info()
-        # get_server_info returns data, so if it succeeded, we got a dict with 'games_count'
-        assert 'games_count' in info
+        # get_server_info returns data
+        assert 'uptime' in info
     finally:
         server.stop()

@@ -361,34 +361,42 @@ Inicia un servidor de juegos autónomo.
 
 ### Sugerencias de Nombres
 
+El paquete proporciona funciones de utilidad para sugerir nombres para juegos y jugadores basados en varias categorías.
+
+#### Categorías para Juegos
+*   **`cities`**: Grandes ciudades del mundo.
+*   **`countries`**: Naciones soberanas.
+*   **`rivers`**: Ríos significativos del mundo.
+*   **`seas_oceans`**: Cuerpos principales de agua salada.
+*   **`planets_moons`**: Cuerpos celestes de nuestro sistema solar.
+
+#### Categorías para Jugadores
+*   **`roman_gods`**: Deidades de la mitología romana.
+*   **`greek_gods`**: Deidades de la mitología griega antigua.
+*   **`egyptian_gods`**: Deidades de la mitología egipcia antigua.
+*   **`european_kings`**: Monarcas europeos históricos (hombres).
+*   **`european_queens`**: Monarcas europeos históricos (mujeres).
+
 #### `register_name_category(category_name, data, category_type)`
 Registra una nueva categoría personalizada para sugerencias de nombres.
 
 *   **`category_name`** (`str`): El nombre de la nueva categoría.
-*   **`data`** (`list` o `str`): Una lista de nombres, o una ruta a un archivo de texto (un nombre por línea).
+*   **`data`** (`list`, `str` o `Path`): Una lista de nombres, o una ruta a un archivo de texto/CSV (un nombre por línea, o primera columna del CSV).
 *   **`category_type`** (`str`): `"game"` o `"player"`.
-
----
 
 #### `unregister_name_category(category_name)`
 Elimina una categoría personalizada. Devuelve `True` si tiene éxito.
-
----
 
 #### `get_available_categories(category_type="all")`
 Devuelve una lista de categorías de sugerencias de nombres disponibles.
 
 *   **`category_type`** (`str`): `"all"`, `"game"` o `"player"`.
 
----
-
 #### `suggest_game_name(category=None)`
-Sugiere un nombre aléatorio para un juego.
-
----
+Sugiere un nombre aleatorio para un juego. Si `category` es `None`, se utiliza una categoría aleatoria relacionada con el juego.
 
 #### `suggest_player_name(category=None)`
-Sugiere un nombre aléatorio para un jugador.
+Sugiere un nombre aleatorio para un jugador. Si `category` es `None`, se utiliza una categoría aleatoria relacionada con el jugador.
 
 ## Excepciones
 *   **MultiplayerError**: Excepción base para todos los errores específicos del módulo.

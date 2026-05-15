@@ -361,34 +361,42 @@ Starts a standalone game server.
 
 ### Name Suggestions
 
+The package provides utility functions to suggest names for games and players based on various categories.
+
+#### Categories for Games
+*   **`cities`**: Major world cities.
+*   **`countries`**: Sovereign nations.
+*   **`rivers`**: Significant world rivers.
+*   **`seas_oceans`**: Major bodies of salt water.
+*   **`planets_moons`**: Celestial bodies from our solar system.
+
+#### Categories for Players
+*   **`roman_gods`**: Deities from Roman mythology.
+*   **`greek_gods`**: Deities from Ancient Greek mythology.
+*   **`egyptian_gods`**: Deities from Ancient Egyptian mythology.
+*   **`european_kings`**: Historical European monarchs (male).
+*   **`european_queens`**: Historical European monarchs (female).
+
 #### `register_name_category(category_name, data, category_type)`
 Registers a new custom category for name suggestions.
 
 *   **`category_name`** (`str`): The name for the new category.
-*   **`data`** (`list` or `str`): A list of names, or a path to a text file (one name per line).
+*   **`data`** (`list`, `str` or `Path`): A list of names, or a path to a text/CSV file (one name per line, or first column of CSV).
 *   **`category_type`** (`str`): `"game"` or `"player"`.
-
----
 
 #### `unregister_name_category(category_name)`
 Removes a custom category. Returns `True` on success.
-
----
 
 #### `get_available_categories(category_type="all")`
 Returns a list of available name suggestion categories.
 
 *   **`category_type`** (`str`): `"all"`, `"game"`, or `"player"`.
 
----
-
 #### `suggest_game_name(category=None)`
-Suggests a random name for a game.
-
----
+Suggests a random name for a game. If `category` is `None`, a random game-related category is used.
 
 #### `suggest_player_name(category=None)`
-Suggests a random name for a player.
+Suggests a random name for a player. If `category` is `None`, a random player-related category is used.
 
 ## Exceptions
 

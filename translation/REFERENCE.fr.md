@@ -361,34 +361,42 @@ Démarre un serveur de jeu autonome.
 
 ### Suggestions de Noms
 
+Le package fournit des fonctions utilitaires pour suggérer des noms de parties et de joueurs basés sur différentes catégories.
+
+#### Catégories pour les Parties
+*   **`cities`** : Grandes villes du monde.
+*   **`countries`** : Nations souveraines.
+*   **`rivers`** : Fleuves importants du monde.
+*   **`seas_oceans`** : Principales étendues d'eau salée.
+*   **`planets_moons`** : Corps célestes de notre système solaire.
+
+#### Catégories pour les Joueurs
+*   **`roman_gods`** : Divinités de la mythologie romaine.
+*   **`greek_gods`** : Divinités de la mythologie grecque antique.
+*   **`egyptian_gods`** : Divinités de la mythologie égyptienne antique.
+*   **`european_kings`** : Monarques européens historiques (hommes).
+*   **`european_queens`** : Monarques européens historiques (femmes).
+
 #### `register_name_category(category_name, data, category_type)`
 Enregistre une nouvelle catégorie personnalisée pour les suggestions de noms.
 
 *   **`category_name`** (`str`) : Le nom de la nouvelle catégorie.
-*   **`data`** (`list` ou `str`) : Une liste de noms, ou un chemin vers un fichier texte (un nom par ligne).
+*   **`data`** (`list`, `str` ou `Path`) : Une liste de noms, ou un chemin vers un fichier texte/CSV (un nom par ligne, ou première colonne du CSV).
 *   **`category_type`** (`str`) : `"game"` ou `"player"`.
-
----
 
 #### `unregister_name_category(category_name)`
 Supprime une catégorie personnalisée. Retourne `True` en cas de succès.
-
----
 
 #### `get_available_categories(category_type="all")`
 Retourne une liste des catégories de suggestions de noms disponibles.
 
 *   **`category_type`** (`str`) : `"all"`, `"game"`, ou `"player"`.
 
----
-
 #### `suggest_game_name(category=None)`
-Suggère un nom aléatoire pour une partie.
-
----
+Suggère un nom aléatoire pour une partie. Si `category` est `None`, une catégorie liée aux parties est choisie aléatoirement.
 
 #### `suggest_player_name(category=None)`
-Suggère un nom aléatoire pour un joueur.
+Suggère un nom aléatoire pour un joueur. Si `category` est `None`, une catégorie liée aux joueurs est choisie aléatoirement.
 
 ## Exceptions
 

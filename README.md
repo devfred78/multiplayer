@@ -225,6 +225,39 @@ else:
     private_game.start()
 ```
 
+### Name Suggestions
+
+The `multiplayer` package includes a powerful name suggestion utility to help you create creative names for games and players.
+
+```python
+from multiplayer import suggest_game_name, suggest_player_name
+
+# Get a random name
+print(suggest_game_name())    # e.g., "Pacific Ocean"
+print(suggest_player_name())  # e.g., "Zeus"
+
+# Specify a category
+print(suggest_game_name(category="planets_moons")) # e.g., "Europa"
+print(suggest_player_name(category="european_queens")) # e.g., "Elizabeth I"
+```
+
+#### Built-in Categories
+*   **For Games**: `cities`, `countries`, `rivers`, `seas_oceans`, `planets_moons`.
+*   **For Players**: `roman_gods`, `greek_gods`, `egyptian_gods`, `european_kings`, `european_queens`.
+
+#### Custom Categories
+You can also register your own categories using a list of names or a file:
+
+```python
+from multiplayer import register_name_category
+
+# Register from a list
+register_name_category("monsters", ["Godzilla", "King Kong"], category_type="player")
+
+# Register from a text/CSV file
+register_name_category("races", "path/to/races.txt", category_type="player")
+```
+
 ## Error Handling
 
 The module provides a set of custom exceptions, including `AuthenticationError` for both server and game passwords.

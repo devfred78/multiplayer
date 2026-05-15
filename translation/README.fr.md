@@ -291,4 +291,7 @@ Ensuite, vous pouvez lancer les tests depuis la racine du projet :
 ```sh
 pytest
 ```
-                                                                                                                                      
+
+## Licence
+
+Ce projet est sous licence MIT - voir le fichier [LICENSE.md](../LICENSE.md) pour plus de détails.

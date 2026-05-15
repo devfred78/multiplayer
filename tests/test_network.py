@@ -118,7 +118,7 @@ def test_create_and_list_games(game_server):
     games_list = client.list_games()
     assert game.game_id in games_list
     assert games_list[game.game_id]['name'] == "Test Game"
-    assert games_list[game.game_id]['state'] == 'pending'
+    assert games_list[game.game_id]['state'] == GameState.PENDING
     
     # After stopping, it should not be in the list
     game.stop()
@@ -137,7 +137,7 @@ def test_game_proxy_interaction(game_server):
     
     # Test the new state format
     full_state = game.state
-    assert full_state['status'] == 'in_progress'
+    assert full_state['status'] == GameState.IN_PROGRESS
     assert full_state['custom'] == {}
     
     # Test setting and getting custom state
@@ -153,7 +153,7 @@ def test_game_proxy_interaction(game_server):
     
     game.stop()
     final_state = game.state
-    assert final_state['status'] == 'finished'
+    assert final_state['status'] == GameState.FINISHED
 
 def test_error_handling(game_server):
     """Tests that the server correctly reports errors to the client."""
@@ -209,7 +209,7 @@ def test_tls_data_exchange(tls_custom_game_server):
     
     # Check state
     state = game.state
-    assert state['status'] == 'pending'
+    assert state['status'] == GameState.PENDING
     
     # List games
     games = client.list_games()
@@ -255,14 +255,14 @@ def test_remote_game_lifecycle(game_server):
     game.start()
     
     game.pause()
-    assert game.state['status'] == GameState.PAUSING.value
+    assert game.state['status'] == GameState.PAUSING
     
     game.resume()
-    assert game.state['status'] == GameState.IN_PROGRESS.value
+    assert game.state['status'] == GameState.IN_PROGRESS
     
     game.next_turn()
     # next_turn doesn't change status but we verify it doesn't crash
-    assert game.state['status'] == GameState.IN_PROGRESS.value
+    assert game.state['status'] == GameState.IN_PROGRESS
 
 def test_unknown_action(game_server):
     """Tests that the server handles unknown actions correctly."""
@@ -316,7 +316,7 @@ def test_register_unregister_remote_game(game_server):
     assert remote_game.port == client.port
     
     # Verify it works by calling a method
-    assert remote_game.state['status'] == 'pending'
+    assert remote_game.state['status'] == GameState.PENDING
     
     # Unregister
     client.unregister_remote_game(remote_game)
@@ -334,7 +334,7 @@ def test_list_games_format(game_server):
     data = games[game_id]
     
     assert data['name'] == "FormatTest"
-    assert data['state'] == 'pending'
+    assert data['state'] == GameState.PENDING
     assert data['attributes']['type'] == "battle"
     assert data['players_count'] == 0
     assert data['max_players'] == 4

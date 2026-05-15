@@ -181,7 +181,7 @@ Le point d'entrée principal pour qu'un client se connecte à un `GameServer`.
 *   `list_games()` : Retourne toutes les parties actives (statut différent de `GameState.FINISHED`).
     *   **Retourne** : Un `dict` où les clés sont les IDs de partie (`str`) et les valeurs sont des dictionnaires contenant les propriétés de la partie :
         *   `name` (`str`) : Le nom de la session de jeu.
-        *   `state` (`str`) : L'état actuel de la partie (par exemple, `"pending"`, `"in_progress"`).
+        *   `state` (`GameState`) : L'état actuel de la partie (par exemple, `GameState.PENDING`, `GameState.IN_PROGRESS`).
         *   `attributes` (`dict`) : Attributs personnalisés de la partie.
         *   `players_count` (`int`) : Nombre de joueurs actuellement dans la partie.
         *   `max_players` (`int`) : Nombre maximum de joueurs autorisés.

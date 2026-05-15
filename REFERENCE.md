@@ -181,7 +181,7 @@ The main entry point for a client to connect to a `GameServer`.
 *   `list_games()`: Returns all active games (status different from `GameState.FINISHED`).
     *   **Returns**: A `dict` where keys are game IDs (`str`) and values are dictionaries containing game properties:
         *   `name` (`str`): The name of the game session.
-        *   `state` (`str`): The current state of the game (e.g., `"pending"`, `"in_progress"`).
+        *   `state` (`GameState`): The current state of the game (e.g., `GameState.PENDING`, `GameState.IN_PROGRESS`).
         *   `attributes` (`dict`): Custom attributes of the game.
         *   `players_count` (`int`): Number of players currently in the game.
         *   `max_players` (`int`): Maximum number of players allowed.

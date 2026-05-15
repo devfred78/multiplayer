@@ -8,7 +8,7 @@ import time
 import ssl
 import logging
 from logging.handlers import SocketHandler
-from .game import Player, Observer, PersistentPlayer, PlayerRole
+from .game import Player, Observer, PersistentPlayer, PlayerRole, GameState
 from . import exceptions
 
 # Constants for network discovery
@@ -199,7 +199,14 @@ class GameClient:
 
     def list_games(self):
         """Retrieves a dictionary of active games (status different from GameState.FINISHED) organized by ID."""
-        return self._send_command('list_games')
+        games_data = self._send_command('list_games')
+        for gid in games_data:
+            if 'state' in games_data[gid]:
+                try:
+                    games_data[gid]['state'] = GameState(games_data[gid]['state'])
+                except ValueError:
+                    pass
+        return games_data
 
     def create_group(self, name, admin_password=None, **attributes):
         """Requests the server to create a new game group and returns a proxy to it."""
@@ -646,7 +653,13 @@ class RemoteGame:
     @property
     def state(self):
         """Gets the state of the remote game."""
-        return self._send_command('get_game_state')
+        data = self._send_command('get_game_state')
+        if data and 'status' in data:
+            try:
+                data['status'] = GameState(data['status'])
+            except ValueError:
+                pass
+        return data
 
     @property
     def players(self):

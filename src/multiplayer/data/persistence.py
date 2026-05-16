@@ -89,6 +89,7 @@ class JSONDataStore(DataStore):
                 game = Game(**params)
                 game.state = GameState(g_data['state'])
                 game.custom_state = g_data.get('custom_state')
+                game.end_time = g_data.get('end_time')
                 # Note: We don't restore active player connections/objects here 
                 # as they are transient. But we could restore player lists if needed.
                 # For now, we restore the game metadata and state.
@@ -139,7 +140,8 @@ class JSONDataStore(DataStore):
                 'turn_based': g.turn_based,
                 'password': getattr(g, 'password', None),
                 'observer_password': getattr(g, 'observer_password', None),
-                'custom_state': g.custom_state
+                'custom_state': g.custom_state,
+                'end_time': getattr(g, 'end_time', None)
             }
 
         for gname, grp in groups.items():
@@ -177,7 +179,7 @@ class SQLiteDataStore(DataStore):
                               (name TEXT PRIMARY KEY, password TEXT, role TEXT, managed_groups TEXT, attributes TEXT)''')
             cursor.execute('''CREATE TABLE IF NOT EXISTS games 
                               (id TEXT PRIMARY KEY, name TEXT, state TEXT, attributes TEXT, max_players INTEGER, 
-                               max_observers INTEGER, turn_based INTEGER, password TEXT, observer_password TEXT, custom_state TEXT)''')
+                               max_observers INTEGER, turn_based INTEGER, password TEXT, observer_password TEXT, custom_state TEXT, end_time TEXT)''')
             cursor.execute('''CREATE TABLE IF NOT EXISTS groups 
                               (name TEXT PRIMARY KEY, attributes TEXT, game_ids TEXT)''')
             cursor.execute('''CREATE TABLE IF NOT EXISTS server_config
@@ -209,9 +211,9 @@ class SQLiteDataStore(DataStore):
 
             # Load games
             games = {}
-            cursor.execute("SELECT id, name, state, attributes, max_players, max_observers, turn_based, password, observer_password, custom_state FROM games")
+            cursor.execute("SELECT id, name, state, attributes, max_players, max_observers, turn_based, password, observer_password, custom_state, end_time FROM games")
             for row in cursor.fetchall():
-                gid, name, state, attributes_json, max_players, max_observers, turn_based, password, observer_password, custom_state_json = row
+                gid, name, state, attributes_json, max_players, max_observers, turn_based, password, observer_password, custom_state_json, end_time = row
                 params = {
                     'name': name,
                     'max_players': max_players,
@@ -224,6 +226,7 @@ class SQLiteDataStore(DataStore):
                 game = Game(**params)
                 game.state = GameState(state)
                 game.custom_state = json.loads(custom_state_json) if custom_state_json else None
+                game.end_time = end_time
                 games[gid] = game
 
             # Load groups
@@ -268,10 +271,10 @@ class SQLiteDataStore(DataStore):
 
             # Save games
             for gid, g in games.items():
-                cursor.execute("INSERT INTO games VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                cursor.execute("INSERT INTO games VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                                (gid, g.name, g.state.value, json.dumps(g.attributes), g.max_players, 
                                 g.max_observers, 1 if g.turn_based else 0, getattr(g, 'password', None), 
-                                getattr(g, 'observer_password', None), json.dumps(g.custom_state)))
+                                getattr(g, 'observer_password', None), json.dumps(g.custom_state), getattr(g, 'end_time', None)))
 
             # Save groups
             for gname, grp in groups.items():

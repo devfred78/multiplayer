@@ -4,6 +4,7 @@ This module provides classes for managing a multiplayer game.
 
 import enum
 import uuid
+from datetime import datetime
 from .exceptions import (
     GameLogicError, 
     PlayerLimitReachedError, 
@@ -182,6 +183,7 @@ class Game:
         self.current_player_index = 0
         self.custom_state = {}
         self.kicked_ids = set() # Track players/observers who have been kicked
+        self.end_time = None
         self._id = str(uuid.uuid4())
 
     @property
@@ -305,6 +307,7 @@ class Game:
         Stops the game.
         """
         self.state = GameState.FINISHED
+        self.end_time = datetime.now().isoformat()
 
     def next_turn(self):
         """

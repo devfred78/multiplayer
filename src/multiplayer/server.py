@@ -416,6 +416,15 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
                 return {'status': 'success', 'message': f'Server is now {status}'}
             return {'status': 'error', 'message': 'Server passwords dictionary not available'}
 
+        elif action == 'set_server_name':
+            name = params.get('name')
+            if not name:
+                return {'status': 'error', 'message': 'Missing server name'}
+            if server_passwords is not None:
+                server_passwords['name'] = name
+                return {'status': 'success', 'message': f"Server name updated to '{name}'"}
+            return {'status': 'error', 'message': 'Server passwords dictionary not available'}
+
         elif action == 'create_persistent_player':
             name = params.get('name')
             password = params.get('password')

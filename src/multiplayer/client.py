@@ -440,6 +440,12 @@ class ServerAdmin(GameClient):
             'hidden': hidden
         })
 
+    def set_server_name(self, name):
+        """Sets a new name for the server."""
+        return self._send_command('set_server_name', {
+            'name': name
+        })
+
     def update_persistent_player(self, name, role=None, managed_groups=None, password=None, **attributes):
         """
         Updates a persistent player's information.

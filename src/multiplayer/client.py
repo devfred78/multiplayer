@@ -374,14 +374,7 @@ class ServerAdmin(GameClient):
 
     def list_all_server_games(self):
         """Retrieves a dictionary of all games (even those with GameState.FINISHED) organized by ID."""
-        games_data = self._send_command('list_games', {'include_finished': True})
-        for gid in games_data:
-            if 'state' in games_data[gid]:
-                try:
-                    games_data[gid]['state'] = GameState(games_data[gid]['state'])
-                except ValueError:
-                    pass
-        return games_data
+        return self._send_command('list_games', {'include_finished': True})
 
     def kick_player(self, game_id, player_id):
         """Kicks a player from a specific game."""

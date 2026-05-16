@@ -218,6 +218,10 @@ class GameClient:
                     pass
         return games_data
 
+    def list_users(self):
+        """Retrieves a list of names of currently connected users."""
+        return self._send_command('list_users')
+
     def create_group(self, name, admin_password=None, **attributes):
         """Requests the server to create a new game group and returns a proxy to it."""
         data = self._send_command('create_group', {'name': name, 'admin_password': admin_password, 'attributes': attributes})

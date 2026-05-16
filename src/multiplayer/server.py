@@ -629,6 +629,17 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
                     }
             return {'status': 'success', 'data': game_list}
         
+        elif action == 'list_users':
+            # List only connected users names
+            connected_users = []
+            seen_ids = set()
+            for gid, game in games.items():
+                for player in game.players:
+                    if player.ID not in seen_ids:
+                        connected_users.append(player.name)
+                        seen_ids.add(player.ID)
+            return {'status': 'success', 'data': connected_users}
+        
         elif action == 'stop_server':
             result = {'status': 'success', 'message': 'Server stopping...'}
             def delayed_exit():

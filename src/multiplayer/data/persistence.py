@@ -89,6 +89,7 @@ class JSONDataStore(DataStore):
                 game = Game(**params)
                 game.state = GameState(g_data['state'])
                 game.custom_state = g_data.get('custom_state')
+                game.start_time = g_data.get('start_time')
                 game.end_time = g_data.get('end_time')
                 # Restore player names if available
                 player_names = g_data.get('players', [])
@@ -147,6 +148,7 @@ class JSONDataStore(DataStore):
                 'password': getattr(g, 'password', None),
                 'observer_password': getattr(g, 'observer_password', None),
                 'custom_state': g.custom_state,
+                'start_time': getattr(g, 'start_time', None),
                 'end_time': getattr(g, 'end_time', None),
                 'players': [p.name for p in g.players]
             }
@@ -186,7 +188,7 @@ class SQLiteDataStore(DataStore):
                               (name TEXT PRIMARY KEY, password TEXT, role TEXT, managed_groups TEXT, attributes TEXT)''')
             cursor.execute('''CREATE TABLE IF NOT EXISTS games 
                               (id TEXT PRIMARY KEY, name TEXT, state TEXT, attributes TEXT, max_players INTEGER, 
-                               max_observers INTEGER, turn_based INTEGER, password TEXT, observer_password TEXT, custom_state TEXT, end_time TEXT, players TEXT)''')
+                               max_observers INTEGER, turn_based INTEGER, password TEXT, observer_password TEXT, custom_state TEXT, start_time TEXT, end_time TEXT, players TEXT)''')
             cursor.execute('''CREATE TABLE IF NOT EXISTS groups 
                               (name TEXT PRIMARY KEY, attributes TEXT, game_ids TEXT)''')
             cursor.execute('''CREATE TABLE IF NOT EXISTS server_config
@@ -218,9 +220,9 @@ class SQLiteDataStore(DataStore):
 
             # Load games
             games = {}
-            cursor.execute("SELECT id, name, state, attributes, max_players, max_observers, turn_based, password, observer_password, custom_state, end_time, players FROM games")
+            cursor.execute("SELECT id, name, state, attributes, max_players, max_observers, turn_based, password, observer_password, custom_state, start_time, end_time, players FROM games")
             for row in cursor.fetchall():
-                gid, name, state, attributes_json, max_players, max_observers, turn_based, password, observer_password, custom_state_json, end_time, players_json = row
+                gid, name, state, attributes_json, max_players, max_observers, turn_based, password, observer_password, custom_state_json, start_time, end_time, players_json = row
                 params = {
                     'name': name,
                     'max_players': max_players,
@@ -233,6 +235,7 @@ class SQLiteDataStore(DataStore):
                 game = Game(**params)
                 game.state = GameState(state)
                 game.custom_state = json.loads(custom_state_json) if custom_state_json else None
+                game.start_time = start_time
                 game.end_time = end_time
                 if players_json:
                     from ..game import Player
@@ -284,10 +287,10 @@ class SQLiteDataStore(DataStore):
             # Save games
             for gid, g in games.items():
                 player_names = [p.name for p in g.players]
-                cursor.execute("INSERT INTO games VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                cursor.execute("INSERT INTO games VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                                (gid, g.name, g.state.value, json.dumps(g.attributes), g.max_players, 
                                 g.max_observers, 1 if g.turn_based else 0, getattr(g, 'password', None), 
-                                getattr(g, 'observer_password', None), json.dumps(g.custom_state), getattr(g, 'end_time', None),
+                                getattr(g, 'observer_password', None), json.dumps(g.custom_state), getattr(g, 'start_time', None), getattr(g, 'end_time', None),
                                 json.dumps(player_names)))
 
             # Save groups

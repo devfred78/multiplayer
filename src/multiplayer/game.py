@@ -183,6 +183,7 @@ class Game:
         self.current_player_index = 0
         self.custom_state = {}
         self.kicked_ids = set() # Track players/observers who have been kicked
+        self.start_time = None
         self.end_time = None
         self._id = str(uuid.uuid4())
 
@@ -279,6 +280,7 @@ class Game:
         if not self.players:
             raise GameLogicError("Cannot start a game with no players")
         self.state = GameState.IN_PROGRESS
+        self.start_time = datetime.now().isoformat()
 
     def pause(self):
         """

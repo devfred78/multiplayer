@@ -651,7 +651,8 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
                         'observers_count': len(g.observers),
                         'max_observers': g.max_observers,
                         'custom_state': g.custom_state,
-                        'end_time': getattr(g, 'end_time', None)
+                        'end_time': getattr(g, 'end_time', None),
+                        'players': [p.name for p in g.players]
                     }
             return {'status': 'success', 'data': game_list}
         

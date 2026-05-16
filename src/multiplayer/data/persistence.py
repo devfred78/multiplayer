@@ -12,12 +12,12 @@ class DataStore(ABC):
         Loads data from the store. 
         
         Returns:
-            tuple: (games, groups, persistent_players)
+            tuple: (games, groups, persistent_players, server_config)
         """
         pass
 
     @abstractmethod
-    def save(self, games, groups, persistent_players):
+    def save(self, games, groups, persistent_players, server_config=None):
         """
         Saves data to the store.
         
@@ -25,6 +25,7 @@ class DataStore(ABC):
             games (dict): Dictionary of games.
             groups (dict): Dictionary of game groups.
             persistent_players (dict): Dictionary of persistent players.
+            server_config (dict, optional): Dictionary of server settings.
         """
         pass
 
@@ -33,9 +34,9 @@ class MemoryDataStore(DataStore):
     An in-memory data store that does not persist anything.
     """
     def load(self):
-        return {}, {}, {}
+        return {}, {}, {}, {}
 
-    def save(self, games, groups, persistent_players):
+    def save(self, games, groups, persistent_players, server_config=None):
         pass
 
 class JSONDataStore(DataStore):
@@ -51,7 +52,7 @@ class JSONDataStore(DataStore):
 
     def load(self):
         if not os.path.exists(self.file_path):
-            return {}, {}, {}
+            return {}, {}, {}, {}
         
         try:
             with open(self.file_path, 'r', encoding='utf-8') as f:
@@ -102,18 +103,21 @@ class JSONDataStore(DataStore):
                     if gid in games:
                         grp.add_game(games[gid])
                 groups[gname] = grp
+            
+            server_config = data.get('server_config', {})
                 
-            return games, groups, persistent_players
+            return games, groups, persistent_players, server_config
         except Exception as e:
             self.logger.error(f"Failed to load data from JSON: {e}")
-            return {}, {}, {}
+            return {}, {}, {}, {}
 
-    def save(self, games, groups, persistent_players):
+    def save(self, games, groups, persistent_players, server_config=None):
         from ..server import EnumEncoder
         data = {
             'persistent_players': {},
             'games': {},
-            'groups': {}
+            'groups': {},
+            'server_config': server_config or {}
         }
 
         for name, p in persistent_players.items():
@@ -176,6 +180,8 @@ class SQLiteDataStore(DataStore):
                                max_observers INTEGER, turn_based INTEGER, password TEXT, observer_password TEXT, custom_state TEXT)''')
             cursor.execute('''CREATE TABLE IF NOT EXISTS groups 
                               (name TEXT PRIMARY KEY, attributes TEXT, game_ids TEXT)''')
+            cursor.execute('''CREATE TABLE IF NOT EXISTS server_config
+                              (key TEXT PRIMARY KEY, value TEXT)''')
             conn.commit()
             conn.close()
         except Exception as e:
@@ -232,13 +238,19 @@ class SQLiteDataStore(DataStore):
                         grp.add_game(games[gid])
                 groups[gname] = grp
 
+            # Load server config
+            server_config = {}
+            cursor.execute("SELECT key, value FROM server_config")
+            for key, value in cursor.fetchall():
+                server_config[key] = json.loads(value)
+
             conn.close()
-            return games, groups, persistent_players
+            return games, groups, persistent_players, server_config
         except Exception as e:
             self.logger.error(f"Failed to load data from SQLite: {e}")
-            return {}, {}, {}
+            return {}, {}, {}, {}
 
-    def save(self, games, groups, persistent_players):
+    def save(self, games, groups, persistent_players, server_config=None):
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
@@ -247,6 +259,7 @@ class SQLiteDataStore(DataStore):
             cursor.execute("DELETE FROM persistent_players")
             cursor.execute("DELETE FROM games")
             cursor.execute("DELETE FROM groups")
+            cursor.execute("DELETE FROM server_config")
 
             # Save persistent players
             for name, p in persistent_players.items():
@@ -265,6 +278,12 @@ class SQLiteDataStore(DataStore):
                 game_ids = [g.ID for g in grp.games]
                 cursor.execute("INSERT INTO groups VALUES (?, ?, ?)",
                                (gname, json.dumps(grp.attributes), json.dumps(game_ids)))
+
+            # Save server config
+            if server_config:
+                for key, value in server_config.items():
+                    cursor.execute("INSERT INTO server_config VALUES (?, ?)",
+                                   (key, json.dumps(value)))
 
             conn.commit()
             conn.close()

@@ -124,13 +124,20 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
     server_start_msg = f"Starting server process on {host}:{port}"
     if unencrypted_port:
         server_start_msg += f" (Unencrypted on {host}:{unencrypted_port})"
-    if name:
-        server_start_msg += f" (Name: {name})"
+    
+    games, groups, persistent_players, server_config = datastore.load()
+    
+    # Override server settings from persistence if they exist
+    effective_name = server_config.get('name', name)
+    effective_hidden = server_config.get('hidden', hidden)
+    effective_persistent_players_enabled = server_config.get('persistent_players_enabled', persistent_players_enabled)
+    
+    if effective_name:
+        server_start_msg += f" (Name: {effective_name})"
     logger.info(server_start_msg)
     
-    games, groups, persistent_players = datastore.load()
-    if games or groups or persistent_players:
-        logger.info(f"Loaded {len(games)} games, {len(groups)} groups, and {len(persistent_players)} persistent players from storage.")
+    if games or groups or persistent_players or server_config:
+        logger.info(f"Loaded {len(games)} games, {len(groups)} groups, {len(persistent_players)} persistent players, and server config from storage.")
     
     games_lock = threading.Lock()
     context = None
@@ -157,8 +164,9 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
     server_passwords = {
         'server': password, 
         'admin': admin_password, 
-        'persistent_players_enabled': persistent_players_enabled, 
-        'hidden': hidden, 
+        'persistent_players_enabled': effective_persistent_players_enabled, 
+        'hidden': effective_hidden, 
+        'name': effective_name,
         'start_time': time.time(),
         'host': host,
         'port': port,
@@ -191,7 +199,8 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
                     newsocket, fromaddr = s.accept()
                     is_tls_conn = (s == bindsocket and use_tls)
                     conn = context.wrap_socket(newsocket, server_side=True) if is_tls_conn else newsocket
-                    thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, groups, games_lock, server_passwords, logger_name, name, is_tls_conn, certfile, persistent_players, datastore))
+                    # Pass the current name from server_passwords to ensure threads have the latest name
+                    thread = threading.Thread(target=_handle_client, args=(conn, fromaddr, games, groups, games_lock, server_passwords, logger_name, server_passwords.get('name'), is_tls_conn, certfile, persistent_players, datastore))
                     thread.daemon = True
                     thread.start()
                 except (ssl.SSLError, OSError) as e:
@@ -376,9 +385,15 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                             'create_persistent_player', 'update_persistent_player', 'remove_persistent_player',
                             'create_game', 'stop_game', 'pause_game', 'resume_game', 'set_custom_state',
                             'create_group', 'remove_group', 'set_server_password', 'set_admin_password',
-                            'set_persistent_players_enabled', 'set_server_hidden'
+                            'set_persistent_players_enabled', 'set_server_hidden', 'set_server_name'
                         ]:
-                            datastore.save(games, groups, persistent_players)
+                            # Prepare server_config for saving
+                            server_config = {
+                                'name': server_passwords.get('name'),
+                                'hidden': server_passwords.get('hidden'),
+                                'persistent_players_enabled': server_passwords.get('persistent_players_enabled')
+                            }
+                            datastore.save(games, groups, persistent_players, server_config=server_config)
                     except Exception as e:
                         response = {'status': 'error', 'type': e.__class__.__name__, 'message': str(e)}
                 conn.sendall(json.dumps(response, cls=EnumEncoder).encode('utf-8'))

@@ -110,7 +110,7 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
     datastore = create_datastore(persistence_type, persistence_path)
     
     logger = logging.getLogger(logger_name)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.CRITICAL + 1) # Default to off as requested
     if logging_host and logging_port:
         from logging.handlers import SocketHandler
         # Remove existing SocketHandlers if any
@@ -119,6 +119,7 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
                 logger.removeHandler(h)
         handler = SocketHandler(logging_host, logging_port)
         logger.addHandler(handler)
+        logger.setLevel(logging.INFO) # Enable if explicitly configured
         logger.info(f"Logging configured to send to {logging_host}:{logging_port}")
 
     server_start_msg = f"Starting server process on {host}:{port}"

@@ -87,6 +87,7 @@ class JSONDataStore(DataStore):
                 params.update(g_data.get('attributes', {}))
                 
                 game = Game(**params)
+                game._force_id(gid)
                 game.state = GameState(g_data['state'])
                 game.custom_state = g_data.get('custom_state')
                 game.start_time = g_data.get('start_time')
@@ -233,6 +234,7 @@ class SQLiteDataStore(DataStore):
                 }
                 params.update(json.loads(attributes_json))
                 game = Game(**params)
+                game._force_id(gid)
                 game.state = GameState(state)
                 game.custom_state = json.loads(custom_state_json) if custom_state_json else None
                 game.start_time = start_time

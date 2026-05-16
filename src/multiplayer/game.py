@@ -194,6 +194,12 @@ class Game:
         """
         return self._id
 
+    def _force_id(self, id):
+        """
+        Forces the ID of the game. Use with caution, mainly for persistence.
+        """
+        self._id = id
+
     def add_player(self, player, password=None):
         """
         Adds a player to the game.

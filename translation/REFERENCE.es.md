@@ -61,17 +61,17 @@ Representa a un jugador.
 ---
 
 ### `PersistentPlayer(name, password, role=PlayerRole.PLAYER, managed_groups=None, **kwargs)`
-Representa una cuenta de jugador persistente (hereda de `Player`).
+Representa una cuenta de jugador persistente (hereda de `Player`). Las contraseñas de los jugadores persistentes se cifran automáticamente mediante un hash de `bcrypt` antes de ser almacenadas.
 
 *   **`name`** (`str`): El nombre del jugador (único en el servidor).
-*   **`password`** (`str`): La contraseña de la cuenta.
+*   **`password`** (`str`): La contraseña de la cuenta (almacenada mediante hash).
 *   **`role`** (`PlayerRole`, opcional): El rol del jugador. Por defecto es `PlayerRole.PLAYER`.
 *   **`managed_groups`** (`list`, opcional): Una lista de IDs de grupos gestionados por este jugador (si el rol es `GROUP_ADMIN`).
 *   **`**kwargs`**: Atributos personalizados para el jugador.
 
 #### Propiedades
 *   Todas las propiedades de `Player`.
-*   **`password`**: La contraseña de la cuenta.
+*   **`password`**: La contraseña de la cuenta (devuelve el hash bcrypt).
 *   **`role`**: El rol del jugador (`PlayerRole.PLAYER`, `PlayerRole.GROUP_ADMIN`, o `PlayerRole.SERVER_ADMIN`).
 *   **`managed_groups`**: Lista de IDs de grupos que el jugador puede gestionar.
 
@@ -133,7 +133,7 @@ Una enumeración que representa el estado actual de una partida.
 Estas clases gestionan la arquitectura cliente-servidor.
 
 ### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, name=None, unencrypted_port=None, hidden=False, persistence_type=None, persistence_path=None)`
-Gestiona las sesiones de juego y maneja las peticiones de red.
+Gestiona las sesiones de juego y maneja las peticiones de red. Todas las contraseñas (servidor, administrador, juegos y jugadores) se cifran de forma segura mediante el hash `bcrypt` cuando se almacenan de forma persistente.
 
 *   **`host`** (`str`): La dirección del host a la que vincularse. Usa `'0.0.0.0'` para hacerlo accesible en la red local.
 *   **`port`** (`int`): El puerto TCP en el que escuchar los comandos del juego.

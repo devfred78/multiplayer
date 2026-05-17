@@ -19,13 +19,13 @@ Para una descripción técnica detallada de todas las clases y funciones, consul
 *   **Soporte de Observadores:** Capacidad de añadir observadores que pueden ver el estado del juego sin participar como jugadores.
 *   **Rol de Administrador:** Nueva clase `ServerAdmin` para gestionar el servidor, expulsar jugadores/observadores y supervisar el estado del servidor.
 *   **Agrupación de Juegos:** Organiza varias sesiones de juego dentro del mismo servidor utilizando la clase `GameGroup`.
-*   **Seguridad Multinivel:** Soporta contraseñas de servidor, administrador y por partida, con cifrado opcional TLS v1.3. Los administradores pueden actualizar las contraseñas dinámicamente.
+*   **Seguridad Multinivel:** Soporta contraseñas de servidor, administrador y por partida, con cifrado opcional TLS v1.3. Los administradores pueden actualizar las contraseñas dinámicamente y se almacenan de forma segura mediante el hash `bcrypt`.
 *   **Descubrimiento Automático de Servidores:** Los clientes pueden encontrar automáticamente servidores en funcionamiento en la red local.
 *   **Sugerencias de Nombres Extensibles:** Incluye una función de utilidad para sugerir nombres creativos para juegos y jugadores.
 *   **Múltiples Partidas:** El servidor puede gestionar múltiples sesiones de juego simultáneamente. Por defecto, la lista de partidas para los clientes estándar se filtra para ocultar las partidas finalizadas, pero los administradores pueden acceder a todas las sesiones a través de métodos especializados como `list_all_server_games()` o `list_all_group_games()`.
 *   **Manejo de Errores Robusto:** Un conjunto claro de excepciones personalizadas para la lógica del juego y problemas de red.
-*   **Cuentas de Jugador Persistentes:** Capacidad para que los jugadores creen una cuenta con contraseña para uso repetido en el servidor.
-*   **Persistencia de Datos:** Soporte opcional para la persistencia de la configuración del servidor, las cuentas de los jugadores y las sesiones de juego en disco (ej: en formato JSON).
+*   **Cuentas de Jugador Persistentes:** Capacidad para que los jugadores creen una cuenta con contraseña para uso repetido en el servidor. Todas las contraseñas persistentes (jugadores, grupos y servidor) están protegidas con `bcrypt`.
+*   **Persistencia de Datos:** Soporte opcional para la persistencia de la configuración del servidor, las cuentas de los jugadores y las sesiones de juego en disco (ej: en formato JSON). El almacenamiento de contraseñas basado en hash garantiza la seguridad incluso si el archivo de datos se ve comprometido.
 
 ## Instalación
 

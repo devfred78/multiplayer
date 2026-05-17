@@ -61,17 +61,17 @@ Represents a player.
 ---
 
 ### `PersistentPlayer(name, password, role=PlayerRole.PLAYER, managed_groups=None, **kwargs)`
-Represents a persistent player account (inherits from `Player`).
+Represents a persistent player account (inherits from `Player`). Passwords for persistent players are automatically hashed using `bcrypt` before being stored.
 
 *   **`name`** (`str`): The player's name (unique on the server).
-*   **`password`** (`str`): The password for the account.
+*   **`password`** (`str`): The password for the account (hashed on storage).
 *   **`role`** (`PlayerRole`, optional): The role of the player. Defaults to `PlayerRole.PLAYER`.
 *   **`managed_groups`** (`list`, optional): A list of group IDs managed by this player (if role is `GROUP_ADMIN`).
 *   **`**kwargs`**: Custom attributes for the player.
 
 #### Properties
 *   All properties of `Player`.
-*   **`password`**: The account password.
+*   **`password`**: The account password (returns the bcrypt hash).
 *   **`role`**: The player's role (`PlayerRole.PLAYER`, `PlayerRole.GROUP_ADMIN`, or `PlayerRole.SERVER_ADMIN`).
 *   **`managed_groups`**: List of group IDs the player can manage.
 
@@ -133,7 +133,7 @@ An enumeration representing the current status of a game.
 These classes manage the client-server architecture.
 
 ### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, name=None, unencrypted_port=None, hidden=False, persistence_type=None, persistence_path=None)`
-Manages game sessions and handles network requests.
+Manages game sessions and handles network requests. All passwords (server, admin, games, and players) are securely hashed using `bcrypt` when stored persistently.
 
 *   **`host`** (`str`): The host address to bind to. Use `'0.0.0.0'` to make it accessible on the local network.
 *   **`port`** (`int`): The TCP port to listen on for game commands.

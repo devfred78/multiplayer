@@ -61,17 +61,17 @@ ReprÃ©sente un joueur.
 ---
 
 ### `PersistentPlayer(name, password, role=PlayerRole.PLAYER, managed_groups=None, **kwargs)`
-ReprÃ©sente un compte de joueur persistant (hÃ©rite de `Player`).
+ReprÃ©sente un compte de joueur persistant (hÃ©rite de `Player`). Les mots de passe des joueurs persistants sont automatiquement hachÃ©s avec `bcrypt` avant d'Ãªtre stockÃ©s.
 
 *   **`name`** (`str`) : Le nom du joueur (unique sur le serveur).
-*   **`password`** (`str`) : Le mot de passe du compte.
+*   **`password`** (`str`) : Le mot de passe du compte (hachÃ© lors du stockage).
 *   **`role`** (`PlayerRole`, optionnel) : Le rÃ´le du joueur. Par dÃ©faut `PlayerRole.PLAYER`.
 *   **`managed_groups`** (`list`, optionnel) : Une liste d'IDs de groupes gÃ©rÃ©s par ce joueur (si le rÃ´le est `GROUP_ADMIN`).
 *   **`**kwargs`** : Attributs personnalisÃ©s pour le joueur.
 
 #### PropriÃ©tÃ©s
 *   Toutes les propriÃ©tÃ©s de `Player`.
-*   **`password`** : Le mot de passe du compte.
+*   **`password`** : Le mot de passe du compte (retourne le hash bcrypt).
 *   **`role`** : Le rÃ´le du joueur (`PlayerRole.PLAYER`, `PlayerRole.GROUP_ADMIN`, ou `PlayerRole.SERVER_ADMIN`).
 *   **`managed_groups`** : Liste des IDs de groupes que le joueur peut gÃ©rer.
 
@@ -133,7 +133,7 @@ Une Ã©numÃ©ration reprÃ©sentant le statut actuel d'une partie.
 Ces classes gÃ¨rent l'architecture client-serveur.
 
 ### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, name=None, unencrypted_port=None, hidden=False, persistence_type=None, persistence_path=None)`
-GÃ¨re les sessions de jeu et les requÃªtes rÃ©seau.
+GÃ¨re les sessions de jeu et les requÃªtes rÃ©seau. Tous les mots de passe (serveur, admin, parties et joueurs) sont hachÃ©s de maniÃ¨re sÃ©curisÃ©e avec `bcrypt` lorsqu'ils sont stockÃ©s de maniÃ¨re persistante.
 
 *   **`host`** (`str`) : L'adresse de l'hÃ´te sur laquelle s'Ã©couter. Utilisez `'0.0.0.0'` pour le rendre accessible sur le rÃ©seau local.
 *   **`port`** (`int`) : Le port TCP sur lequel Ã©couter les commandes de jeu.

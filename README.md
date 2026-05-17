@@ -19,13 +19,13 @@ For a detailed technical description of all classes and functions, see the [API 
 *   **Observer Support:** Ability to add observers who can view the game state without participating as players.
 *   **Administrator Role:** New `ServerAdmin` class to manage the server, kick players/observers, and monitor server status.
 *   **Game Grouping:** Organize several game sessions within the same server using the `GameGroup` class.
-*   **Multi-Layered Security:** Supports server passwords, admin passwords, and per-game passwords, with optional TLS v1.3 encryption. Passwords can be updated dynamically by administrators.
+*   **Multi-Layered Security:** Supports server passwords, admin passwords, and per-game passwords, with optional TLS v1.3 encryption. Passwords can be updated dynamically by administrators and are securely stored using `bcrypt` hashing.
 *   **Automatic Server Discovery:** Clients can automatically find running servers on the local network.
 *   **Extensible Name Suggestions:** Includes a utility function to suggest creative names for games and players.
 *   **Multiple Games:** The server can manage multiple game sessions simultaneously. By default, the game list for standard clients is filtered to hide finished games, but administrators can access all sessions via specialized methods like `list_all_server_games()` or `list_all_group_games()`.
 *   **Robust Error Handling:** A clear set of custom exceptions for both game logic and network issues.
-*   **Persistent Player Accounts:** Ability for players to create an account with a password for repeated use across the server.
-*   **Data Persistence:** Optional support for persisting server configuration, player accounts, and game sessions to disk (e.g., in JSON format).
+*   **Persistent Player Accounts:** Ability for players to create an account with a password for repeated use across the server. All persistent passwords (players, groups, and server) are protected with `bcrypt`.
+*   **Data Persistence:** Optional support for persisting server configuration, player accounts, and game sessions to disk (e.g., in JSON format). Hash-based password storage ensures security even if the data file is compromised.
 
 ## Installation
 

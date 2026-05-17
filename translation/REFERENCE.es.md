@@ -38,6 +38,8 @@ Representa una única sesión de juego.
 *   **`custom_state`**: Un diccionario para almacenar cualquier dato específico del juego.
 *   **`attributes`**: Un diccionario de atributos personalizados.
 *   **`current_player`**: El objeto `Player` activo en un juego por turnos.
+*   **`start_time`**: La hora en que comenzó la partida (formato ISO), o `None`.
+*   **`end_time`**: La hora en que terminó la partida (formato ISO), o `None`.
 
 > **Nota: `custom_state` vs `attributes`**
 > - **`attributes`** (Metadatos estáticos): Definidos al momento de la creación mediante `**kwargs`. Se utilizan para configuraciones que rara vez cambian (ej: `difficulty`, `map`).
@@ -130,7 +132,7 @@ Una enumeración que representa el estado actual de una partida.
 
 Estas clases gestionan la arquitectura cliente-servidor.
 
-### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, name=None, unencrypted_port=None, hidden=False)`
+### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, name=None, unencrypted_port=None, hidden=False, persistence_type=None, persistence_path=None)`
 Gestiona las sesiones de juego y maneja las peticiones de red.
 
 *   **`host`** (`str`): La dirección del host a la que vincularse. Usa `'0.0.0.0'` para hacerlo accesible en la red local.
@@ -139,7 +141,7 @@ Gestiona las sesiones de juego y maneja las peticiones de red.
 *   **`admin_password`** (`str`, opcional): Una contraseña para acceso administrativo.
 *   **`use_tls`** (`bool`, opcional): Si es `True`, habilita el cifrado TLS v1.3 para todas las comunicaciones. Por defecto es `False`.
 *   **`tls_domain`** (`str`, opcional): Nombre de dominio a incluir en el certificado generado. Por defecto es `"localhost"`.
-*   **`tls_cert`** (`str`, opcional): Ruta a un archivo de certificado PEM. Este archivo debe ser una "cadena completa" (incluyendo el certificado del dominio y los certificados intermedios) o tener un archivo de "cadena" correspondiente en el mismo directorio (ej: `cert.pem` y `chain.pem`, or `ECC-cert.pem` y `ECC-chain.pem`). Si solo se proporciona uno de `tls_cert` o `tls_key` mientras `tls_self_signed` es `False`, el servidor no se iniciará.
+*   **`tls_cert`** (`str`, opcional): Ruta a un archivo de certificado PEM. Este archivo debe ser una "cadena completa" (incluyendo el certificado del dominio y los certificados intermedios) o tener un archivo de "cadena" correspondiente en el mismo directorio (ej: `cert.pem` y `chain.pem`, or `ECC-cert.pem` y `ECC-chain.pem`). Si solo se proporciona uno de `tls_cert` or `tls_key` mientras `tls_self_signed` es `False`, el servidor no se iniciará.
 *   **`tls_key`** (`str`, opcional): Ruta a un archivo de clave privada PEM. Si solo se proporciona uno de `tls_cert` o `tls_key` mientras `tls_self_signed` es `False`, el servidor no se iniciará.
 *   **`tls_self_signed`** (`bool`, opcional): Si es `True`, genera un certificado auto-firmado si falta `tls_cert` o `tls_key`. Si es `False`, se deben proporcionar ambos. Por defecto es `True`.
 *   **`logging_host`** (`str`, opcional): La dirección del host de un servidor de registros al que enviar los registros.
@@ -147,6 +149,8 @@ Gestiona las sesiones de juego y maneja las peticiones de red.
 *   **`name`** (`str`, opcional): Un nombre para la instancia del servidor.
 *   **`unencrypted_port`** (`int`, opcional): Puerto para conexiones no cifradas cuando TLS está habilitado.
 *   **`hidden`** (`bool`, opcional): Si es `True`, el servidor no responderá a las peticiones de descubrimiento de red. Por defecto es `False`.
+*   **`persistence_type`** (`str`, opcional): El tipo de persistencia a utilizar (ej: `'json'`). Por defecto es `None` (sin persistencia).
+*   **`persistence_path`** (`str`, opcional): La ruta al archivo o directorio donde se deben almacenar los datos del juego y de la cuenta.
 
 #### Métodos
 *   `start()`: Inicia el servidor en un proceso de segundo plano.
@@ -189,6 +193,10 @@ El punto de entrada principal para que un cliente se conecte a un `GameServer`.
         *   `observers_count` (`int`): Número de observadores actualmente en el juego.
         *   `max_observers` (`int`): Número máximo de observadores permitidos.
         *   `custom_state` (`dict`): El estado personalizado del juego.
+        *   `start_time` (`str`): La hora de inicio en formato ISO.
+        *   `end_time` (`str`): La hora de finalización en formato ISO (si ha terminado).
+*   `list_users()`: Devuelve una lista de los usuarios actualmente conectados al servidor.
+    *   **Devuelve**: Una `list` de cadenas que contienen los nombres y roles de los usuarios conectados.
 *   `create_group(name, admin_password=None, **attributes)`: Solicita al servidor crear un nuevo grupo de juegos.
     *   **Devuelve**: Un objeto proxy `RemoteGroup`.
 *   `list_groups()` : Devuelve todos los grupos de juegos en el servidor.

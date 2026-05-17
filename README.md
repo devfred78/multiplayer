@@ -25,6 +25,7 @@ For a detailed technical description of all classes and functions, see the [API 
 *   **Multiple Games:** The server can manage multiple game sessions simultaneously. By default, the game list for standard clients is filtered to hide finished games, but administrators can access all sessions via specialized methods like `list_all_server_games()` or `list_all_group_games()`.
 *   **Robust Error Handling:** A clear set of custom exceptions for both game logic and network issues.
 *   **Persistent Player Accounts:** Ability for players to create an account with a password for repeated use across the server.
+*   **Data Persistence:** Optional support for persisting server configuration, player accounts, and game sessions to disk (e.g., in JSON format).
 
 ## Installation
 

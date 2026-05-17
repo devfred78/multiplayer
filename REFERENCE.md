@@ -38,6 +38,8 @@ Represents a single game session.
 *   **`custom_state`**: A dictionary for storing any game-specific data.
 *   **`attributes`**: A dictionary of custom attributes.
 *   **`current_player`**: The active `Player` object in a turn-based game.
+*   **`start_time`**: The time when the game started (ISO format), or `None`.
+*   **`end_time`**: The time when the game ended (ISO format), or `None`.
 
 > **Note: `custom_state` vs `attributes`**
 > - **`attributes`** (Static Metadata): Defined at creation via `**kwargs`. Used for configuration that rarely changes (e.g., `difficulty`, `map`).
@@ -130,7 +132,7 @@ An enumeration representing the current status of a game.
 
 These classes manage the client-server architecture.
 
-### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, name=None, unencrypted_port=None, hidden=False)`
+### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, name=None, unencrypted_port=None, hidden=False, persistence_type=None, persistence_path=None)`
 Manages game sessions and handles network requests.
 
 *   **`host`** (`str`): The host address to bind to. Use `'0.0.0.0'` to make it accessible on the local network.
@@ -147,6 +149,8 @@ Manages game sessions and handles network requests.
 *   **`name`** (`str`, optional): A name for the server instance.
 *   **`unencrypted_port`** (`int`, optional): Port for unencrypted connections when TLS is enabled.
 *   **`hidden`** (`bool`, optional): If `True`, the server will not respond to network discovery requests. Defaults to `False`.
+*   **`persistence_type`** (`str`, optional): The type of persistence to use (e.g., `'json'`). Defaults to `None` (no persistence).
+*   **`persistence_path`** (`str`, optional): The path to the file or directory where game and account data should be stored.
 
 #### Methods
 *   `start()`: Starts the server in a background process.
@@ -189,6 +193,10 @@ The main entry point for a client to connect to a `GameServer`.
         *   `observers_count` (`int`): Number of observers currently in the game.
         *   `max_observers` (`int`): Maximum number of observers allowed.
         *   `custom_state` (`dict`): The game's custom state.
+        *   `start_time` (`str`): The ISO formatted start time.
+        *   `end_time` (`str`): The ISO formatted end time (if finished).
+*   `list_users()`: Returns a list of currently connected users on the server.
+    *   **Returns**: A `list` of strings containing the names and roles of connected users.
 *   `create_group(name, admin_password=None, **attributes)`: Requests the server to create a new game group.
     *   **Returns**: A `RemoteGroup` proxy object.
 *   `list_groups()`: Returns all game groups on the server.

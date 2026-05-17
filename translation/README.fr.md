@@ -25,6 +25,7 @@ Pour une description technique détaillée de toutes les classes et fonctions, c
 *   **Parties Multiples :** Le serveur peut gérer plusieurs sessions de jeu simultanément. Par défaut, la liste des parties pour les clients standards est filtrée pour cacher les parties terminées, mais les administrateurs peuvent accéder à toutes les sessions via des méthodes spécialisées comme `list_all_server_games()` ou `list_all_group_games()`.
 *   **Gestion Robuste des Erreurs :** Un ensemble clair d'exceptions personnalisées pour la logique de jeu et les problèmes réseau.
 *   **Comptes Joueurs Persistants :** Possibilité pour les joueurs de créer un compte avec un mot de passe pour une utilisation répétée sur le serveur.
+*   **Persistance des Données :** Support optionnel pour la persistance de la configuration du serveur, des comptes joueurs et des sessions de jeu sur disque (ex : au format JSON).
 
 ## Installation
 

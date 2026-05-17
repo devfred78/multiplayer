@@ -25,6 +25,7 @@ Para una descripción técnica detallada de todas las clases y funciones, consul
 *   **Múltiples Partidas:** El servidor puede gestionar múltiples sesiones de juego simultáneamente. Por defecto, la lista de partidas para los clientes estándar se filtra para ocultar las partidas finalizadas, pero los administradores pueden acceder a todas las sesiones a través de métodos especializados como `list_all_server_games()` o `list_all_group_games()`.
 *   **Manejo de Errores Robusto:** Un conjunto claro de excepciones personalizadas para la lógica del juego y problemas de red.
 *   **Cuentas de Jugador Persistentes:** Capacidad para que los jugadores creen una cuenta con contraseña para uso repetido en el servidor.
+*   **Persistencia de Datos:** Soporte opcional para la persistencia de la configuración del servidor, las cuentas de los jugadores y las sesiones de juego en disco (ej: en formato JSON).
 
 ## Instalación
 

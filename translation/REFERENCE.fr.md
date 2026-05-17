@@ -38,6 +38,8 @@ ReprÃ©sente une session de jeu unique.
 *   **`custom_state`** : Un dictionnaire pour stocker les donnÃ©es spÃ©cifiques au jeu.
 *   **`attributes`** : Un dictionnaire d'attributs personnalisÃ©s.
 *   **`current_player`** : L'objet `Player` actif dans un jeu au tour par tour.
+*   **`start_time`** : L'heure Ã  laquelle la partie a commencÃ© (format ISO), ou `None`.
+*   **`end_time`** : L'heure Ã  laquelle la partie s'est terminÃ©e (format ISO), ou `None`.
 
 > **Note : `custom_state` vs `attributes`**
 > - **`attributes`** (MÃ©tadonnÃ©es statiques) : DÃ©finis Ã  la crÃ©ation via `**kwargs`. UtilisÃ©s pour la configuration qui change rarement (ex : `difficulty`, `map`).
@@ -130,7 +132,7 @@ Une Ã©numÃ©ration reprÃ©sentant le statut actuel d'une partie.
 
 Ces classes gÃ¨rent l'architecture client-serveur.
 
-### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, name=None, unencrypted_port=None, hidden=False)`
+### `GameServer(host='0.0.0.0', port=65432, password=None, admin_password=None, use_tls=False, tls_domain="localhost", tls_cert=None, tls_key=None, tls_self_signed=True, logging_host=None, logging_port=None, name=None, unencrypted_port=None, hidden=False, persistence_type=None, persistence_path=None)`
 GÃ¨re les sessions de jeu et les requÃªtes rÃ©seau.
 
 *   **`host`** (`str`) : L'adresse de l'hÃ´te sur laquelle s'Ã©couter. Utilisez `'0.0.0.0'` pour le rendre accessible sur le rÃ©seau local.
@@ -147,6 +149,8 @@ GÃ¨re les sessions de jeu et les requÃªtes rÃ©seau.
 *   **`name`** (`str`, optionnel) : Un nom pour l'instance du serveur.
 *   **`unencrypted_port`** (`int`, optionnel) : Port pour les connexions non chiffrÃ©es lorsque le TLS est activÃ©.
 *   **`hidden`** (`bool`, optionnel) : Si `True`, le serveur ne rÃ©pondra pas aux requÃªtes de dÃ©couverte rÃ©seau. Par dÃ©faut `False`.
+*   **`persistence_type`** (`str`, optionnel) : Le type de persistance Ã  utiliser (ex: `'json'`). Par dÃ©faut `None` (pas de persistance).
+*   **`persistence_path`** (`str`, optionnel) : Le chemin vers le fichier ou le rÃ©pertoire oÃ¹ les donnÃ©es de jeu et de compte doivent Ãªtre stockÃ©es.
 
 #### MÃ©thodes
 *   `start()` : DÃ©marre le serveur dans un processus d'arriÃ¨re-plan.
@@ -189,6 +193,10 @@ Le point d'entrÃ©e principal pour qu'un client se connecte Ã  un `GameServer
         *   `observers_count` (`int`) : Nombre d'observateurs actuellement dans la partie.
         *   `max_observers` (`int`) : Nombre maximum d'observateurs autorisés.
         *   `custom_state` (`dict`) : L'état personnalisé de la partie.
+        *   `start_time` (`str`) : L'heure de dÃ©but au format ISO.
+        *   `end_time` (`str`) : L'heure de fin au format ISO (si terminÃ©e).
+*   `list_users()` : Retourne une liste des utilisateurs actuellement connectÃ©s au serveur.
+    *   **Retourne** : Une `list` de chaÃ®nes contenant les noms et rÃ´les des utilisateurs connectÃ©s.
 *   `create_group(name, admin_password=None, **attributes)` : Demande au serveur la crÃ©ation d'un nouveau groupe de jeux.
     *   **Retourne** : Un objet proxy `RemoteGroup`.
 *   `list_groups()` : Retourne tous les groupes de jeux sur le serveur.

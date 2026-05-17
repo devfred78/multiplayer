@@ -288,7 +288,8 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
 
                 # Check if it's an admin action
                 is_server_admin_action = action in ['stop_server', 'restart_server', 'get_server_info', 'set_logging_for_server', 'set_logging_enabled', 'list_all_players', 'get_cert_expiration', 'set_server_password', 'set_admin_password', 'create_group', 'remove_group', 'set_persistent_players_enabled', 'kick_player', 'kick_observer']
-                is_group_admin_action = action in ['kick_player', 'kick_observer', 'set_group_admin_password', 'list_group_games', 'get_group_info']
+                is_group_admin_action = action in ['kick_player', 'kick_observer', 'set_group_admin_password']
+                is_public_action = action in ['list_groups', 'get_group_info', 'list_group_games', 'list_games', 'list_users']
                 is_persistent_player_action = action in ['create_persistent_player']
                 
                 # If it's a kick action, it could be server admin OR group admin
@@ -315,8 +316,12 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                 from .game import PlayerRole
                 authorized = False
                 
+                # Public actions are always authorized
+                if is_public_action:
+                    authorized = True
+                
                 # 1. Try Global Admin access (if it's a server admin action OR a group admin action)
-                if is_server_admin_action or is_group_admin_action:
+                if not authorized and (is_server_admin_action or is_group_admin_action):
                     # We use client_password which is the password sent by the client for authentication.
                     # We avoid using params.get('admin_password') here because for actions like 'create_group',
                     # 'admin_password' in params is the password for the NEW group, not the authentication password.
@@ -745,12 +750,20 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
         elif action == 'list_games':
             include_finished = params.get('include_finished', False)
             game_list = {}
+            
+            # Pre-calculate group mapping
+            game_to_group = {}
+            for group in groups.values():
+                for g in group.games:
+                    game_to_group[g.ID] = group.ID
+
             for gid, g in games.items():
                 if include_finished or g.state != GameState.FINISHED:
                     game_list[gid] = {
                         'name': g.name,
                         'state': g.state,
                         'attributes': g.attributes,
+                        'group_id': game_to_group.get(gid),
                         'players_count': len(g.players),
                         'max_players': g.max_players,
                         'observers_count': len(g.observers),

@@ -3,7 +3,6 @@ import json
 import sqlite3
 import logging
 from abc import ABC, abstractmethod
-from ..game import Game, GameGroup, PersistentPlayer, GameState, PlayerRole
 
 class DataStore(ABC):
     @abstractmethod
@@ -343,6 +342,8 @@ class SQLiteDataStore(DataStore):
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
+            from ..game import PersistentPlayer, Player, Game, GameGroup, GameState, PlayerRole
+
             # Load persistent players
             persistent_players = {}
             cursor.execute("SELECT id, name, password, role, managed_groups, attributes, closed_at FROM persistent_players")
@@ -391,7 +392,7 @@ class SQLiteDataStore(DataStore):
                 game.start_time = start_time
                 game.end_time = end_time
                 
-                from ..game import Player, Observer
+                from ..game import Observer
                 if players_json:
                     player_ids = json.loads(players_json)
                     for pid in player_ids:

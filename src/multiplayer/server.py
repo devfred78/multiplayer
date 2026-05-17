@@ -19,7 +19,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 import enum
 
-from .game import Game, Player, Observer, GameState, PersistentPlayer
+from .game import Game, GameState, PersistentPlayer
 from .utils import hash_password, verify_password
 from .exceptions import GameLogicError, PlayerLimitReachedError, ObserverLimitReachedError, AuthenticationError
 

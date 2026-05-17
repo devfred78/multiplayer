@@ -249,8 +249,8 @@ Une classe client pour les administrateurs pour gÃ©rer un `GameServer` (hÃ©r
         *   `logging_active` (`bool`) : `True` si le logging cÃ´tÃ© serveur est actuellement activÃ©.
         *   `persistent_players_active` (`bool`) : `True` si la crÃ©ation de nouveaux comptes persistants est autorisÃ©e.
         *   `connected_clients` (`int`) : Nombre actuel de connexions clients actives.
-*   `kick_player(game_id, player_id)` : Retire un joueur d'une partie spÃ©cifique par son ID.
-*   `kick_observer(game_id, observer_id)` : Retire un observateur d'une partie spÃ©cifique par son ID.
+*   `kick_player(game_id, player_id)` : Retire un joueur d'une partie spÃ©cifique par son ID. Le `group_id` sera automatiquement rÃ©solu Ã  partir du `game_id` s'il n'est pas explicitement fourni (utilisÃ© pour l'autorisation).
+*   `kick_observer(game_id, observer_id)` : Retire un observateur d'une partie spÃ©cifique par son ID. Le `group_id` sera automatiquement rÃ©solu Ã  partir du `game_id` s'il n'est pas explicitement fourni (utilisÃ© pour l'autorisation).
 *   `list_all_players()` : Liste tous les joueurs actuellement connus par le serveur.
     *   **Retourne** : Un `dict` oÃ¹ les clÃ©s sont les ID des joueurs (`str`) et les valeurs sont des dictionnaires contenant :
         *   `name` (`str`) : Le nom du joueur.

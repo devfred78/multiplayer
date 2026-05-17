@@ -249,8 +249,8 @@ A client class for administrators to manage a `GameServer` (inherits from `GameC
         *   `logging_active` (`bool`): `True` if server-side logging is currently enabled.
         *   `persistent_players_active` (`bool`): `True` if the creation of new persistent accounts is allowed.
         *   `connected_clients` (`int`): Current number of active client connections.
-*   `kick_player(game_id, player_id)`: Removes a player from a specific game by their ID.
-*   `kick_observer(game_id, observer_id)`: Removes an observer from a specific game by their ID.
+*   `kick_player(game_id, player_id)`: Removes a player from a specific game by their ID. The `group_id` will be automatically resolved from the `game_id` if not explicitly provided (used for authorization).
+*   `kick_observer(game_id, observer_id)`: Removes an observer from a specific game by their ID. The `group_id` will be automatically resolved from the `game_id` if not explicitly provided (used for authorization).
 *   `list_all_players()`: Lists all players currently known by the server.
     *   **Returns**: A `dict` where keys are player IDs (`str`) and values are dictionaries containing:
         *   `name` (`str`): The player's name.

@@ -249,8 +249,8 @@ Una clase de cliente para que los administradores gestionen un `GameServer` (her
         *   `logging_active` (`bool`): `True` si el registro en el lado del servidor está habilitado actualmente.
         *   `persistent_players_active` (`bool`): `True` si se permite la creación de nuevas cuentas persistentes.
         *   `connected_clients` (`int`): Número actual de conexiones de clientes activas.
-*   `kick_player(game_id, player_id)`: Elimina a un jugador de un juego específico por su ID.
-*   `kick_observer(game_id, observer_id)`: Elimina a un observador de un juego específico por su ID.
+*   `kick_player(game_id, player_id)`: Elimina a un jugador de un juego específico por su ID. El `group_id` se resolverá automáticamente a partir del `game_id` si no se proporciona explícitamente (se utiliza para la autorización).
+*   `kick_observer(game_id, observer_id)`: Elimina a un observador de un juego específico por su ID. El `group_id` se resolverá automáticamente a partir del `game_id` si no se proporciona explícitamente (se utiliza para la autorización).
 *   `list_all_players()`: Enumera todos los jugadores conocidos actualmente por el servidor.
     *   **Devuelve**: Un `dict` donde las claves son los ID de los jugadores (`str`) y los valores son diccionarios que contienen:
         *   `name` (`str`): El nombre del jugador.

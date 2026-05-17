@@ -197,7 +197,7 @@ class GameClient:
         if group_id:
             params['group_id'] = group_id
         data = self._send_command('create_game', params)
-        remote_game = RemoteGame(data['game_id'], self.host, self.port, self.password, self.use_tls, self.auth_user, self.auth_password)
+        remote_game = RemoteGame(data['game_id'], self.host, self.port, game_options.get('password', self.password), self.use_tls, self.auth_user, self.auth_password)
         
         # Propagate logging configuration if any
         for h in self._logger.handlers:
@@ -225,7 +225,7 @@ class GameClient:
     def create_group(self, name, admin_password=None, **attributes):
         """Requests the server to create a new game group and returns a proxy to it."""
         data = self._send_command('create_group', {'name': name, 'admin_password': admin_password, 'attributes': attributes})
-        remote_group = RemoteGroup(data['group_id'], self.host, self.port, self.password, self.use_tls, self.auth_user, self.auth_password)
+        remote_group = RemoteGroup(data['group_id'], self.host, self.port, admin_password or self.password, self.use_tls, self.auth_user, self.auth_password)
         
         # Propagate logging configuration if any
         for h in self._logger.handlers:
@@ -607,7 +607,12 @@ class RemoteGame:
             'game_password': password,
         }
         if isinstance(player, PersistentPlayer):
-            params['persistent_player_password'] = player.password
+            # The server expects the raw password to verify against its hash
+            # PersistentPlayer.password is now a hash locally too if initialized with a string
+            # But the client test might be using the hash if it's not careful.
+            # However, if we want to support this, we need a way to get the raw password or
+            # ensure the client doesn't hash it.
+            params['persistent_player_password'] = getattr(player, '_raw_password', player.password)
             
         self._send_command('add_player', params)
         
@@ -638,7 +643,7 @@ class RemoteGame:
             'observer_password': password,
         }
         if isinstance(observer, PersistentPlayer):
-            params['persistent_player_password'] = observer.password
+            params['persistent_player_password'] = getattr(observer, '_raw_password', observer.password)
             
         self._send_command('add_observer', params)
         

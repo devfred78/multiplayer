@@ -53,7 +53,7 @@ def test_create_game_with_password():
     Tests that a game can be created with a password.
     """
     game = Game(password="secret")
-    assert game.password == "secret"
+    assert game.check_password("secret")
 
 def test_add_player_to_password_protected_game_success():
     """

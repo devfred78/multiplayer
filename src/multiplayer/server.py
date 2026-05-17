@@ -20,6 +20,7 @@ from cryptography.hazmat.primitives import serialization
 import enum
 
 from .game import Game, Player, Observer, GameState, PersistentPlayer
+from .utils import hash_password, verify_password
 from .exceptions import GameLogicError, PlayerLimitReachedError, ObserverLimitReachedError, AuthenticationError
 
 # Custom JSON Encoder to handle enums
@@ -162,9 +163,19 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
         unencrypted_bindsocket.listen()
 
     import time
+    
+    # Helper to hash passwords securely
+    def secure_hash(pw):
+        if pw is None: return None
+        if isinstance(pw, str) and (pw.startswith('$2b$') or pw.startswith('$2a$')):
+            return pw
+        from .utils import hash_password
+        hashed = hash_password(pw)
+        return hashed
+
     server_passwords = {
-        'server': password, 
-        'admin': admin_password, 
+        'server': secure_hash(password), 
+        'admin': secure_hash(admin_password), 
         'persistent_players_enabled': effective_persistent_players_enabled, 
         'hidden': effective_hidden, 
         'name': effective_name,
@@ -256,7 +267,7 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                 if auth_user and auth_password:
                     if persistent_players and auth_user in persistent_players:
                         p = persistent_players[auth_user]
-                        if p.password == auth_password:
+                        if p.check_password(auth_password):
                             user_role = p.role
                             user_managed_groups = p.managed_groups
                             logger.info(f"Authenticated as persistent player: {auth_user} (role: {user_role})")
@@ -268,7 +279,7 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                         raise AuthenticationError("Persistent player account not found")
 
                 # Check if it's an admin action
-                is_server_admin_action = action in ['stop_server', 'restart_server', 'get_server_info', 'set_logging_for_server', 'set_logging_enabled', 'list_all_players', 'get_cert_expiration', 'set_server_password', 'set_admin_password', 'create_group', 'remove_group', 'set_persistent_players_enabled']
+                is_server_admin_action = action in ['stop_server', 'restart_server', 'get_server_info', 'set_logging_for_server', 'set_logging_enabled', 'list_all_players', 'get_cert_expiration', 'set_server_password', 'set_admin_password', 'create_group', 'remove_group', 'set_persistent_players_enabled', 'kick_player', 'kick_observer']
                 is_group_admin_action = action in ['kick_player', 'kick_observer', 'set_group_admin_password', 'list_group_games', 'get_group_info']
                 is_persistent_player_action = action in ['create_persistent_player']
                 
@@ -284,7 +295,8 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                     # 1. Global admin password matches
                     # 2. Persistent player is SERVER_ADMIN
                     authorized = False
-                    if admin_password is not None and client_password == admin_password:
+                    
+                    if admin_password is not None and verify_password(client_password, admin_password):
                         authorized = True
                     elif user_role == PlayerRole.SERVER_ADMIN:
                         authorized = True
@@ -322,7 +334,7 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                         
                         authorized = False
                         # 1. Global admin password matches
-                        if admin_password is not None and client_password == admin_password:
+                        if admin_password is not None and verify_password(client_password, admin_password):
                             authorized = True
                         # 2. Persistent player is SERVER_ADMIN
                         elif user_role == PlayerRole.SERVER_ADMIN:
@@ -345,7 +357,7 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                             if found:
                                 authorized = True
                         # 4. Group admin password matches
-                        elif group.admin_password is not None and client_password == group.admin_password:
+                        elif group.admin_password is not None and group.check_admin_password(client_password):
                             authorized = True
                         
                         if not authorized:
@@ -371,14 +383,14 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                         raise AuthenticationError("Invalid admin credentials")
                 
                 elif is_persistent_player_action:
-                    if server_password is not None and client_password != server_password:
+                    if server_password is not None and not verify_password(client_password, server_password):
                         # Allow server admin to create accounts even if server password is set but not provided?
                         # For simplicity, if server password is set, it must be provided as 'password' field 
                         # OR the user must be already authenticated as SERVER_ADMIN.
                         if user_role != PlayerRole.SERVER_ADMIN:
                              raise AuthenticationError("Invalid server password")
                 
-                elif server_password is not None and client_password != server_password:
+                elif server_password is not None and not verify_password(client_password, server_password):
                     if user_role is None: # Not even a simple persistent player logged in
                          raise AuthenticationError("Invalid server password")
 
@@ -497,7 +509,11 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             # Update password if provided
             password = params.get('password')
             if password:
-                player.password = password
+                if not (password.startswith('$2b$') or password.startswith('$2a$')):
+                    player._raw_password = password
+                    player.password = hash_password(password)
+                else:
+                    player.password = password
             
             # Update attributes
             attributes = params.get('attributes', {})
@@ -573,14 +589,20 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
         elif action == 'set_server_password':
             new_password = params.get('new_password')
             if server_passwords is not None:
-                server_passwords['server'] = new_password
+                if new_password and not (new_password.startswith('$2b$') or new_password.startswith('$2a$')):
+                    server_passwords['server'] = hash_password(new_password)
+                else:
+                    server_passwords['server'] = new_password
                 return {'status': 'success', 'message': 'Server password updated'}
             return {'status': 'error', 'message': 'Server passwords dictionary not available'}
 
         elif action == 'set_admin_password':
             new_password = params.get('new_password')
             if server_passwords is not None:
-                server_passwords['admin'] = new_password
+                if new_password and not (new_password.startswith('$2b$') or new_password.startswith('$2a$')):
+                    server_passwords['admin'] = hash_password(new_password)
+                else:
+                    server_passwords['admin'] = new_password
                 return {'status': 'success', 'message': 'Admin password updated'}
             return {'status': 'error', 'message': 'Server passwords dictionary not available'}
 
@@ -594,7 +616,11 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
                     break
             if not group:
                 return {'status': 'error', 'message': f'Group with ID {group_id} not found'}
-            group.admin_password = new_password
+            # Hashing is handled by logic here as GameGroup doesn't have a property setter
+            if new_password and not (new_password.startswith('$2b$') or new_password.startswith('$2a$')):
+                group.admin_password = hash_password(new_password)
+            else:
+                group.admin_password = new_password
             return {'status': 'success', 'message': f'Admin password for group {group.name} updated'}
 
         elif action == 'list_group_games':
@@ -820,7 +846,7 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             # If the player is in persistent_players, we must authenticate
             if persistent_players is not None and player_name in persistent_players:
                 p_player = persistent_players[player_name]
-                if persistent_player_password != p_player.password:
+                if not p_player.check_password(persistent_player_password):
                     raise AuthenticationError(f"Invalid password for persistent player '{player_name}'")
                 # Use the persistent player object's properties
                 # Combine persistent attributes with game-specific attributes provided in player_data
@@ -843,7 +869,7 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             # If the player is in persistent_players, we must authenticate
             if persistent_players is not None and observer_name in persistent_players:
                 p_player = persistent_players[observer_name]
-                if persistent_player_password != p_player.password:
+                if not p_player.check_password(persistent_player_password):
                     raise AuthenticationError(f"Invalid password for persistent player '{observer_name}'")
                 # Combine persistent attributes with observer-specific attributes
                 combined_attributes = p_player.attributes.copy()

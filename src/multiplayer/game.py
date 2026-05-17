@@ -5,6 +5,7 @@ This module provides classes for managing a multiplayer game.
 import enum
 import uuid
 from datetime import datetime
+from .utils import hash_password, verify_password
 from .exceptions import (
     GameLogicError, 
     PlayerLimitReachedError, 
@@ -69,9 +70,20 @@ class PersistentPlayer(Player):
     """
     def __init__(self, name, password, role=PlayerRole.PLAYER, managed_groups=None, **kwargs):
         super().__init__(name, **kwargs)
-        self.password = password
+        # Check if the password is already a bcrypt hash
+        if password and not (password.startswith('$2b$') or password.startswith('$2a$')):
+            self._raw_password = password
+            self.password = hash_password(password)
+        else:
+            self.password = password
         self.role = role
         self.managed_groups = managed_groups or []
+
+    def check_password(self, password):
+        """
+        Checks if the provided password matches the player's password.
+        """
+        return verify_password(password, self.password)
 
     @property
     def role(self):
@@ -97,10 +109,19 @@ class GameGroup:
     """
     def __init__(self, name, admin_password=None, **kwargs):
         self.name = name
-        self.admin_password = admin_password
+        if admin_password and not (admin_password.startswith('$2b$') or admin_password.startswith('$2a$')):
+            self.admin_password = hash_password(admin_password)
+        else:
+            self.admin_password = admin_password
         self.attributes = kwargs
         self.games = []
         self._id = str(uuid.uuid4())
+
+    def check_admin_password(self, password):
+        """
+        Checks if the provided password matches the group admin password.
+        """
+        return verify_password(password, self.admin_password)
 
     @property
     def ID(self):
@@ -174,8 +195,17 @@ class Game:
         self.max_players = max_players
         self.max_observers = max_observers
         self.turn_based = turn_based
-        self.password = password
-        self.observer_password = observer_password
+        
+        if password and not (password.startswith('$2b$') or password.startswith('$2a$')):
+            self.password = hash_password(password)
+        else:
+            self.password = password
+            
+        if observer_password and not (observer_password.startswith('$2b$') or observer_password.startswith('$2a$')):
+            self.observer_password = hash_password(observer_password)
+        else:
+            self.observer_password = observer_password
+
         self.attributes = kwargs
         self.players = []
         self.observers = []
@@ -186,6 +216,19 @@ class Game:
         self.start_time = None
         self.end_time = None
         self._id = str(uuid.uuid4())
+
+    def check_password(self, password):
+        """
+        Checks if the provided password matches the game's password.
+        """
+        return verify_password(password, self.password)
+
+    def check_observer_password(self, password):
+        """
+        Checks if the provided password matches the observer's password.
+        """
+        required_hash = self.observer_password if self.observer_password is not None else self.password
+        return verify_password(password, required_hash)
 
     @property
     def ID(self):
@@ -215,7 +258,7 @@ class Game:
         """
         if any(p.ID == player.ID for p in self.players):
             raise PlayerAlreadyInGameError(f"Player with ID {player.ID} is already in the game")
-        if self.password is not None and self.password != password:
+        if self.password is not None and not verify_password(password, self.password):
             raise AuthenticationError("Invalid password for this game")
         if self.max_players is not None and len(self.players) >= self.max_players:
             raise PlayerLimitReachedError("Maximum number of players reached")
@@ -236,8 +279,11 @@ class Game:
         """
         if any(o.ID == observer.ID for o in self.observers):
             raise PlayerAlreadyInGameError(f"Observer with ID {observer.ID} is already in the game")
-        required_password = self.observer_password if self.observer_password is not None else self.password
-        if required_password is not None and required_password != password:
+        
+        # Determine required password hash
+        required_hash = self.observer_password if self.observer_password is not None else self.password
+        
+        if required_hash is not None and not verify_password(password, required_hash):
             raise AuthenticationError("Invalid password for this game")
         if self.max_observers is not None and len(self.observers) >= self.max_observers:
             raise ObserverLimitReachedError("Maximum number of observers reached")

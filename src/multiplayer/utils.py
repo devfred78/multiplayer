@@ -27,6 +27,30 @@ _BUILTIN_PLAYER_CATEGORIES = {
 _CUSTOM_GAME_CATEGORIES = {}
 _CUSTOM_PLAYER_CATEGORIES = {}
 
+import bcrypt
+
+def hash_password(password: str) -> str:
+    """
+    Hashes a password using bcrypt.
+    """
+    if password is None:
+        return None
+    # bcrypt.hashpw expects bytes
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
+
+def verify_password(password: str, hashed_password: str) -> bool:
+    """
+    Checks a password against a bcrypt hash.
+    """
+    if password is None or hashed_password is None:
+        return False
+    try:
+        return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception:
+        return False
+
 def register_name_category(category_name, data, category_type):
     """
     Registers a new custom category for name suggestions.

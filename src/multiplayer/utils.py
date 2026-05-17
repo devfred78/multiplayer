@@ -3,6 +3,7 @@ This module provides utility functions for the multiplayer package.
 """
 import csv
 import random
+import bcrypt
 from importlib import resources
 from pathlib import Path
 
@@ -26,8 +27,6 @@ _BUILTIN_PLAYER_CATEGORIES = {
 # --- Custom Categories (user-defined) ---
 _CUSTOM_GAME_CATEGORIES = {}
 _CUSTOM_PLAYER_CATEGORIES = {}
-
-import bcrypt
 
 def hash_password(password: str) -> str:
     """

@@ -170,7 +170,8 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
     
     # Helper to hash passwords securely
     def secure_hash(pw):
-        if pw is None: return None
+        if pw is None:
+            return None
         if isinstance(pw, str) and (pw.startswith('$2b$') or pw.startswith('$2a$')):
             return pw
         from .utils import hash_password
@@ -292,41 +293,37 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                 # If not, we check server admin rights.
                 group_id = params.get('group_id')
                 
+                # SPECIAL CASE: if it's a kick_player or kick_observer but without group_id in params,
+                # we try to find the group_id from the game_id
+                if action in ['kick_player', 'kick_observer'] and not group_id:
+                    game_id = params.get('game_id')
+                    if game_id:
+                        with lock:
+                            for group in groups.values():
+                                for g in group.games:
+                                    if g.ID == game_id:
+                                        group_id = group.ID
+                                        params['group_id'] = group_id # Inject it for later use
+                                        break
+                                if group_id:
+                                    break
+
                 # Authorization check
                 from .game import PlayerRole
-                if is_server_admin_action:
-                    # Authorized if:
-                    # 1. Global admin password matches
-                    # 2. Persistent player is SERVER_ADMIN
-                    authorized = False
-                    
-                    if admin_password is not None and verify_password(params.get('admin_password') or client_password, admin_password):
+                authorized = False
+                
+                # 1. Try Global Admin access (if it's a server admin action OR a group admin action)
+                if is_server_admin_action or is_group_admin_action:
+                    # We use client_password which is the password sent by the client for authentication.
+                    # We avoid using params.get('admin_password') here because for actions like 'create_group',
+                    # 'admin_password' in params is the password for the NEW group, not the authentication password.
+                    if admin_password is not None and verify_password(client_password, admin_password):
                         authorized = True
                     elif user_role == PlayerRole.SERVER_ADMIN:
                         authorized = True
-                    
-                    if not authorized:
-                        if admin_password is None and user_role != PlayerRole.SERVER_ADMIN:
-                            raise AuthenticationError("Admin actions are disabled on this server")
-                        raise AuthenticationError("Invalid admin credentials")
-                    
-                    # For get_server_info, we need more info than just server_passwords
-                    if action == 'get_server_info':
-                        params['__server_info__'] = {
-                            'host': server_passwords.get('host') or command.get('client_host'),
-                            'port': server_passwords.get('port') or command.get('client_port'),
-                            'unencrypted_port': server_passwords.get('unencrypted_port'),
-                            'use_tls': use_tls,
-                            'tls_domain': server_passwords.get('tls_domain'),
-                            'tls_self_signed': server_passwords.get('tls_self_signed'),
-                            'logging_host': server_passwords.get('logging_host'),
-                            'logging_port': server_passwords.get('logging_port'),
-                            'hidden': server_passwords.get('hidden', False),
-                            'name': server_name,
-                            'certfile': certfile
-                        }
                 
-                elif is_group_admin_action and group_id:
+                # 2. Try Group Admin access (if not already authorized and it's a group admin action)
+                if not authorized and is_group_admin_action and group_id:
                     with lock:
                         group = None
                         for g in groups.values():
@@ -336,15 +333,8 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                         if not group:
                             raise GameLogicError(f"Group with ID '{group_id}' not found")
                         
-                        authorized = False
-                        # 1. Global admin password matches
-                        if admin_password is not None and verify_password(params.get('admin_password') or client_password, admin_password):
-                            authorized = True
-                        # 2. Persistent player is SERVER_ADMIN
-                        elif user_role == PlayerRole.SERVER_ADMIN:
-                            authorized = True
-                        # 3. Persistent player is GROUP_ADMIN for THIS group
-                        elif user_role == PlayerRole.GROUP_ADMIN:
+                        # A. Persistent player is GROUP_ADMIN for THIS group
+                        if user_role == PlayerRole.GROUP_ADMIN:
                             # Search by name or ID in managed_groups
                             found = False
                             for mg in user_managed_groups:
@@ -360,43 +350,71 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                                     break
                             if found:
                                 authorized = True
-                        # 4. Group admin password matches
-                        elif group.admin_password is not None and group.check_admin_password(client_password):
-                            authorized = True
                         
-                        if not authorized:
-                            logger.warning(f"Unauthorized group admin action: {action} on group {group_id} for user {auth_user} (role {user_role}). Managed groups: {user_managed_groups}")
-                            # If they provided an auth_user, they MUST have the role, even if no password is set
-                            if auth_user and user_role not in [PlayerRole.SERVER_ADMIN, PlayerRole.GROUP_ADMIN]:
-                                raise AuthenticationError(f"User {auth_user} does not have administrative roles")
-                            
-                            if group.admin_password is None and admin_password is None and user_role not in [PlayerRole.SERVER_ADMIN, PlayerRole.GROUP_ADMIN]:
-                                raise AuthenticationError(f"Group admin actions are disabled for group ID '{group_id}'")
-                            raise AuthenticationError("Invalid group admin credentials")
+                        # B. Group admin password matches
+                        if not authorized and group.admin_password is not None and group.check_admin_password(client_password):
+                            authorized = True
                 
-                elif is_group_admin_action: # Action without group_id (like kick without group)
-                    authorized = False
-                    if admin_password is not None and client_password == admin_password:
-                        authorized = True
-                    elif user_role == PlayerRole.SERVER_ADMIN:
+                # 3. Handle persistent player actions (not admin, just server entry)
+                if not authorized and is_persistent_player_action:
+                    if server_password is not None:
+                        if verify_password(client_password, server_password):
+                            authorized = True
+                    else:
                         authorized = True
                     
-                    if not authorized:
-                        if admin_password is None and user_role != PlayerRole.SERVER_ADMIN:
+                    if not authorized and user_role == PlayerRole.SERVER_ADMIN:
+                        authorized = True
+                
+                # 4. Final authorization enforcement
+                if not authorized:
+                    if is_server_admin_action and not is_group_admin_action:
+                         if admin_password is None and user_role != PlayerRole.SERVER_ADMIN:
                             raise AuthenticationError("Admin actions are disabled on this server")
-                        raise AuthenticationError("Invalid admin credentials")
-                
-                elif is_persistent_player_action:
-                    if server_password is not None and not verify_password(client_password, server_password):
-                        # Allow server admin to create accounts even if server password is set but not provided?
-                        # For simplicity, if server password is set, it must be provided as 'password' field 
-                        # OR the user must be already authenticated as SERVER_ADMIN.
-                        if user_role != PlayerRole.SERVER_ADMIN:
-                             raise AuthenticationError("Invalid server password")
-                
-                elif server_password is not None and not verify_password(client_password, server_password):
-                    if user_role is None: # Not even a simple persistent player logged in
+                         raise AuthenticationError("Invalid admin credentials")
+                    
+                    if is_group_admin_action:
+                        if group_id:
+                            # Re-fetch group for error message if not done before
+                            if 'group' not in locals() or group is None:
+                                with lock:
+                                    for g in groups.values():
+                                        if g.ID == group_id:
+                                            group = g
+                                            break
+                            if group and group.admin_password is None and admin_password is None and user_role not in [PlayerRole.SERVER_ADMIN, PlayerRole.GROUP_ADMIN]:
+                                raise AuthenticationError(f"Group admin actions are disabled for group ID '{group_id}'")
+                            raise AuthenticationError("Invalid group admin credentials")
+                        else:
+                            # Action without group_id but is group admin (e.g. kick without group_id)
+                            # Should have been handled by server admin check above, but if we are here it failed
+                            raise AuthenticationError("Invalid admin credentials")
+                    
+                    if is_persistent_player_action:
                          raise AuthenticationError("Invalid server password")
+
+                    if server_password is not None and not verify_password(client_password, server_password):
+                         # Special case for server password check on any connection
+                         if user_role is None:
+                             raise AuthenticationError("Invalid server password")
+
+                # If we reach here, either authorized is True OR it wasn't a restricted action
+                
+                # For get_server_info, we need more info than just server_passwords
+                if action == 'get_server_info' and authorized:
+                    params['__server_info__'] = {
+                        'host': server_passwords.get('host') or command.get('client_host'),
+                        'port': server_passwords.get('port') or command.get('client_port'),
+                        'unencrypted_port': server_passwords.get('unencrypted_port'),
+                        'use_tls': use_tls,
+                        'tls_domain': server_passwords.get('tls_domain'),
+                        'tls_self_signed': server_passwords.get('tls_self_signed'),
+                        'logging_host': server_passwords.get('logging_host'),
+                        'logging_port': server_passwords.get('logging_port'),
+                        'hidden': server_passwords.get('hidden', False),
+                        'name': server_name,
+                        'certfile': certfile
+                    }
 
                 with lock:
                     try:

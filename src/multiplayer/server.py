@@ -402,9 +402,7 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                          raise AuthenticationError("Invalid server password")
 
                     if server_password is not None and not verify_password(client_password, server_password):
-                         # Special case for server password check on any connection
-                         if user_role is None:
-                             raise AuthenticationError("Invalid server password")
+                         raise AuthenticationError("Invalid server password")
 
                 # If we reach here, either authorized is True OR it wasn't a restricted action
                 

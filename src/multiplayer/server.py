@@ -270,16 +270,17 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                 user_role = None
                 user_managed_groups = []
                 if auth_user and auth_password:
-                    # Case-insensitive lookup
+                    # Case-insensitive lookup (supporting name or ID)
                     player = None
                     if persistent_players:
-                        # Try exact match first
+                        # Try exact match first (could be name or ID depending on how it's stored)
                         if auth_user in persistent_players:
                             player = persistent_players[auth_user]
-                        else:
-                            # Try case-insensitive match
-                            for p_name, p_obj in persistent_players.items():
-                                if p_name.lower() == auth_user.lower():
+                        
+                        if not player:
+                            # Try case-insensitive name match OR exact ID match if not already found
+                            for p_obj in persistent_players.values():
+                                if p_obj.name.lower() == auth_user.lower() or p_obj.ID == auth_user:
                                     player = p_obj
                                     break
                     

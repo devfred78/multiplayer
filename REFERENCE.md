@@ -31,7 +31,7 @@ Represents a single game session.
 *   `next_turn()`: Advances to the next player in a turn-based game.
 
 #### Properties
-*   **`ID`**: The unique ID of the game session (read-only).
+*   **`ID`**: The unique ID of the game session (UUID string, read-only).
 *   **`players`**: A list of `Player` objects in the game.
 *   **`observers`**: A list of `Observer` objects in the game.
 *   **`state`**: The current `GameState` of the game (e.g., `GameState.IN_PROGRESS`).
@@ -54,7 +54,7 @@ Represents a player.
 *   **`**kwargs`**: Custom attributes for the player (e.g., `score=100`).
 
 #### Properties
-*   **`ID`**: The unique ID of the player (read-only).
+*   **`ID`**: The unique ID of the player (UUID string, read-only).
 *   **`name`**: The player's name.
 *   **`attributes`**: A dictionary of the player's custom attributes.
 
@@ -84,7 +84,7 @@ Represents an observer.
 *   **`**kwargs`**: Custom attributes for the observer.
 
 #### Properties
-*   **`ID`**: The unique ID of the observer (read-only).
+*   **`ID`**: The unique ID of the observer (UUID string, read-only).
 *   **`name`**: The observer's name.
 *   **`attributes`**: A dictionary of the observer's custom attributes.
 
@@ -102,7 +102,7 @@ Represents a group of games on a server.
 *   `remove_game(game_id)`: Removes a game from the group by its ID.
 
 #### Properties
-*   **`ID`**: The unique ID of the group (read-only).
+*   **`ID`**: The unique ID of the group (UUID string, read-only).
 *   **`name`**: The name of the group.
 *   **`games`**: A list of `Game` objects currently in the group.
 *   **`attributes`**: A dictionary of custom attributes for the group.
@@ -370,6 +370,7 @@ When using persistent storage (JSON or SQLite):
 *   **Volatile Players**: Non-persistent players (those created for a single game) are also stored in a dedicated `volatile_players` group. Only their ID, name, and attributes are persisted.
 *   **Account Closure**: Removing a persistent player does not delete their record. Instead, a `closed_at` timestamp is added. A closed account cannot be used for authentication.
 *   **Game Data**: Games mandatory include `players` and `observers` lists, containing the IDs of the participants.
+*   **Legacy Support**: The system can load older data formats (using names as keys) and automatically migrates them to the new ID-based format upon saving.
 
 ## Utility Functions
 

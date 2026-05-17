@@ -82,7 +82,7 @@ game2 = Game("Match 2")
 group.add_game(game1)
 group.add_game(game2)
 
-print(f"Game 1 ID: {game1.ID}")
+print(f"Game 1 ID: {game1.game_id}")
 # > Game 1 ID: 550e8400-e29b-41d4-a716-446655440000
 
 print(f"Group '{group.name}' has {len(group.games)} games.")

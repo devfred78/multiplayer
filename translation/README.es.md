@@ -196,7 +196,7 @@ servers = GameClient.discover_servers()
 if not servers:
     print("No se encontraron servidores.")
 else:
-    host, port = servers[0]
+    host, port, name = servers[0]
     client = GameClient(
         host=host,
         port=port,

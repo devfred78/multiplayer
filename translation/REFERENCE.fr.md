@@ -30,8 +30,8 @@ ReprÃ©sente une session de jeu unique.
 *   `stop()` : Termine la partie.
 *   `next_turn()` : Passe au joueur suivant dans un jeu au tour par tour.
 
-#### PropriÃ©tÃ©s
-*   **`ID`** : L'ID unique de la session de jeu (lecture seule).
+#### Propriétés
+*   **`ID`** : L'ID unique de la session de jeu (chaîne UUID, lecture seule).
 *   **`players`** : Une liste d'objets `Player` dans la partie.
 *   **`observers`** : Une liste d'objets `Observer` dans la partie.
 *   **`state`** : Le `GameState` actuel de la partie (ex: `GameState.IN_PROGRESS`).
@@ -53,10 +53,10 @@ ReprÃ©sente un joueur.
 *   **`name`** (`str`) : Le nom du joueur.
 *   **`**kwargs`** : Attributs personnalisÃ©s pour le joueur (ex: `score=100`).
 
-#### PropriÃ©tÃ©s
-*   **`ID`** : L'ID unique du joueur (lecture seule).
+#### Propriétés
+*   **`ID`** : L'ID unique du joueur (chaîne UUID, lecture seule).
 *   **`name`** : Le nom du joueur.
-*   **`attributes`** : Un dictionnaire des attributs personnalisÃ©s du joueur.
+*   **`attributes`** : Un dictionnaire des attributs personnalisés du joueur.
 
 ---
 
@@ -83,10 +83,10 @@ ReprÃ©sente un observateur.
 *   **`name`** (`str`) : Le nom de l'observateur.
 *   **`**kwargs`** : Attributs personnalisÃ©s pour l'observateur.
 
-#### PropriÃ©tÃ©s
-*   **`ID`** : L'ID unique de l'observateur (lecture seule).
+#### Propriétés
+*   **`ID`** : L'ID unique de l'observateur (chaîne UUID, lecture seule).
 *   **`name`** : Le nom de l'observateur.
-*   **`attributes`** : Un dictionnaire des attributs personnalisÃ©s de l'observateur.
+*   **`attributes`** : Un dictionnaire des attributs personnalisés de l'observateur.
 
 ---
 
@@ -101,11 +101,11 @@ ReprÃ©sente un groupe de parties sur un serveur.
 *   `add_game(game)` : Ajoute un objet `Game` au groupe.
 *   `remove_game(game_id)` : Retire une partie du groupe par son ID.
 
-#### PropriÃ©tÃ©s
-*   **`ID`** : L'ID unique du groupe (lecture seule).
+#### Propriétés
+*   **`ID`** : L'ID unique du groupe (chaîne UUID, lecture seule).
 *   **`name`** : Le nom du groupe.
 *   **`games`** : Une liste d'objets `Game` actuellement dans le groupe.
-*   **`attributes`** : Un dictionnaire d'attributs personnalisÃ©s pour le groupe.
+*   **`attributes`** : Un dictionnaire d'attributs personnalisés pour le groupe.
 
 ---
 
@@ -370,6 +370,7 @@ Lors de l'utilisation d'un stockage persistant (JSON ou SQLite) :
 *   **Joueurs Volatils** : Les joueurs non persistants (ceux créés pour une seule partie) sont également stockés dans un groupe dédié `volatile_players`. Seuls leur ID, leur nom et leurs attributs sont conservés.
 *   **Fermeture de Compte** : La suppression d'un joueur persistant ne supprime pas son enregistrement. À la place, un horodatage `closed_at` est ajouté. Un compte fermé ne peut plus être utilisé pour l'authentification.
 *   **Données de Partie** : Les parties incluent obligatoirement des listes `players` et `observers`, contenant les IDs des participants.
+*   **Support Legacy** : Le système peut charger d'anciens formats de données (utilisant les noms comme clés) et les migre automatiquement vers le nouveau format basé sur les IDs lors de la sauvegarde.
 
 ## Fonctions Utilitaires
 
@@ -574,12 +575,4 @@ server = GameServer(
 server.start()
 
 try:
-    print("Le serveur est en cours d'exÃ©cution. Appuyez sur Ctrl+C pour arrÃªter.")
-    while True:
-        time.sleep(1)
-except KeyboardInterrupt:
-    print("ArrÃªt du serveur...")
-finally:
-    # ArrÃªter proprement le serveur
-    server.stop()
-```
+    print("Le serveur est en cours d'exÃ©cu

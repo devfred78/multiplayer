@@ -31,7 +31,7 @@ Representa una única sesión de juego.
 *   `next_turn()`: Avanza al siguiente jugador en un juego por turnos.
 
 #### Propiedades
-*   **`ID`**: El ID único de la sesión de juego (solo lectura).
+*   **`ID`**: El ID único de la sesión de juego (cadena UUID, solo lectura).
 *   **`players`**: Una lista de objetos `Player` en la partida.
 *   **`observers`**: Una lista de objetos `Observer` en la partida.
 *   **`state`**: El `GameState` actual de la partida (ej: `GameState.IN_PROGRESS`).
@@ -54,7 +54,7 @@ Representa a un jugador.
 *   **`**kwargs`**: Atributos personalizados para el jugador (ej: `score=100`).
 
 #### Propiedades
-*   **`ID`**: El ID único del jugador (solo lectura).
+*   **`ID`**: El ID único del jugador (cadena UUID, solo lectura).
 *   **`name`**: El nombre del jugador.
 *   **`attributes`**: Un diccionario de los atributos personalizados del jugador.
 
@@ -84,7 +84,7 @@ Representa a un observador.
 *   **`**kwargs`**: Atributos personalizados para el observador.
 
 #### Propiedades
-*   **`ID`**: El ID único del observador (solo lectura).
+*   **`ID`**: El ID único del observador (cadena UUID, solo lectura).
 *   **`name`**: El nombre del observador.
 *   **`attributes`**: Un diccionario de los atributos personalizados del observador.
 
@@ -102,7 +102,7 @@ Representa un grupo de juegos en un servidor.
 *   `remove_game(game_id)` : Elimina una partida del grupo por su ID.
 
 #### Propiedades
-*   **`ID`**: El ID único del grupo (solo lectura).
+*   **`ID`**: El ID único del grupo (cadena UUID, solo lectura).
 *   **`name`**: El nombre del grupo.
 *   **`games`**: Una lista de objetos `Game` actualmente en el grupo.
 *   **`attributes`**: Un diccionario de atributos personalizados para el grupo.
@@ -369,7 +369,8 @@ Cuando se utiliza el almacenamiento persistente (JSON o SQLite):
 *   **IDs como Claves**: Los jugadores y las partidas se guardan usando su UUID único como clave principal en lugar de los nombres.
 *   **Jugadores Volátiles**: Los jugadores no persistentes (creados para una sola partida) también se guardan en un grupo dedicado `volatile_players`. Solo se persisten su ID, nombre y atributos.
 *   **Cierre de Cuenta**: Eliminar un jugador persistente no borra su registro. En su lugar, se añade una marca de tiempo `closed_at`. Una cuenta cerrada no puede usarse para la autenticación.
-*   **Datos de Partida**: Las partidas incluyen obligatoriamente listas de `players` y `observers`, que contienen los IDs de los participantes.
+*   **Datos de Partida**: Las partidas incluyen obligatoiramente listas de `players` y `observers`, que contienen los IDs de los participantes.
+*   **Soporte de Legado**: El sistema puede cargar formatos de datos más antiguos (usando nombres como claves) y los migra automáticamente al nuevo formato basado en IDs al guardar.
 
 ## Funciones de Utilidad
 

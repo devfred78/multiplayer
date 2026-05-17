@@ -39,9 +39,9 @@ pip install multiplayer
 ### 2. Desde un archivo Wheel (GitHub)
 Descarga el archivo `.whl` desde la página de [Lanzamientos (Releases)](https://github.com/devfred78/multiplayer/releases) y ejecuta:
 ```sh
-pip install multiplayer-1.1.0-py3-none-any.whl
+pip install multiplayer-1.1.1-py3-none-any.whl
 ```
-*Reemplaza `multiplayer-1.1.0-py3-none-any.whl` con el nombre real del archivo descargado.*
+*Reemplaza `multiplayer-1.1.1-py3-none-any.whl` con el nombre real del archivo descargado.*
 
 ## Uso
 

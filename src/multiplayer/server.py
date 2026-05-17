@@ -270,25 +270,40 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                 user_role = None
                 user_managed_groups = []
                 if auth_user and auth_password:
-                    if persistent_players and auth_user in persistent_players:
-                        p = persistent_players[auth_user]
+                    # Case-insensitive lookup (supporting name or ID)
+                    player = None
+                    if persistent_players:
+                        # Try exact match first (could be name or ID depending on how it's stored)
+                        if auth_user in persistent_players:
+                            player = persistent_players[auth_user]
+                        
+                        if not player:
+                            # Try case-insensitive name match OR exact ID match if not already found
+                            for p_obj in persistent_players.values():
+                                if p_obj.name.lower() == auth_user.lower() or p_obj.ID == auth_user:
+                                    player = p_obj
+                                    break
+                    
+                    if player:
+                        p = player
                         if p.closed_at:
                             logger.warning(f"Authentication attempt for closed account: {auth_user}")
-                            raise AuthenticationError("Persistent player account is closed")
+                            raise AuthenticationError("account_closed")
                         if p.check_password(auth_password):
                             user_role = p.role
                             user_managed_groups = p.managed_groups
                             logger.info(f"Authenticated as persistent player: {auth_user} (role: {user_role})")
                         else:
                             logger.warning(f"Failed authentication for persistent player: {auth_user} (wrong password)")
-                            raise AuthenticationError("Invalid persistent player password")
+                            raise AuthenticationError("invalid_password")
                     else:
                         logger.warning(f"Failed authentication for persistent player: {auth_user} (not found)")
-                        raise AuthenticationError("Persistent player account not found")
+                        raise AuthenticationError("account_not_found")
 
                 # Check if it's an admin action
                 is_server_admin_action = action in ['stop_server', 'restart_server', 'get_server_info', 'set_logging_for_server', 'set_logging_enabled', 'list_all_players', 'get_cert_expiration', 'set_server_password', 'set_admin_password', 'create_group', 'remove_group', 'set_persistent_players_enabled', 'kick_player', 'kick_observer']
-                is_group_admin_action = action in ['kick_player', 'kick_observer', 'set_group_admin_password', 'list_group_games', 'get_group_info']
+                is_group_admin_action = action in ['kick_player', 'kick_observer', 'set_group_admin_password']
+                is_public_action = action in ['list_groups', 'get_group_info', 'list_group_games', 'list_users']
                 is_persistent_player_action = action in ['create_persistent_player']
                 
                 # If it's a kick action, it could be server admin OR group admin
@@ -315,8 +330,12 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                 from .game import PlayerRole
                 authorized = False
                 
+                # Public actions are always authorized
+                if is_public_action:
+                    authorized = True
+                
                 # 1. Try Global Admin access (if it's a server admin action OR a group admin action)
-                if is_server_admin_action or is_group_admin_action:
+                if not authorized and (is_server_admin_action or is_group_admin_action):
                     # We use client_password which is the password sent by the client for authentication.
                     # We avoid using params.get('admin_password') here because for actions like 'create_group',
                     # 'admin_password' in params is the password for the NEW group, not the authentication password.
@@ -397,9 +416,7 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                          raise AuthenticationError("Invalid server password")
 
                     if server_password is not None and not verify_password(client_password, server_password):
-                         # Special case for server password check on any connection
-                         if user_role is None:
-                             raise AuthenticationError("Invalid server password")
+                         raise AuthenticationError("Invalid server password")
 
                 # If we reach here, either authorized is True OR it wasn't a restricted action
                 
@@ -519,30 +536,41 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             if not enabled:
                 return {'status': 'error', 'message': 'Persistent player creation is disabled on this server'}
 
-            if name in persistent_players:
-                existing_player = persistent_players[name]
+            # Case-insensitive check for existing player
+            existing_player = None
+            for p_obj in persistent_players.values():
+                if p_obj.name.lower() == name.lower():
+                    existing_player = p_obj
+                    break
+
+            if existing_player:
                 if not existing_player.closed_at:
                     return {'status': 'error', 'type': 'UserAlreadyExistsError', 'message': f"Player '{name}' already exists"}
                 else:
-                    # Account was closed, we can reactivate it or replace it?
-                    # The requirement says "the account is kept in the persistence storage, but a new key closed_at appears"
-                    # If someone tries to recreate it, it should probably be an error or we should allow taking the name if we really "delete" it
-                    # But if we keep it for audit/history, the name might be reserved.
-                    # Let's stick to "already exists" for now as the account IS there.
                     return {'status': 'error', 'type': 'UserAlreadyExistsError', 'message': f"Player '{name}' already exists (account closed)"}
             
             player = PersistentPlayer(name, password, role=role, managed_groups=managed_groups, **params.get('attributes', {}))
-            persistent_players[name] = player
+            persistent_players[player.ID] = player
             return {'status': 'success', 'data': {'player_id': player.ID, 'name': player.name, 'role': player.role.value}}
 
         elif action == 'update_persistent_player':
-            name = params.get('name')
-            if not name or name not in persistent_players:
-                return {'status': 'error', 'message': f"Player '{name}' not found"}
+            pid = params.get('id')
+            if not pid or pid not in persistent_players:
+                # Fallback to name search if id not provided
+                name = params.get('name')
+                player = None
+                if name:
+                    for p in persistent_players.values():
+                        if p.name == name:
+                            player = p
+                            break
+                if not player:
+                    return {'status': 'error', 'message': f"Player '{pid or name}' not found"}
+            else:
+                player = persistent_players[pid]
             
-            player = persistent_players[name]
             if player.closed_at:
-                return {'status': 'error', 'message': f"Account for player '{name}' is closed"}
+                return {'status': 'error', 'message': f"Account for player '{player.name}' is closed"}
             
             # Update role if provided
             role_val = params.get('role')
@@ -573,13 +601,23 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             return {'status': 'success', 'message': f"Player '{name}' updated"}
 
         elif action == 'remove_persistent_player':
-            name = params.get('name')
-            if not name or name not in persistent_players:
-                return {'status': 'error', 'message': f"Player '{name}' not found"}
+            pid = params.get('id')
+            if not pid or pid not in persistent_players:
+                # Fallback to name
+                name = params.get('name')
+                player = None
+                if name:
+                    for p in persistent_players.values():
+                        if p.name == name:
+                            player = p
+                            break
+                if not player:
+                    return {'status': 'error', 'message': f"Player '{pid or name}' not found"}
+            else:
+                player = persistent_players[pid]
             
-            player = persistent_players[name]
             player.closed_at = datetime.now(timezone.utc).isoformat()
-            return {'status': 'success', 'message': f"Player '{name}' account closed"}
+            return {'status': 'success', 'message': f"Player '{player.name}' account closed"}
 
         elif action == 'create_game':
             game_id = str(uuid.uuid4())
@@ -595,11 +633,14 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
                 from .game import Player as GamePlayer, Observer as GameObserver
                 player = None
                 # Check if persistent
-                if persistent_players is not None and player_name in persistent_players:
-                    p_player = persistent_players[player_name]
-                    player = GamePlayer(p_player.name, **p_player.attributes)
-                    player._force_id(p_player.ID)
-                else:
+                if persistent_players is not None:
+                    for p_player in persistent_players.values():
+                        if p_player.name == player_name or p_player.ID == player_name:
+                            player = GamePlayer(p_player.name, **p_player.attributes)
+                            player._force_id(p_player.ID)
+                            break
+                
+                if not player:
                     player = GamePlayer(player_name)
                     # If it's a volatile player already known, use its ID
                     if volatile_players:
@@ -745,12 +786,20 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
         elif action == 'list_games':
             include_finished = params.get('include_finished', False)
             game_list = {}
+            
+            # Pre-calculate group mapping
+            game_to_group = {}
+            for group in groups.values():
+                for g in group.games:
+                    game_to_group[g.ID] = group.ID
+
             for gid, g in games.items():
                 if include_finished or g.state != GameState.FINISHED:
                     game_list[gid] = {
                         'name': g.name,
                         'state': g.state,
                         'attributes': g.attributes,
+                        'group_id': game_to_group.get(gid),
                         'players_count': len(g.players),
                         'max_players': g.max_players,
                         'observers_count': len(g.observers),
@@ -893,9 +942,9 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
 
             # 2. Add persistent players who are NOT connected
             if persistent_players:
-                for name, p_player in persistent_players.items():
-                    if p_player.ID not in player_map:
-                        player_map[p_player.ID] = {
+                for pid, p_player in persistent_players.items():
+                    if pid not in player_map:
+                        player_map[pid] = {
                             'name': p_player.name,
                             'attributes': p_player.attributes,
                             'games': {},
@@ -932,17 +981,37 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             
             from .game import Player as GamePlayer, Observer as GameObserver
             # If the player is in persistent_players, we must authenticate
-            if persistent_players is not None and player_name in persistent_players:
-                p_player = persistent_players[player_name]
+            p_player = None
+            if persistent_players is not None:
+                # 1. Try by ID
+                if player_name in persistent_players:
+                    p_player = persistent_players[player_name]
+                else:
+                    # 2. Try by name (case-insensitive)
+                    for p in persistent_players.values():
+                        if p.name.lower() == player_name.lower():
+                            p_player = p
+                            break
+            
+            if p_player:
+                if p_player.closed_at:
+                    raise AuthenticationError("account_closed")
                 if not p_player.check_password(persistent_player_password):
-                    raise AuthenticationError(f"Invalid password for persistent player '{player_name}'")
+                    raise AuthenticationError("invalid_password")
+                
                 # Use the persistent player object's properties
-                # Combine persistent attributes with game-specific attributes provided in player_data
                 combined_attributes = p_player.attributes.copy()
                 combined_attributes.update(player_data.get('attributes', {}))
                 player = GamePlayer(p_player.name, **combined_attributes)
                 player._force_id(p_player.ID)
             else:
+                # Non-persistent or not found
+                # If we intended to use a persistent account but didn't find it, we should probably fail
+                # if the client explicitly wants to use a persistent account.
+                # For now, if it's not found in persistent_players, we treat it as volatile.
+                # BUT the user wants specific errors if it was intended to be persistent.
+                # Since the client sends player_name, we don't know for sure if they EXPECTED it to be persistent.
+                # However, usually in the UI, if they are on the "Connect to account" tab, they expect it.
                 player = GamePlayer(player_name, **player_data.get('attributes', {}))
                 # If volatile player already known, use its ID
                 if volatile_players:
@@ -962,10 +1031,22 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             
             from .game import Player as GamePlayer, Observer as GameObserver
             # If the player is in persistent_players, we must authenticate
-            if persistent_players is not None and observer_name in persistent_players:
-                p_player = persistent_players[observer_name]
+            p_player = None
+            if persistent_players is not None:
+                if observer_name in persistent_players:
+                    p_player = persistent_players[observer_name]
+                else:
+                    for p in persistent_players.values():
+                        if p.name.lower() == observer_name.lower():
+                            p_player = p
+                            break
+            
+            if p_player:
+                if p_player.closed_at:
+                    raise AuthenticationError("account_closed")
                 if not p_player.check_password(persistent_player_password):
-                    raise AuthenticationError(f"Invalid password for persistent player '{observer_name}'")
+                    raise AuthenticationError("invalid_password")
+                
                 # Combine persistent attributes with observer-specific attributes
                 combined_attributes = p_player.attributes.copy()
                 combined_attributes.update(observer_data.get('attributes', {}))

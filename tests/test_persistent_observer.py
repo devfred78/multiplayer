@@ -33,7 +33,7 @@ def test_persistent_player_as_observer():
         wrong_alice = PersistentPlayer("Alice", "wrong_password")
         with pytest.raises(Exception) as excinfo:
             remote_game.add_observer(wrong_alice)
-        assert "AuthenticationError" in str(excinfo.value) or "Invalid password" in str(excinfo.value)
+        assert any(msg in str(excinfo.value) for msg in ["AuthenticationError", "Invalid password", "invalid_password"])
         
         # 5. Vérifier la fusion des attributs spécifiques à la session
         bob_client = GameClient(port=65435)

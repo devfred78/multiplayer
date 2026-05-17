@@ -82,8 +82,7 @@ class JSONDataStore(DataStore):
                 if 'attributes' in p_data:
                     p.attributes.update(p_data['attributes'])
                 
-                # Use both name AND ID as keys to support lookup by either
-                persistent_players[p.name] = p
+                # Use only ID as key
                 persistent_players[p.ID] = p
 
             # Reconstruct volatile players
@@ -360,8 +359,7 @@ class SQLiteDataStore(DataStore):
                 )
                 p._force_id(pid)
                 p.attributes.update(json.loads(attributes_json))
-                # Use both name AND ID as keys to support lookup by either
-                persistent_players[name] = p
+                # Use only ID as key
                 persistent_players[pid] = p
 
             # Load volatile players

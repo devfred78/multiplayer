@@ -134,6 +134,10 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
     effective_hidden = server_config.get('hidden', hidden)
     effective_persistent_players_enabled = server_config.get('persistent_players_enabled', persistent_players_enabled)
     
+    # Priority to persisted passwords if they exist
+    effective_password = server_config.get('server_password', password)
+    effective_admin_password = server_config.get('admin_password', admin_password)
+    
     if effective_name:
         server_start_msg += f" (Name: {effective_name})"
     logger.info(server_start_msg)
@@ -161,7 +165,7 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
         unencrypted_bindsocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         unencrypted_bindsocket.bind((host, unencrypted_port))
         unencrypted_bindsocket.listen()
-
+    
     import time
     
     # Helper to hash passwords securely
@@ -172,10 +176,10 @@ def _run_server_process(host, port, password, admin_password, use_tls, certfile,
         from .utils import hash_password
         hashed = hash_password(pw)
         return hashed
-
+    
     server_passwords = {
-        'server': secure_hash(password), 
-        'admin': secure_hash(admin_password), 
+        'server': secure_hash(effective_password), 
+        'admin': secure_hash(effective_admin_password), 
         'persistent_players_enabled': effective_persistent_players_enabled, 
         'hidden': effective_hidden, 
         'name': effective_name,
@@ -296,7 +300,7 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                     # 2. Persistent player is SERVER_ADMIN
                     authorized = False
                     
-                    if admin_password is not None and verify_password(client_password, admin_password):
+                    if admin_password is not None and verify_password(params.get('admin_password') or client_password, admin_password):
                         authorized = True
                     elif user_role == PlayerRole.SERVER_ADMIN:
                         authorized = True
@@ -334,7 +338,7 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                         
                         authorized = False
                         # 1. Global admin password matches
-                        if admin_password is not None and verify_password(client_password, admin_password):
+                        if admin_password is not None and verify_password(params.get('admin_password') or client_password, admin_password):
                             authorized = True
                         # 2. Persistent player is SERVER_ADMIN
                         elif user_role == PlayerRole.SERVER_ADMIN:
@@ -408,7 +412,9 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                             server_config = {
                                 'name': server_passwords.get('name'),
                                 'hidden': server_passwords.get('hidden'),
-                                'persistent_players_enabled': server_passwords.get('persistent_players_enabled')
+                                'persistent_players_enabled': server_passwords.get('persistent_players_enabled'),
+                                'server_password': server_passwords.get('server'),
+                                'admin_password': server_passwords.get('admin')
                             }
                             datastore.save(games, groups, persistent_players, server_config=server_config)
                     except Exception as e:

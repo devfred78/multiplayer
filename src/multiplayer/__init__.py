@@ -1,7 +1,7 @@
 """
 This package provides classes for managing a multiplayer game, both locally and over a network.
 """
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 from .game import Game, Player, Observer, GameState, GameGroup
 from .server import GameServer
 from .client import GameClient, RemoteGame, ServerAdmin, GroupAdmin

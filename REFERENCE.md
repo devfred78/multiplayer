@@ -363,6 +363,14 @@ Starts a standalone game server.
 *   **`--persistence`** (`str`): Type of persistence for players and games. Choices: `none` (default), `json`, `sqlite`.
 *   **`--persistence-path`** (`str`): Path to the persistence file (e.g., `server_data.json` or `server_data.db`). If the file does not exist, it will be created automatically on first use. If the directory does not exist or is not writable, the server will fail to start.
 
+### Persistence Details
+
+When using persistent storage (JSON or SQLite):
+*   **IDs as Keys**: Players and games are stored using their unique UUID as the primary key instead of names.
+*   **Volatile Players**: Non-persistent players (those created for a single game) are also stored in a dedicated `volatile_players` group. Only their ID, name, and attributes are persisted.
+*   **Account Closure**: Removing a persistent player does not delete their record. Instead, a `closed_at` timestamp is added. A closed account cannot be used for authentication.
+*   **Game Data**: Games mandatory include `players` and `observers` lists, containing the IDs of the participants.
+
 ## Utility Functions
 
 ### Name Suggestions

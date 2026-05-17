@@ -363,6 +363,14 @@ Inicia un servidor de juegos autónomo.
 *   **`--persistence`** (`str`): Tipo de persistencia para jugadores y partidas. Opciones: `none` (por defecto), `json`, `sqlite`.
 *   **`--persistence-path`** (`str`): Ruta al archivo de persistencia (ej. `server_data.json` o `server_data.db`). Si el archivo no existe, se creará automáticamente en el primer uso. Si el directorio no existe o no tiene permisos de escritura, el servidor no se iniciará.
 
+### Detalles de la Persistencia
+
+Cuando se utiliza el almacenamiento persistente (JSON o SQLite):
+*   **IDs como Claves**: Los jugadores y las partidas se guardan usando su UUID único como clave principal en lugar de los nombres.
+*   **Jugadores Volátiles**: Los jugadores no persistentes (creados para una sola partida) también se guardan en un grupo dedicado `volatile_players`. Solo se persisten su ID, nombre y atributos.
+*   **Cierre de Cuenta**: Eliminar un jugador persistente no borra su registro. En su lugar, se añade una marca de tiempo `closed_at`. Una cuenta cerrada no puede usarse para la autenticación.
+*   **Datos de Partida**: Las partidas incluyen obligatoriamente listas de `players` y `observers`, que contienen los IDs de los participantes.
+
 ## Funciones de Utilidad
 
 ### Sugerencias de Nombres

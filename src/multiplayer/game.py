@@ -68,7 +68,7 @@ class PersistentPlayer(Player):
         managed_groups (list, optional): A list of group IDs managed by this player if role is GROUP_ADMIN.
         **kwargs: Additional attributes for the player.
     """
-    def __init__(self, name, password, role=PlayerRole.PLAYER, managed_groups=None, **kwargs):
+    def __init__(self, name, password, role=PlayerRole.PLAYER, managed_groups=None, closed_at=None, **kwargs):
         super().__init__(name, **kwargs)
         # Check if the password is already a bcrypt hash
         if password and not (password.startswith('$2b$') or password.startswith('$2a$')):
@@ -78,6 +78,7 @@ class PersistentPlayer(Player):
             self.password = password
         self.role = role
         self.managed_groups = managed_groups or []
+        self.closed_at = closed_at
 
     def check_password(self, password):
         """
@@ -122,6 +123,12 @@ class GameGroup:
         Checks if the provided password matches the group admin password.
         """
         return verify_password(password, self.admin_password)
+
+    def _force_id(self, id):
+        """
+        Forces the ID of the group.
+        """
+        self._id = id
 
     @property
     def ID(self):

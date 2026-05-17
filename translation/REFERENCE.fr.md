@@ -361,7 +361,15 @@ DÃ©marre un serveur de jeu autonome.
 *   **`--name`** (`str`) : Nom lisible par l'homme pour l'instance du serveur.
 *   **`--hidden`** : Cache le serveur de la dÃ©couverte rÃ©seau.
 *   **`--persistence`** (`str`) : Type de persistance pour les joueurs et les parties. Choix : `none` (par dÃ©faut), `json`, `sqlite`.
-*   **`--persistence-path`** (`str`) : Chemin vers le fichier de persistance (ex: `server_data.json` ou `server_data.db`). Si le fichier n'existe pas, il sera crÃ©Ã© automatiquement lors de la premiÃ¨re utilisation. Si le rÃ©pertoire n'existe pas ou n'est pas accessible en Ã©criture, le serveur ne dÃ©marrera pas.
+*   **`--persistence-path`** (`str`) : Chemin vers le fichier de persistance (ex: `server_data.json` ou `server_data.db`). Si le fichier n'existe pas, il sera créé automatiquement lors de la première utilisation. Si le répertoire n'existe pas ou n'est pas accessible en écriture, le serveur ne démarrera pas.
+
+### Détails de la persistance
+
+Lors de l'utilisation d'un stockage persistant (JSON ou SQLite) :
+*   **IDs comme Clés** : Les joueurs et les parties sont stockés en utilisant leur UUID unique comme clé primaire au lieu de leurs noms.
+*   **Joueurs Volatils** : Les joueurs non persistants (ceux créés pour une seule partie) sont également stockés dans un groupe dédié `volatile_players`. Seuls leur ID, leur nom et leurs attributs sont conservés.
+*   **Fermeture de Compte** : La suppression d'un joueur persistant ne supprime pas son enregistrement. À la place, un horodatage `closed_at` est ajouté. Un compte fermé ne peut plus être utilisé pour l'authentification.
+*   **Données de Partie** : Les parties incluent obligatoirement des listes `players` et `observers`, contenant les IDs des participants.
 
 ## Fonctions Utilitaires
 

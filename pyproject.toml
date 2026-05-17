@@ -40,3 +40,8 @@ build-backend = "uv_build"
 module-name = "multiplayer"
 module-root = "src"
 package-data = { "multiplayer" = ["data/*.csv"] }
+
+[dependency-groups]
+dev = [
+    "requests>=2.34.1",
+]

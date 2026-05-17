@@ -269,7 +269,7 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
 
                 # Check if it's an admin action
                 is_server_admin_action = action in ['stop_server', 'restart_server', 'get_server_info', 'set_logging_for_server', 'set_logging_enabled', 'list_all_players', 'get_cert_expiration', 'set_server_password', 'set_admin_password', 'create_group', 'remove_group', 'set_persistent_players_enabled']
-                is_group_admin_action = action in ['kick_player', 'kick_observer', 'set_group_admin_password']
+                is_group_admin_action = action in ['kick_player', 'kick_observer', 'set_group_admin_password', 'list_group_games', 'get_group_info']
                 is_persistent_player_action = action in ['create_persistent_player']
                 
                 # If it's a kick action, it could be server admin OR group admin
@@ -350,6 +350,10 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                         
                         if not authorized:
                             logger.warning(f"Unauthorized group admin action: {action} on group {group_id} for user {auth_user} (role {user_role}). Managed groups: {user_managed_groups}")
+                            # If they provided an auth_user, they MUST have the role, even if no password is set
+                            if auth_user and user_role not in [PlayerRole.SERVER_ADMIN, PlayerRole.GROUP_ADMIN]:
+                                raise AuthenticationError(f"User {auth_user} does not have administrative roles")
+                            
                             if group.admin_password is None and admin_password is None and user_role not in [PlayerRole.SERVER_ADMIN, PlayerRole.GROUP_ADMIN]:
                                 raise AuthenticationError(f"Group admin actions are disabled for group ID '{group_id}'")
                             raise AuthenticationError("Invalid group admin credentials")

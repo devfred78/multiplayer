@@ -270,8 +270,21 @@ def _handle_client(conn, addr, games, groups, lock, server_passwords, logger_nam
                 user_role = None
                 user_managed_groups = []
                 if auth_user and auth_password:
-                    if persistent_players and auth_user in persistent_players:
-                        p = persistent_players[auth_user]
+                    # Case-insensitive lookup
+                    player = None
+                    if persistent_players:
+                        # Try exact match first
+                        if auth_user in persistent_players:
+                            player = persistent_players[auth_user]
+                        else:
+                            # Try case-insensitive match
+                            for p_name, p_obj in persistent_players.items():
+                                if p_name.lower() == auth_user.lower():
+                                    player = p_obj
+                                    break
+                    
+                    if player:
+                        p = player
                         if p.closed_at:
                             logger.warning(f"Authentication attempt for closed account: {auth_user}")
                             raise AuthenticationError("Persistent player account is closed")
@@ -522,16 +535,20 @@ def _execute_command(games, groups, action, params, server_name=None, use_tls=Fa
             if not enabled:
                 return {'status': 'error', 'message': 'Persistent player creation is disabled on this server'}
 
+            # Case-insensitive check for existing player
+            existing_player = None
             if name in persistent_players:
                 existing_player = persistent_players[name]
+            else:
+                for p_name, p_obj in persistent_players.items():
+                    if p_name.lower() == name.lower():
+                        existing_player = p_obj
+                        break
+
+            if existing_player:
                 if not existing_player.closed_at:
                     return {'status': 'error', 'type': 'UserAlreadyExistsError', 'message': f"Player '{name}' already exists"}
                 else:
-                    # Account was closed, we can reactivate it or replace it?
-                    # The requirement says "the account is kept in the persistence storage, but a new key closed_at appears"
-                    # If someone tries to recreate it, it should probably be an error or we should allow taking the name if we really "delete" it
-                    # But if we keep it for audit/history, the name might be reserved.
-                    # Let's stick to "already exists" for now as the account IS there.
                     return {'status': 'error', 'type': 'UserAlreadyExistsError', 'message': f"Player '{name}' already exists (account closed)"}
             
             player = PersistentPlayer(name, password, role=role, managed_groups=managed_groups, **params.get('attributes', {}))

@@ -51,6 +51,8 @@ finally:
 
 - Toutes les propriétés de type "ID" (identifiants) doivent être des chaînes de caractères alphanumériques et doivent être générées de manière unique à l'instantiation, en utilisant la fonction uuid.uuid4() du module uuid. Elles doivent être en lecture seule.
 - Tous les objets codés doivent faire l'objet d'un ensemble de tests unitaires pour garantir leur bon fonctionnement. Ces tests doivent couvrir tous les cas possibles d'utilisation des objets et doivent être automatisés. Ils doivent pouvoir être lancés avec `pytest`.
+- Le fichier `pyproject.toml` doit être conforme à la spécification du format TOML et aux instructions décrites [ici](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/) et doit contenir les informations nécessaires pour la gestion du projet avec `uv`.
+- Les fichiers de documentation doivent être écrits en Markdown et doivent être mis à jour régulièrement avec les modifications apportées au code.
 
 ## Organisation du code
 
@@ -62,21 +64,21 @@ Sauf exception spécifiquement indiquée, les objets à implémenter (fonctions,
 
 Les fichiers sont organisés selon le format d'un projet Python géré par `uv`, qui reprend la structure de projet standard Python (avec le fichier `pyproject.toml`), en y ajoutant quelques spécificités (telles que le fichier `uv.lock`).
 
-Ainsi, les fichiers sources sont dans le répertoire `src/multiplayer`, les tests unitaires dans `tests/`, les fichiers de distribution dans `dist/`, et quelques scripts de tests plus complexes dans `scripts/`. `pyproject.toml`, `uv.lock`, `README.md`, ainsi que tous les autres fichiers de documentation sont, eux, à la racine du projet.
+Ainsi, les fichiers sources sont dans le répertoire `src/multiplayer`, les tests unitaires dans `tests/`, les fichiers de distribution dans `dist/`, et quelques scripts de tests plus complexes dans `scripts/`. `pyproject.toml`, `uv.lock`, `README.md`, ainsi que tous les autres fichiers de documentation et de configuration sont, eux, à la racine du projet.
 
-## Contenu du fichier __init__.py
+### Contenu du fichier __init__.py
 
 Ce fichier contient les imports nécessaires pour le fonctionnement du package de multiplayer. De manière générale, on y indique tous les éléments constants (constantes, énumérations) que les modules de multiplayer utilisent.
 On y trouve en particulier les éléments suivants:
 
-### `PlayerRole` (Enum)
+#### `PlayerRole` (Enum)
 Une énumération pour le rôle d'un compte de joueur.
 
 *   `PlayerRole.PLAYER` : Un joueur standard qui peut rejoindre et participer à des parties.
 *   `PlayerRole.GROUP_ADMIN` : Un joueur qui peut gérer les parties au sein des groupes qui lui sont assignés. Ce rôle inclut toutes les permissions d'un `PLAYER`.
 *   `PlayerRole.SERVER_ADMIN` : Un joueur avec un accès administratif complet au serveur. Ce rôle englobe le rôle de `GROUP_ADMIN`, lui-même pouvant également jouer le rôle de `PLAYER`.
 
-### `GameState` (Enum)
+#### `GameState` (Enum)
 Une énumération représentant le statut actuel d'une partie.
 
 *   `GameState.PENDING` : La partie a été créée mais n'a pas encore commencé. Cet état est dédié à l'attente des joueurs. Les joueurs peuvent rejoindre ou quitter la partie.
@@ -84,11 +86,11 @@ Une énumération représentant le statut actuel d'une partie.
 *   `GameState.IN_PROGRESS` : La partie est actuellement active.
 *   `GameState.FINISHED` : La partie est terminée. Plus aucun coup ne peut être joué et les résultats sont définitifs.
 
-## Contenu du fichier game.py
+### Contenu du fichier game.py
 
 Ce fichier contient la logique principale de gestion des parties. Il définit les classes et les fonctions nécessaires pour la création, la gestion et la résolution des parties.
 On y trouve en particulier les classes suivantes:
 
-### Classe Player:
+#### Classe Player:
 Cette classe représente un joueur dans le contexte du jeu.
 

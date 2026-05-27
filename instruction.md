@@ -132,11 +132,11 @@ Elle présente les attributs suivants:
 Cette classe représente un compte utilisateur. Celui-ci permet de conserver un profil de joueur et d'accéder à des informations ou des actions selon le niveau de droit dont il dispose, et auquel il a accès via une capacité d'authentification.
 Elle s'instantie avec les paramètres suivants:
 
-| Nom | Type         | Description                                                                                                   | Obligatoire | Valeur par défaut |
-| --- |--------------|---------------------------------------------------------------------------------------------------------------| --- | --- |
-| `username` | str          | Le nom d'utilisateur du compte.                                                                               | Oui | - |
-| `password` | str          | Le mot de passe du compte.                                                                                    | Oui | - |
-| `email` | str          | L'adresse e-mail du compte.                                                                                   | Non | - |
+| Nom | Type         | Description                                                                                                   | Obligatoire | Valeur par défaut  |
+| --- |--------------|---------------------------------------------------------------------------------------------------------------| --- |--------------------|
+| `username` | str          | Le nom d'utilisateur du compte.                                                                               | Oui | -                  |
+| `password` | str          | Le mot de passe du compte.                                                                                    | Oui | -                  |
+| `email` | str          | L'adresse e-mail du compte.                                                                                   | Non | `""` (chaîne vide) |
 
 
 Si un objet `User` est instantié avec un `username` déjà utilisé dans une instance existante de `User`, une exception `UserAlreadyExistsError` est levée et l'instantiation échoue.

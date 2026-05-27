@@ -86,11 +86,31 @@ Une énumération représentant le statut actuel d'une partie.
 *   `GameState.IN_PROGRESS` : La partie est actuellement active.
 *   `GameState.FINISHED` : La partie est terminée. Plus aucun coup ne peut être joué et les résultats sont définitifs.
 
+#### `ParameterFamily` (Enum)
+Une énumération représentant les familles de paramètres optionnels de personnalisation des joueurs et des parties.
+
+*   `ParameterFamily.STATIC` : Paramètres statiques qui ne changent pas ou peu pendant la partie.
+*   `ParameterFamily.DYNAMIC` : Paramètres dynamiques qui peuvent être modifiés souvent pendant la partie.
+
 ### Contenu du fichier game.py
 
 Ce fichier contient la logique principale de gestion des parties. Il définit les classes et les fonctions nécessaires pour la création, la gestion et la résolution des parties.
 On y trouve en particulier les classes suivantes:
 
 #### Classe Player:
-Cette classe représente un joueur dans le contexte du jeu.
+Cette classe représente un joueur dans le contexte du jeu. Elle s'instantie avec les paramètres suivants:
+
+| Nom | Type     | Description | Obligatoire |
+| --- |----------|--------| --- |
+| `name` | str      | Le nom du joueur. | Oui |
+| `**kwargs` | variable | Paramètres optionnels pour personnaliser le joueur. Chaque paramètre doit se présenter sous la forme d'un tuple `(famille, valeur_initiale)` dont `famille` est un objet `ParameterFamily` qui spécifie le caractère statique ou dynamique du paramètre, et `valeur_initiale` sa valeur initiale. Le choix de la famille se fait à la convenance de l'utilisateur, pour l'aider à classer les informations, mais n'a aucun impact sur le traitement interne (les familles sont toutes traitées de la même manière). | Non |
+
+Elle présente les propriétés suivantes:
+
+| Nom | Type | Description | Modifiable | Précision d'implémentation                                                                                                                                                                                                                                                                                                                                                                                         |
+| --- |------|-------------|------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ID` | str | L'identifiant unique du joueur.  | Non | S'initialise automatiquement avec la valeur de `uuid.uuid4()`.                                                                                                                                                                                                                                                                                                                                                     |
+| `name` | str | Le nom du joueur.  | Oui | S'initialise automatiquement avec le nom fourni lors de la création du joueur.                                                                                                                                                                                                                                                                                                                                     |
+| `static_state` | dict | Attributs personnalisés du joueur, dont la vocation est de stocker des informations qui ne changent pas ou peu pendant la partie. | Oui  | S'initialise automatiquement avec les paramètres spécifiés comme appartenant à la famille `ParameterFamily.STATIC`, mais peut être complété par la suite par tout autre paramètre au choix de l'utilisateur. Par exemple, si `Player` est instantié avec `Player(name="Mon nom", color=(ParameterFamily.STATIC, "white"), score=(ParameterFamily.DYNAMIC, 0))`, alors `static_state`est égal à `{"color":"white"}`. |
+| `dynamic_state` | dict | Attributs personnalisés du joueur, dont la vocation est de stocker des informations qui peuvent être modifiées souvent pendant la partie. | Oui  | S'initialise automatiquement avec les paramètres spécifiés comme appartenant à la famille `ParameterFamily.DYNAMIC`, mais peut être complété par la suite par tout autre paramètre au choix de l'utilisateur. Par exemple, si `Player` est instantié avec `Player(name="Mon nom", color=(ParameterFamily.STATIC, "white"), score=(ParameterFamily.DYNAMIC, 0))`, alors `dynamic_state` est égal à `{"score":0}`.    |
 

@@ -92,20 +92,34 @@ Une énumération représentant les familles de paramètres optionnels de person
 *   `ParameterFamily.STATIC` : Paramètres statiques qui ne changent pas ou peu pendant la partie.
 *   `ParameterFamily.DYNAMIC` : Paramètres dynamiques qui peuvent être modifiés souvent pendant la partie.
 
+### Contenu du fichier exceptions.py
+
+Ce fichier contient les définitions des exceptions personnalisées utilisées dans ce module. Il définit les classes et les fonctions nécessaires pour la gestion des erreurs spécifiques au jeu.
+On y trouve en particulier les classes suivantes:
+
+#### Classe `MultiplayerError`
+Cette classe est la classe de base pour toutes les exceptions liées au module `multiplayer`. Elle sert de point de départ pour la hiérarchie des exceptions personnalisées.
+
+#### Classe `UserAlreadyExistsError`
+Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative de création d'un compte utilisateur avec un nom déjà existant.
+
+#### Classe `GroupNotFoundError`
+Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative de l'ID d'un groupe qui n'existe pas. Cette exception retourne dans son message l'ID du groupe qui n'a pas été trouvé.
+
 ### Contenu du fichier game.py
 
 Ce fichier contient la logique principale de gestion des parties. Il définit les classes et les fonctions nécessaires pour la création, la gestion et la résolution des parties.
 On y trouve en particulier les classes suivantes:
 
-#### Classe Player:
+#### Classe `Player`
 Cette classe représente un joueur dans le contexte du jeu. Elle s'instantie avec les paramètres suivants:
 
-| Nom | Type     | Description | Obligatoire |
-| --- |----------|--------| --- |
-| `name` | str      | Le nom du joueur. | Oui |
-| `**kwargs` | variable | Paramètres optionnels pour personnaliser le joueur. Chaque paramètre doit se présenter sous la forme d'un tuple `(famille, valeur_initiale)` dont `famille` est un objet `ParameterFamily` qui spécifie le caractère statique ou dynamique du paramètre, et `valeur_initiale` sa valeur initiale. Le choix de la famille se fait à la convenance de l'utilisateur, pour l'aider à classer les informations, mais n'a aucun impact sur le traitement interne (les familles sont toutes traitées de la même manière). | Non |
+| Nom | Type     | Description | Obligatoire | Valeur par défaut |
+| --- |----------|--------| --- | --- |
+| `name` | str      | Le nom du joueur. | Oui | - |
+| `**kwargs` | variable | Paramètres optionnels pour personnaliser le joueur. Chaque paramètre doit se présenter sous la forme d'un tuple `(famille, valeur_initiale)` dont `famille` est un objet `ParameterFamily` qui spécifie le caractère statique ou dynamique du paramètre, et `valeur_initiale` sa valeur initiale. Le choix de la famille se fait à la convenance de l'utilisateur, pour l'aider à classer les informations, mais n'a aucun impact sur le traitement interne (les familles sont toutes traitées de la même manière). | Non | - |
 
-Elle présente les propriétés suivantes:
+Elle présente les attributs suivants:
 
 | Nom | Type | Description | Modifiable | Précision d'implémentation                                                                                                                                                                                                                                                                                                                                                                                         |
 | --- |------|-------------|------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -114,3 +128,27 @@ Elle présente les propriétés suivantes:
 | `static_state` | dict | Attributs personnalisés du joueur, dont la vocation est de stocker des informations qui ne changent pas ou peu pendant la partie. | Oui  | S'initialise automatiquement avec les paramètres spécifiés comme appartenant à la famille `ParameterFamily.STATIC`, mais peut être complété par la suite par tout autre paramètre au choix de l'utilisateur. Par exemple, si `Player` est instantié avec `Player(name="Mon nom", color=(ParameterFamily.STATIC, "white"), score=(ParameterFamily.DYNAMIC, 0))`, alors `static_state`est égal à `{"color":"white"}`. |
 | `dynamic_state` | dict | Attributs personnalisés du joueur, dont la vocation est de stocker des informations qui peuvent être modifiées souvent pendant la partie. | Oui  | S'initialise automatiquement avec les paramètres spécifiés comme appartenant à la famille `ParameterFamily.DYNAMIC`, mais peut être complété par la suite par tout autre paramètre au choix de l'utilisateur. Par exemple, si `Player` est instantié avec `Player(name="Mon nom", color=(ParameterFamily.STATIC, "white"), score=(ParameterFamily.DYNAMIC, 0))`, alors `dynamic_state` est égal à `{"score":0}`.    |
 
+#### Classe `User`
+Cette classe représente un compte utilisateur. Celui-ci permet de conserver un profil de joueur et d'accéder à des informations ou des actions selon le niveau de droit dont il dispose, et auquel il a accès via une capacité d'authentification.
+Elle s'instantie avec les paramètres suivants:
+
+| Nom | Type         | Description                                                                                                   | Obligatoire | Valeur par défaut |
+| --- |--------------|---------------------------------------------------------------------------------------------------------------| --- | --- |
+| `username` | str          | Le nom d'utilisateur du compte.                                                                               | Oui | - |
+| `password` | str          | Le mot de passe du compte.                                                                                    | Oui | - |
+| `email` | str          | L'adresse e-mail du compte.                                                                                   | Non | - |
+
+
+Si un objet `User` est instantié avec un `username` déjà utilisé dans une instance existante de `User`, une exception `UserAlreadyExistsError` est levée et l'instantiation échoue.
+
+Elle présente les attributs suivants:
+
+| Nom        | Type         | Description                                                                                                                                                                                                                                                                                            | Modifiable         | Précision d'implémentation                                                                                                                                                                                                                         |
+|------------|--------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ID`       | str          | L'identifiant unique du compte utilisateur.                                                                                                                                                                                                                                                            | Non                | S'initialise automatiquement avec la valeur de `uuid.uuid4()`.                                                                                                                                                                                     |
+| `username` | str          | Le nom d'utilisateur du compte.                                                                                                                                                                                                                                                                        | Non                | -                                                                                                                                                                                                                                                  |
+| `hash`     | str          | Le hash du mot de passe du compte.                                                                                                                                                                                                                                                                     | Non                | Le hash est automatiquement généré à partir de `password` avec `bcrypt`.                                                                                                                                                                           |
+| `email`    | str          | L'adresse e-mail du compte.                                                                                                                                                                                                                                                                            | Oui                | -                                                                                                                                                                                                                                                  |
+| `role`     | `PlayerRole` | Le rôle du compte (ie: son niveau de permission).                                                                                                                                                                                                                                                      | Oui                | -                                                                                                                                                                                                                                                  |
+| `groups_id` | List[str]    | Les identifiants des groupes pour lesquels le compte est administrateur. Uniquement utile si `role == PlayerRole.GROUP_ADMIN`. Une exception `GroupNotFoundError` est levée si un des identifiants ne correspond pas à un groupe existant. Dans ce cas la valeur de `groups_id` n'est pas mise à jour. | Non (mais mutable) | Initialisé avec une liste vide, cet attribut peut être complété et modifié grace aux méthodes de `list` telles que `append`, `extend`, `pop`, ... Comme il s'agit d'un attribut en lecture seule, on ne peut pas le ré-affecter à une autre liste. |
+| `player`   | `Player`     | Le joueur associé au compte. | Non (mais mutable) | -                                                                                                                                                                                                                                                  |

@@ -104,7 +104,38 @@ Cette classe est la classe de base pour toutes les exceptions liées au module `
 Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative de création d'un compte utilisateur avec un nom déjà existant.
 
 #### Classe `GroupNotFoundError`
-Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative de l'ID d'un groupe qui n'existe pas. Cette exception retourne dans son message l'ID du groupe qui n'a pas été trouvé.
+Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative d'utilisation d'un groupe (ou d'un ID de groupe) qui n'existe pas. Cette exception retourne dans son message l'ID erroné.
+
+#### Classe `PlayerNotFoundError`
+Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative d'utilisation d'un joueur (ou d'un ID de joueur) qui n'existe pas. Cette exception retourne dans son message l'ID erroné.
+
+#### Classe `PlayerNotFoundInGameError`
+Cette classe est dérivée de `PlayerNotFoundError` et est utilisée pour signaler une tentative de retirer un joueur **d'une partie où il n'est pas présent**. Cette exception retourne dans son message l'ID du joueur erroné.
+
+#### Classe `PasswordError`:
+Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative d'utilisation d'un mot de passe incorrect.
+
+#### Classe `GameIsFullError`:
+Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative d'ajouter un joueur ou un observateur à une partie qui est déjà pleine.
+
+#### Classe `GameAlreadyStartedError`:
+Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative de démarrage d'une partie qui est déjà en cours.
+
+#### Classe `GameIsFinishedError`:
+Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative de modification d'une partie qui est terminée.
+
+#### Classe `GameNotStartedError`:
+Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative de mise en pause, de redémarrage, d'arrêt ou d'évolution de jeu (passage au tour suivant par exemple) d'une partie qui n'est pas encore démarrée.
+
+#### Classe `GameAlreadyPausedError`:
+Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative de mise en pause d'une partie qui est déjà en pause.
+
+#### Classe `GameNotPausedError`:
+Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative de reprise d'une partie qui n'est pas en pause.
+
+#### Classe `GameNotByTurnError`:
+Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative d'action spécifique au tour par tour d'une partie qui n'est pas gérée au tour par tour.
+
 
 ### Contenu du fichier game.py
 
@@ -184,7 +215,132 @@ La classe présente les attributs suivants:
 | `hash`          | str\|`None`     | Le hash du mot de passe de la partie. `None` si la partie est publique (sans mot de passe).| Non  | Le hash est automatiquement généré à partir de `password` avec `bcrypt`. |
 | `observer_hash` | str\|`None`     | Le hash du mot de passe de l'observateur. `None` si aucun mot de passe d'observation n'est défini. | Non  | Le hash est automatiquement généré à partir de `observer_password` avec `bcrypt`.|
 | `turn_based`    | bool            | `True` si le jeu est au tour par tour, `False` pour un jeu simultané. | Non  | -  |
-| `players`       | Tuple[`Player`] | Tuple (liste non mutable) des instances `Player` représentants les joueurs de la partie. | Non | La variable interne correspondante ( `_players`) est une liste qui est transformée en tuple pour son affichage public au travers de l'attribut `players`. |
+| `players`       | Tuple[`Player`] | Tuple (liste non mutable) des instances `Player` représentants les joueurs de la partie. L'ordre dans lequel sont présentés les joueurs correspond à l'ordre dans lequel les joueurs prennent leurs tours dans une partie au tour par tour. Certains jeux autorisent le changement d'ordre en cours de partie. Des méthodes spécifiques sont donc à disposition pour réaliser ces changements. Ne pas essayer de modifier l'ordre directement dans cet attribut. | Non | La variable interne correspondante ( `_players`) est une liste qui est transformée en tuple pour son affichage public au travers de l'attribut `players`. |
 | `observers`     | Tuple[`Player`] | Tuple (liste non mutable) des instances `Player` représentants les observateurs de la partie. | Non  | La variable interne correspondante ( `_observers`) est une liste qui est transformée en tuple pour son affichage public au travers de l'attribut `observers`. |
+| `current_player`| `Player`        | Instance `Player` représentant le joueur dont le tour est en cours. N'a de sens que pour les parties à tour par tour. | Non  | - |
+| `game_state`    | `GameState` | État actuel de la partie. | Non  | - |
 | `static_state`  | dict | Attributs personnalisés de la partie, dont la vocation est de stocker des informations qui ne changent pas ou peu pendant la partie.  | Oui  | S'initialise automatiquement avec les paramètres spécifiés comme appartenant à la famille `ParameterFamily.STATIC`, mais peut être complété par la suite par tout autre paramètre au choix de l'utilisateur. Par exemple, si `Game` est instantié avec `Game([...], style=(ParameterFamily.STATIC, "blitz"), score=(ParameterFamily.DYNAMIC, "0-0"))`, alors `static_state`est égal à `{"style":"blitz"}`. |
 | `dynamic_state` | dict | Attributs personnalisés de la partie, dont la vocation est de stocker des informations qui peuvent être modifiées souvent pendant la partie. | Oui        | S'initialise automatiquement avec les paramètres spécifiés comme appartenant à la famille `ParameterFamily.DYNAMIC`, mais peut être complété par la suite par tout autre paramètre au choix de l'utilisateur. Par exemple, si `Game` est instantié avec `Game([...], style=(ParameterFamily.STATIC, "blitz"), score=(ParameterFamily.DYNAMIC, "0-0"))`, alors `dynamic_state` est égal à `{"score":"0-0"}`.    |
+
+La classe `Game` présente les méthodes suivantes:
+
+- `join_game_as_player`: permet de rejoindre une partie en tant que joueur.
+  - Description: Cette méthode permet à un joueur de rejoindre une partie en spécifiant son ID ou son objet `Player` et éventuellement un mot de passe si la partie est privée. Elle lance une exception si le joueur n'existe pas ou si le mot de passe est incorrect.
+  - Précision d'implémentation: En cas de succès, la méthode ajoute l'objet `Player` à la liste `_players` de l'instance courante.
+  - Paramètres:
+    - `player` (`Player`|str): le joueur qui rejoint la partie. Il s'agit soit de l'objet `Player` correspondant au joueur, soit une chaîne de caractères correspondant à son ID. Obligatoire.
+    - `password` (str\|`None`): mot de passe pour rejoindre la partie. Si la partie est publique, alors il faut indiquer `None`. Optionnel. Valeur par défaut: `None`.
+  - Exceptions émises:
+    - `PlayerNotFoundError`: levée si le joueur spécifié n'existe pas.
+    - `PasswordError`: levée si le mot de passe est incorrect.
+    - `GameIsFullError`: levée si le nombre maximal de joueurs est atteint, et que l'ajout d'un nouveau joueur est impossible.
+  - Valeur de retour: Aucune.
+
+- `remove_player`: permet de retirer un joueur de la partie.
+  - Description: Cette méthode permet de retirer un joueur de la partie en spécifiant son ID ou son objet `Player`. Elle lance une exception si le joueur n'est pas trouvé dans la partie.
+  - Précision d'implémentation: En cas de succès, la méthode retire l'objet `Player` de la liste `_players` de l'instance courante.
+  - Paramètres:
+    - `player` (`Player`|str): le joueur à retirer de la partie. Il s'agit soit de l'objet `Player` correspondant au joueur, soit une chaîne de caractères correspondant à son ID. Obligatoire.
+  - Exceptions émises:
+    - `PlayerNotFoundInGameError`: levée si le joueur spécifié n'est pas trouvé dans la partie.
+  - Valeur de retour: Aucune.
+
+- `join_game_as_observer`: permet de rejoindre une partie en tant qu'observateur.
+  - Description: Cette méthode permet à un joueur de rejoindre une partie en tant qu'observateur. Elle lance une exception si la partie est privée et que le mot de passe est incorrect.
+  - Précision d'implémentation: En cas de succès, la méthode ajoute l'objet `Player` à la liste `_observers` de l'instance courante.
+  - Paramètres:
+    - `player` (`Player`|str): le joueur qui rejoint la partie en tant qu'observateur. Il s'agit soit de l'objet `Player` correspondant au joueur, soit une chaîne de caractères correspondant à son ID. Obligatoire.
+    - `password` (str\|`None`): mot de passe pour rejoindre la partie en tant qu'observateur. Si l'observation de la partie est publique, alors il faut indiquer `None`. Optionnel. Valeur par défaut: `None`.
+  - Exceptions émises:
+    - `PlayerNotFoundError`: levée si le joueur spécifié n'existe pas.
+    - `PasswordError`: levée si la partie est privée et que le mot de passe est incorrect.
+    - `GameIsFullError`: levée si le nombre maximal d'observateurs est atteint, et que l'ajout d'un nouvel observateur est impossible.
+  - Valeur de retour: Aucune.
+
+- `remove_observer`: permet de retirer un observateur d'une partie.
+  - Description: Cette méthode permet à un observateur de quitter une partie. Elle lance une exception si le joueur spécifié n'est pas trouvé dans la partie.
+  - Précision d'implémentation: En cas de succès, la méthode retire l'objet `Player` de la liste `_observers` de l'instance courante.
+  - Paramètres:
+    - `player` (`Player`|str): le joueur qui quitte la partie en tant qu'observateur. Il s'agit soit de l'objet `Player` correspondant au joueur, soit une chaîne de caractères correspondant à son ID. Obligatoire.
+  - Exceptions émises:
+    - `PlayerNotFoundInGameError`: levée si le joueur spécifié n'est pas trouvé dans la partie.
+  - Valeur de retour: Aucune.
+
+- `start`: permet de démarrer une partie.
+  - Description: Cette méthode permet de démarrer une partie. Elle lance une exception si la partie est déjà en cours ou si elle est terminée. En cas de succès, la méthode passe l'attribut `game_state` à la valeur `GameState.IN_PROGRESS`.
+  - Précision d'implémentation: Le statut `GameState.PAUSING` est aussi considéré comme une partie en cours.
+  - Paramètres:
+    - Aucun.
+  - Exceptions émises:
+    - `GameAlreadyStartedError`: levée si la partie est déjà en cours.
+    - `GameIsFinishedError`: levée si la partie est terminée.
+  - Valeur de retour: Aucune.
+
+- `pause`: permet de mettre en pause une partie.
+  - Description: Cette méthode permet de mettre en pause une partie. Elle lance une exception si la partie n'est pas en cours ou si elle est déjà en pause.
+  - Précision d'implémentation: En cas de succès, la méthode passe l'attribut `game_state` à la valeur `GameState.PAUSING`.
+  - Paramètres:
+    - Aucun.
+  - Exceptions émises:
+    - `GameNotStartedError`: levée si la partie n'est pas en cours.
+    - `GameAlreadyPausedError`: levée si la partie est déjà en pause.
+  - Valeur de retour: Aucune.
+  
+- `resume`: permet de reprendre une partie en pause.
+  - Description: Cette méthode permet de reprendre une partie en pause. Elle lance une exception si la partie n'est pas en pause.
+  - Précision d'implémentation: En cas de succès, la méthode passe l'attribut `game_state` à la valeur `GameState.IN_PROGRESS`.
+  - Paramètres:
+    - Aucun.
+  - Exceptions émises:
+    - `GameNotPausedError`: levée si la partie n'est pas en pause.
+  - Valeur de retour: Aucune.
+
+- `stop`: permet de terminer une partie.
+  - Description: Cette méthode permet de terminer une partie. Elle lance une exception si la partie n'est pas en cours.
+  - Précision d'implémentation: En cas de succès, la méthode passe l'attribut `game_state` à la valeur `GameState.FINISHED`.
+  - Paramètres:
+    - Aucun.
+  - Exceptions émises:
+    - `GameNotStartedError`: levée si la partie n'est pas en cours.
+  - Valeur de retour: Aucune.
+
+- `next_turn`: permet de passer au tour suivant.
+  - Description: Dans le cas d'une partie au tour par tour, cette méthode permet de passer au tour suivant. Elle lance une exception si la partie n'est pas en cours ou si elle est terminée. En cas de succès, la méthode passe l'attribut `current_player` au joueur suivant.
+  - Paramètres:
+    - Aucun.
+  - Exceptions émises:
+    - `GameNotStartedError`: levée si la partie n'est pas en cours.
+    - `GameIsFinishedError`: levée si la partie est terminée.
+    - `GameNotTurnBasedError`: levée si la partie n'est pas gérée au tour par tour.
+  - Valeur de retour: Aucune.
+
+- `reverse_order`: permet d'inverser l'ordre des joueurs dans une partie au tour par tour.
+  - Description: Cette méthode permet d'inverser l'ordre des joueurs dans une partie. Cette inversion d'ordre peut se réaliser dans tout état de la partie autre que `GameState.FINISHED`. Elle lance une exception si la partie est terminée. En cas de succès, la méthode inverse l'ordre des joueurs dans l'attribut `players`.
+  - Précision d'implémentation: En cas de succès, la méthode inverse en fait l'ordre dans la liste interne `_players`.
+  - Paramètres:
+    - Aucun.
+  - Exceptions émises:
+    - `GameIsFinishedError`: levée si la partie est terminée.
+    - `GameNotTurnBasedError`: levée si la partie n'est pas gérée au tour par tour.
+  - Valeur de retour: Aucune.
+
+- `set_player_rank`: permet de spécifier le rang d'un joueur dans une partie au tour par tour.
+  - Description: Cette méthode permet de spécifier le rang d'un joueur dans une partie au tour par tour. Les autres joueurs gardent le même ordre, leur rang est incrémenté ou décrémenté pour combler la place que le joueur quitte, et pour lui laisser la place qu'il rejoint. Ce changement de rang peut se réaliser dans tout état de la partie autre que `GameState.FINISHED`. Elle lance une exception si la partie est terminée. En cas de succès, la modification de rang apparait dans l'attribut `players`.
+  - Précision d'implémentation: En cas de succès, la méthode modifie en fait la liste interne `_players`.
+  - Paramètres:
+    - `player` (`Player`|str): le joueur à qui on modifie le rang. Il s'agit soit de l'objet `Player` correspondant au joueur, soit une chaîne de caractères correspondant à son ID. Obligatoire.
+    - `rank` (int): le nouveau rang du joueur. Obligatoire.
+  - Exceptions émises:
+    - `IndexError`: levée si le rang spécifié est invalide.
+    - `GameIsFinishedError`: levée si la partie est terminée.
+    - `GameNotTurnBasedError`: levée si la partie n'est pas gérée au tour par tour.
+    - `PlayerNotFoundInGameError`: levée si le joueur spécifié n'est pas trouvé dans la partie.
+  - Valeur de retour: Aucune.
+
+#### Classe `GameGroup`
+Cette classe permet de regrouper plusieurs parties dans un seul objet. Elle permet de gérer les parties en parallèle et de les manipuler en tant que groupe. Elle s'instantie avec les paramètres suivants:
+
+| Nom                 | Type        | Description | Obligatoire | Valeur par défaut |
+|---------------------|-------------|-------------|-------------|-------------------|
+| `name`              | str         | Le nom du groupe de parties.| Oui | - |
+| `admin_password`          | str         | Le mot de passe pour accéder aux actions administratives du groupe de parties. | Oui | - |

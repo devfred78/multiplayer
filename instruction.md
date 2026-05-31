@@ -224,6 +224,11 @@ La classe présente les attributs suivants:
 
 La classe `Game` présente les méthodes suivantes:
 
+- `change_password`: permet de changer le mot de passe de la partie. Le paramètre `hash` de l'instance courante est mis à jour avec le nouveau mot de passe via `bcrypt`
+    - Paramètres:
+      - `new_password` (str): le nouveau mot de passe à utiliser pour le compte utilisateur. Obligatoire.
+    - Valeur de retour:
+      - Aucune.
 - `join_game_as_player`: permet de rejoindre une partie en tant que joueur.
   - Description: Cette méthode permet à un joueur de rejoindre une partie en spécifiant son ID ou son objet `Player` et éventuellement un mot de passe si la partie est privée. Elle lance une exception si le joueur n'existe pas ou si le mot de passe est incorrect.
   - Précision d'implémentation: En cas de succès, la méthode ajoute l'objet `Player` à la liste `_players` de l'instance courante.
@@ -343,4 +348,35 @@ Cette classe permet de regrouper plusieurs parties dans un seul objet. Elle perm
 | Nom                 | Type        | Description | Obligatoire | Valeur par défaut |
 |---------------------|-------------|-------------|-------------|-------------------|
 | `name`              | str         | Le nom du groupe de parties.| Oui | - |
-| `admin_password`          | str         | Le mot de passe pour accéder aux actions administratives du groupe de parties. | Oui | - |
+| `admin_password`    | str         | Le mot de passe pour accéder aux actions administratives du groupe de parties. | Oui | - |
+| `**kwargs`          | variable    | Paramètres optionnels pour personnaliser le groupe. | Non  | - |
+
+La classe présente les attributs suivants:
+
+| Nom             | Type            | Description  | Modifiable | Précision d'implémentation |
+|-----------------|-----------------|--------------|------------|----------------------------|
+| `ID`            | str             | L'identifiant unique du groupe. | Non | S'initialise automatiquement avec la valeur de `uuid.uuid4()`.|
+| `name`          | str             | Le nom ddu groupe. | Oui        | - |
+| `hash`          | str\|`None`     | Le hash du mot de passe administrateur du groupe. `None` si aucun mot de passe n'est défini.| Non  | Le hash est automatiquement généré à partir de `admin_password` avec `bcrypt`. |
+| `games`       | Tuple[`Game`] | Tuple (liste non mutable) des instances `Game` représentants les parties du groupe. | Non | La variable interne correspondante ( `_games`) est une liste qui est transformée en tuple pour son affichage public au travers de l'attribut `games`. |
+
+
+La classe `GameGroup` présente les méthodes suivantes:
+
+- `change_password`: permet de changer le mot de passe administrateur du groupe. Le paramètre `hash` de l'instance courante est mis à jour avec le nouveau mot de passe via `bcrypt`
+  - Paramètres:
+    - `new_password` (str): le nouveau mot de passe à utiliser pour l'administration du groupe. Obligatoire.
+  - Valeur de retour:
+    - Aucune.
+- `add_game`: permet d'ajouter une partie au groupe. La partie est ajoutée à la fin de la liste des parties du groupe. 
+  - Description: Cette méthode permet d'ajouter une partie au groupe en spécifiant son ID ou son objet `Game` et éventuellement un mot de passe administrateur de groupe. Elle lance une exception si la partie n'existe pas ou si le mot de passe est incorrect. 
+  - Précision d'implémentation: En cas de succès, la méthode ajoute l'objet `Game` à la liste `_games` de l'instance courante.
+  - Paramètres:
+    - `game` (`Game`|str): l'instance de la partie à ajouter, ou une chaîne de caractères représentant l'ID de la partie à ajouter. Obligatoire.
+  - Valeur de retour:
+    - Aucune.
+- `remove_game`: permet de retirer une partie du groupe. La partie est retirée de la liste des parties du groupe.
+  - Paramètres:
+    - `game` (`Game`|str): l'instance de la partie à retirer, ou une chaîne de caractères représentant l'ID de la partie à retirer. Obligatoire.
+  - Valeur de retour:
+    - Aucune.

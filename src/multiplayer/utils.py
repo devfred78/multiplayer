@@ -22,12 +22,13 @@ def _load_default_categories() -> None:
             register_name_category(cat, path, "player")
 
 def register_name_category(category_name: str, data: List[str] | str | Path, category_type: str) -> None:
-    """Registers a new name category.
+    """Registers a new name category for suggestions.
 
     Args:
-        category_name: Name of the category.
-        data: List of names or path to a file.
-        category_type: "game" or "player".
+        category_name (str): The name of the new category.
+        data (list, str or Path): A list of names, or a path to a text/CSV file
+            (one name per line, or the first column of the CSV).
+        category_type (str): Either "game" or "player".
     """
     names: List[str] = []
     if isinstance(data, (str, Path)):
@@ -51,7 +52,14 @@ def register_name_category(category_name: str, data: List[str] | str | Path, cat
     }
 
 def unregister_name_category(category_name: str) -> bool:
-    """Unregisters a category. Returns True if successful."""
+    """Removes a previously registered category.
+
+    Args:
+        category_name (str): The name of the category to remove.
+
+    Returns:
+        bool: True if the category was found and removed, False otherwise.
+    """
     if category_name in _CATEGORIES:
         del _CATEGORIES[category_name]
         return True

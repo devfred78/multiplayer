@@ -49,7 +49,7 @@ finally:
 
 ### Autres conventions
 
-- Toutes les propriétés de type "ID" (identifiants) doivent être des chaînes de caractères alphanumériques et doivent être générées de manière unique à l'instantiation, en utilisant la fonction uuid.uuid4() du module uuid. Elles doivent être en lecture seule.
+- Toutes les propriétés de type "ID" (identifiants) doivent être des chaînes de caractères alphanumériques et doivent être générées de manière unique à l'instantiation, en utilisant la fonction `uuid.uuid4()` du module uuid. Elles doivent être en lecture seule.
 - Tous les objets codés doivent faire l'objet d'un ensemble de tests unitaires pour garantir leur bon fonctionnement. Ces tests doivent couvrir tous les cas possibles d'utilisation des objets et doivent être automatisés. Ils doivent pouvoir être lancés avec `pytest`.
 - Le fichier `pyproject.toml` doit être conforme à la spécification du format TOML et aux instructions décrites [ici](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/) et doit contenir les informations nécessaires pour la gestion du projet avec `uv`.
 - Les fichiers de documentation doivent être écrits en Markdown et doivent être mis à jour régulièrement avec les modifications apportées au code.
@@ -66,7 +66,7 @@ Les fichiers sont organisés selon le format d'un projet Python géré par `uv`,
 
 Ainsi, les fichiers sources sont dans le répertoire `src/multiplayer`, les tests unitaires dans `tests/`, les fichiers de distribution dans `dist/`, et quelques scripts de tests plus complexes dans `scripts/`. `pyproject.toml`, `uv.lock`, `README.md`, ainsi que tous les autres fichiers de documentation et de configuration sont, eux, à la racine du projet.
 
-### Contenu du fichier __init__.py
+### Contenu du fichier src/multiplayer/__init__.py
 
 Ce fichier contient les imports nécessaires pour le fonctionnement du package de multiplayer. De manière générale, on y indique tous les éléments constants (constantes, énumérations) que les modules de multiplayer utilisent.
 On y trouve en particulier les éléments suivants:
@@ -92,7 +92,7 @@ Une énumération représentant les familles de paramètres optionnels de person
 *   `ParameterFamily.STATIC` : Paramètres statiques qui ne changent pas ou peu pendant la partie.
 *   `ParameterFamily.DYNAMIC` : Paramètres dynamiques qui peuvent être modifiés souvent pendant la partie.
 
-### Contenu du fichier exceptions.py
+### Contenu du fichier src/multiplayer/exceptions.py
 
 Ce fichier contient les définitions des exceptions personnalisées utilisées dans ce module. Il définit les classes et les fonctions nécessaires pour la gestion des erreurs spécifiques au jeu.
 On y trouve en particulier les classes suivantes:
@@ -107,10 +107,10 @@ Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler 
 Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative d'utilisation d'un groupe (ou d'un ID de groupe) qui n'existe pas. Cette exception retourne dans son message l'ID erroné.
 
 #### Classe `PlayerNotFoundError`
-Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative d'utilisation d'un joueur (ou d'un ID de joueur) qui n'existe pas. Cette exception retourne dans son message l'ID erroné.
+Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative d'utilisation d'un joueur (ou d'un ID de joueur) qui n'existe pas. Cette exception retourne dans son message l'ID erroné (si fourni).
 
 #### Classe `PlayerNotFoundInGameError`
-Cette classe est dérivée de `PlayerNotFoundError` et est utilisée pour signaler une tentative de retirer un joueur **d'une partie où il n'est pas présent**. Cette exception retourne dans son message l'ID du joueur erroné.
+Cette classe est dérivée de `PlayerNotFoundError` et est utilisée pour signaler une tentative de retirer un joueur **d'une partie où il n'est pas présent**. Cette exception retourne dans son message l'ID du joueur erroné (si fourni).
 
 #### Classe `PasswordError`:
 Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative d'utilisation d'un mot de passe incorrect.
@@ -136,8 +136,13 @@ Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler 
 #### Classe `GameNotByTurnError`:
 Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative d'action spécifique au tour par tour d'une partie qui n'est pas gérée au tour par tour.
 
+#### Classe `GameNotFoundError`:
+Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative de recherche d'une partie qui n'existe pas. Cette exception retourne dans son message l'ID de la partie erronée (si fourni).
 
-### Contenu du fichier game.py
+#### Classe `GameNotFoundInGroupError`:
+Cette classe est dérivée de `GameNotFoundError` et est utilisée pour signaler une tentative de suppression d'une partie d'un groupe qui ne contient pas cette partie. Cette exception retourne dans son message l'ID de la partie erronée (si fourni).
+
+### Contenu du fichier src/multiplayer/game.py
 
 Ce fichier contient la logique principale de gestion des parties. Il définit les classes et les fonctions nécessaires pour la création, la gestion et la résolution des parties.
 On y trouve en particulier les classes suivantes:
@@ -348,7 +353,6 @@ Cette classe permet de regrouper plusieurs parties dans un seul objet. Elle perm
 | Nom                 | Type        | Description | Obligatoire | Valeur par défaut |
 |---------------------|-------------|-------------|-------------|-------------------|
 | `name`              | str         | Le nom du groupe de parties.| Oui | - |
-| `admin_password`    | str         | Le mot de passe pour accéder aux actions administratives du groupe de parties. | Oui | - |
 | `**kwargs`          | variable    | Paramètres optionnels pour personnaliser le groupe. | Non  | - |
 
 La classe présente les attributs suivants:
@@ -357,17 +361,12 @@ La classe présente les attributs suivants:
 |-----------------|-----------------|--------------|------------|----------------------------|
 | `ID`            | str             | L'identifiant unique du groupe. | Non | S'initialise automatiquement avec la valeur de `uuid.uuid4()`.|
 | `name`          | str             | Le nom ddu groupe. | Oui        | - |
-| `hash`          | str\|`None`     | Le hash du mot de passe administrateur du groupe. `None` si aucun mot de passe n'est défini.| Non  | Le hash est automatiquement généré à partir de `admin_password` avec `bcrypt`. |
 | `games`       | Tuple[`Game`] | Tuple (liste non mutable) des instances `Game` représentants les parties du groupe. | Non | La variable interne correspondante ( `_games`) est une liste qui est transformée en tuple pour son affichage public au travers de l'attribut `games`. |
+| `parameters` | dict | Paramètres de personnalisation du groupe | Oui        | S'initialise automatiquement avec les paramètres spécifiés dans `kwargs`, mais peut être complété par la suite par tout autre paramètre au choix de l'utilisateur. |
 
 
 La classe `GameGroup` présente les méthodes suivantes:
 
-- `change_password`: permet de changer le mot de passe administrateur du groupe. Le paramètre `hash` de l'instance courante est mis à jour avec le nouveau mot de passe via `bcrypt`
-  - Paramètres:
-    - `new_password` (str): le nouveau mot de passe à utiliser pour l'administration du groupe. Obligatoire.
-  - Valeur de retour:
-    - Aucune.
 - `add_game`: permet d'ajouter une partie au groupe. La partie est ajoutée à la fin de la liste des parties du groupe. 
   - Description: Cette méthode permet d'ajouter une partie au groupe en spécifiant son ID ou son objet `Game` et éventuellement un mot de passe administrateur de groupe. Elle lance une exception si la partie n'existe pas ou si le mot de passe est incorrect. 
   - Précision d'implémentation: En cas de succès, la méthode ajoute l'objet `Game` à la liste `_games` de l'instance courante.
@@ -375,8 +374,88 @@ La classe `GameGroup` présente les méthodes suivantes:
     - `game` (`Game`|str): l'instance de la partie à ajouter, ou une chaîne de caractères représentant l'ID de la partie à ajouter. Obligatoire.
   - Valeur de retour:
     - Aucune.
+  - Exceptions émises:
+    - `GameNotFoundError`: levée si la partie spécifiée n'existe pas.
 - `remove_game`: permet de retirer une partie du groupe. La partie est retirée de la liste des parties du groupe.
   - Paramètres:
     - `game` (`Game`|str): l'instance de la partie à retirer, ou une chaîne de caractères représentant l'ID de la partie à retirer. Obligatoire.
+  - Précision d'implémentation: En cas de succès, la méthode retire l'objet `Game` de la liste `_games` de l'instance courante.
   - Valeur de retour:
     - Aucune.
+  - Exceptions émises:
+    - `GameNotFoundInGroupError`: levée si la partie spécifiée n'est pas présente dans le groupe.
+
+### Contenu du fichier src/multiplayer/utils.py
+
+Le package fournit des fonctions utilitaires pour suggérer des noms de parties et de joueurs basés sur différentes catégories.
+
+
+#### Catégories pour les Parties
+*   **`cities`** : Grandes villes du monde.
+*   **`countries`** : Nations souveraines.
+*   **`rivers`** : Fleuves importants du monde.
+*   **`seas_oceans`** : Principales étendues d'eau salée.
+*   **`planets_moons`** : Corps célestes de notre système solaire.
+
+Précision d'implémentation: 
+*   Les catégories sont stockées dans des fichiers texte simples, avec un nom par ligne, dans le répertoire `src/multiplayer/data` (un fichier par catégorie).
+*   Les fichiers CSV sont pris en charge pour permettre une structure plus complexe si nécessaire.
+*   Les noms sont normalisés pour éviter les doublons et les caractères spéciaux.
+
+#### Catégories pour les Joueurs
+*   **`roman_gods`** : Divinités de la mythologie romaine.
+*   **`greek_gods`** : Divinités de la mythologie grecque antique.
+*   **`egyptian_gods`** : Divinités de la mythologie égyptienne antique.
+*   **`european_kings`** : Monarques européens historiques (hommes).
+*   **`european_queens`** : Monarques européens historiques (femmes).
+
+Précision d'implémentation: 
+*   Les catégories sont stockées dans des fichiers texte simples, avec un nom par ligne, dans le répertoire `src/multiplayer/data` (un fichier par catégorie).
+*   Les fichiers CSV sont pris en charge pour permettre une structure plus complexe si nécessaire.
+*   Les noms sont normalisés pour éviter les doublons et les caractères spéciaux.
+
+#### Fonction `register_name_category(category_name, data, category_type)`
+Enregistre une nouvelle catégorie personnalisée pour les suggestions de noms.
+
+*   **`category_name`** (`str`) : Le nom de la nouvelle catégorie.
+*   **`data`** (`list`, `str` ou `Path`) : Une liste de noms, ou un chemin vers un fichier texte/CSV (un nom par ligne, ou première colonne du CSV).
+*   **`category_type`** (`str`) : `"game"` ou `"player"`.
+
+#### Fonction `unregister_name_category(category_name)`
+Supprime une catégorie personnalisée. Retourne `True` en cas de succès.
+
+#### Fonction `get_available_categories(category_type="all")`
+Retourne une liste des catégories de suggestions de noms disponibles.
+
+*   **`category_type`** (`str`) : `"all"`, `"game"`, ou `"player"`.
+
+#### Fonction `suggest_game_name(category=None)`
+Suggère un nom aléatoire pour une partie. Si `category` est `None`, une catégorie liée aux parties est choisie aléatoirement.
+
+#### Fonction `suggest_player_name(category=None)`
+Suggère un nom aléatoire pour un joueur. Si `category` est `None`, une catégorie liée aux joueurs est choisie aléatoirement.
+
+
+## Workflows
+
+Les workflows Github sont stockés dans `.github/workflows` et sont utilisés pour automatiser les tâches de développement et de déploiement. Les fichiers sont écrits en YAML et suivent un format standardisé pour garantir la cohérence et la lisibilité.
+
+Les workflows à implémenter sont les suivants :
+- `lint.yml` : Automatiser la vérification de la qualité du code et de la conformité aux standards. Il s'exécute automatiquement lorsqu'un commit est poussé sur la branche principale (cela inclut également la fusion d'une branche sur la branche principale). Il peut aussi se lancer manuellement, sur la branche de son choix.
+- `test.yml` : Automatiser les tests unitaires et de fonctionnalité. Réalise l'ensemble des tests unitaires dans les environnements Windows, Linux et macOS. Il s'exécute automatiquement lorsqu'un commit est poussé sur la branche principale (cela inclut également la fusion d'une branche sur la branche principale). Il peut aussi se lancer manuellement, sur la branche de son choix.
+- `release.yml` : Automatiser la création de versions et le déploiement sur les plateformes de distribution. Se lance automatiquement lorsque un tag sous la forme `vX.Y.Z` est créé. Il peut également s'exécuter manuellement, avec dans ce cas le choix de la version à déployer.
+- `pypi.yml` : Automatiser le déploiement de la version sur PyPI. S'exécute uniquement manuellement, avec dans ce cas le choix de la version à déployer.
+
+## Scripts
+
+Les scripts sont stockés dans le répertoire `scripts`:
+
+- `check_project.py`: réalise les actions suivantes:
+  - Vérifie les modifications apportées au code depuis la branche principale. S'il n'y a pas de modification, ou si les seules modifications apportées l'ont été aux fichiers de documentation, le script s'arrête sans effectuer de vérification.
+  - Vérifie la présence de `uv` et l'installe si nécessaire
+  - Dans un environnement virtuel Python isolé:
+    - Installe l'ensemble des dépendances nécessaires pour le développement
+    - Exécute la vérification de la qualité du code et de la conformité aux standards
+    - Exécute les tests unitaires et de fonctionnalité
+  - Peut utiliser l'option `--fix` pour corriger automatiquement les erreurs de style et de conformité aux standards
+  - Peut utiliser l'option `--force` pour forcer la vérification même si seule la documentation a été modifiée

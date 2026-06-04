@@ -1,36 +1,24 @@
-name: Publish to PyPI
+name: PyPI
 
 on:
   workflow_dispatch:
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    inputs:
+      version:
+        description: 'Version to deploy'
+        required: true
 
 jobs:
-  build-n-publish:
-    name: Build and publish to PyPI
+  pypi-publish:
+    name: Upload release to PyPI
     runs-on: ubuntu-latest
-    if: github.actor == 'devfred78'
+    environment: release
     permissions:
-      # Required for trusted publishing
       id-token: write
-      contents: read
-
     steps:
       - uses: actions/checkout@v4
-
       - name: Install uv
         uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
       - name: Build package
         run: uv build
-
-      - name: Publish package to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Publish package
+        run: uv publish

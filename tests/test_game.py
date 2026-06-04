@@ -1,279 +1,98 @@
-"""
-Unit tests for the local multiplayer game module.
-"""
 import pytest
-from multiplayer import Game, Player, GameState, GameGroup
-from multiplayer.exceptions import GameLogicError, PlayerLimitReachedError, AuthenticationError
+import bcrypt
+from multiplayer.game import Player, User, Game, GameGroup
+from multiplayer import PlayerRole, GameState, ParameterFamily
+from multiplayer.exceptions import (
+    UserAlreadyExistsError, PasswordError, GameIsFullError, 
+    GameAlreadyStartedError, GameIsFinishedError
+)
+
+def test_player_creation():
+    p = Player("Alice", score=(ParameterFamily.DYNAMIC, 10), team=(ParameterFamily.STATIC, "Blue"))
+    assert p.name == "Alice"
+    assert p.dynamic_state["score"] == 10
+    assert p.static_state["team"] == "Blue"
+    assert p.ID is not None
+
+def test_user_creation():
+    u = User("bob", "password123", "bob@example.com")
+    assert u.username == "bob"
+    assert u.email == "bob@example.com"
+    assert u.role == PlayerRole.PLAYER
+    assert bcrypt.checkpw("password123".encode(), u.hash.encode())
+    assert u.player.name == "bob"
+
+def test_user_duplicate():
+    User("duplicate", "pass")
+    with pytest.raises(UserAlreadyExistsError):
+        User("duplicate", "pass")
+
+def test_game_lifecycle():
+    g = Game(name="Test Game", turn_based=True)
+    assert g.game_state == GameState.PENDING
+    
+    p1 = Player("P1")
+    p2 = Player("P2")
+    
+    g.join_game_as_player(p1)
+    g.join_game_as_player(p2)
+    
+    assert len(g.players) == 2
+    
+    g.start()
+    assert g.game_state == GameState.IN_PROGRESS
+    assert g.current_player.ID == p1.ID
+    
+    g.next_turn()
+    assert g.current_player.ID == p2.ID
+    
+    g.pause()
+    assert g.game_state == GameState.PAUSING
+    
+    g.resume()
+    assert g.game_state == GameState.IN_PROGRESS
+    
+    g.stop()
+    assert g.game_state == GameState.FINISHED
+
+def test_game_passwords():
+    g = Game(password="secret", observer_password="watch")
+    p = Player("Observer")
+    
+    with pytest.raises(PasswordError):
+        g.join_game_as_player(p, password="wrong")
+        
+    g.join_game_as_player(p, password="secret")
+    
+    o = Player("Watcher")
+    with pytest.raises(PasswordError):
+        g.join_game_as_observer(o, password="wrong")
+        
+    g.join_game_as_observer(o, password="watch")
+
+def test_game_errors():
+    g = Game(max_players=1, turn_based=True)
+    p1 = Player("P1")
+    p2 = Player("P2")
+    
+    g.join_game_as_player(p1)
+    with pytest.raises(GameIsFullError):
+        g.join_game_as_player(p2)
+        
+    g.start()
+    with pytest.raises(GameAlreadyStartedError):
+        g.start()
+        
+    g.stop()
+    with pytest.raises(GameIsFinishedError):
+        g.next_turn()
 
 def test_game_group():
-    """
-    Tests that a game group can be created and managed.
-    """
-    group = GameGroup("Action Games", genre="action")
-    assert group.name == "Action Games"
-    assert group.attributes["genre"] == "action"
+    group = GameGroup("My Group", type="ranked")
+    g1 = Game("Game 1")
+    group.add_game(g1)
+    assert len(group.games) == 1
+    assert group.parameters["type"] == "ranked"
+    
+    group.remove_game(g1)
     assert len(group.games) == 0
-
-    game1 = Game("Quake")
-    game2 = Game("Doom")
-    
-    group.add_game(game1)
-    assert len(group.games) == 1
-    assert group.games[0] == game1
-
-    group.add_game(game2)
-    assert len(group.games) == 2
-    
-    # Check that we can't add the same game twice
-    group.add_game(game1)
-    assert len(group.games) == 2
-
-    group.remove_game(game1.ID)
-    assert len(group.games) == 1
-    assert group.games[0] == game2
-    
-    # Remove non-existent game should not raise error
-    group.remove_game(game1.ID)
-    assert len(group.games) == 1
-
-def test_create_game():
-    """
-    Tests that a game can be created with default values.
-    """
-    game = Game()
-    assert game.max_players is None
-    assert not game.turn_based
-    assert not game.players
-    assert game.state == GameState.PENDING
-    assert not game.attributes
-    assert game.password is None
-
-def test_create_game_with_password():
-    """
-    Tests that a game can be created with a password.
-    """
-    game = Game(password="secret")
-    assert game.check_password("secret")
-
-def test_add_player_to_password_protected_game_success():
-    """
-    Tests that a player can join a password-protected game with the correct password.
-    """
-    game = Game(password="secret")
-    player = Player("Alice")
-    game.add_player(player, password="secret")
-    assert len(game.players) == 1
-    assert game.players[0] == player
-
-def test_add_player_to_password_protected_game_no_password():
-    """
-    Tests that joining a password-protected game without a password fails.
-    """
-    game = Game(password="secret")
-    player = Player("Alice")
-    with pytest.raises(AuthenticationError, match="Invalid password for this game"):
-        game.add_player(player)
-
-def test_add_player_to_password_protected_game_wrong_password():
-    """
-    Tests that joining a password-protected game with the wrong password fails.
-    """
-    game = Game(password="secret")
-    player = Player("Alice")
-    with pytest.raises(AuthenticationError, match="Invalid password for this game"):
-        game.add_player(player, password="wrong_secret")
-
-def test_add_player_to_public_game_with_unnecessary_password():
-    """
-    Tests that providing a password to a public game still allows the player to join.
-    """
-    game = Game()
-    player = Player("Alice")
-    game.add_player(player, password="any_password")
-    assert len(game.players) == 1
-
-def test_create_game_with_options():
-    """
-    Tests that a game can be created with a maximum number of players and as turn-based.
-    """
-    game = Game(max_players=4, turn_based=True)
-    assert game.max_players == 4
-    assert game.turn_based
-    assert not game.players
-    assert game.state == GameState.PENDING
-
-def test_create_game_with_name():
-    """
-    Tests that a game can be created with a name.
-    """
-    game = Game(name="My Super Game")
-    assert game.name == "My Super Game"
-
-def test_create_game_with_attributes():
-    """
-    Tests that a game can be created with custom attributes.
-    """
-    game = Game(difficulty="Hard")
-    assert game.attributes["difficulty"] == "Hard"
-
-def test_add_player():
-    """
-    Tests that a player can be added to a game.
-    """
-    game = Game()
-    player = Player("Alice")
-    game.add_player(player)
-    assert len(game.players) == 1
-    assert game.players[0] == player
-
-def test_add_player_with_attributes():
-    """
-    Tests that a player can be added to a game with custom attributes.
-    """
-    game = Game()
-    player = Player("Alice", score=100)
-    game.add_player(player)
-    assert len(game.players) == 1
-    assert game.players[0] == player
-    assert game.players[0].attributes["score"] == 100
-
-def test_add_player_raises_error_when_max_players_reached():
-    """
-    Tests that adding a player to a full game raises PlayerLimitReachedError.
-    """
-    game = Game(max_players=1)
-    game.add_player(Player("Alice"))
-    with pytest.raises(PlayerLimitReachedError, match="Maximum number of players reached"):
-        game.add_player(Player("Bob"))
-
-def test_start_game():
-    """
-    Tests that a game can be started.
-    """
-    game = Game()
-    game.add_player(Player("Alice"))
-    game.start()
-    assert game.state == GameState.IN_PROGRESS
-
-def test_start_game_raises_error_with_no_players():
-    """
-    Tests that starting a game with no players raises GameLogicError.
-    """
-    game = Game()
-    with pytest.raises(GameLogicError, match="Cannot start a game with no players"):
-        game.start()
-
-def test_pause_and_resume_game():
-    """
-    Tests that a game can be paused and resumed.
-    """
-    game = Game()
-    game.add_player(Player("Alice"))
-    game.start()
-    assert game.state == GameState.IN_PROGRESS
-    game.pause()
-    assert game.state == GameState.PAUSING
-    game.resume()
-    assert game.state == GameState.IN_PROGRESS
-
-def test_pause_game_raises_error_if_not_in_progress():
-    """
-    Tests that pausing a game that is not in progress raises GameLogicError.
-    """
-    game = Game()
-    with pytest.raises(GameLogicError, match="Game is not in progress"):
-        game.pause()
-
-def test_game_resume_not_paused():
-    game = Game()
-    game.add_player(Player("Alice"))
-    game.start()
-    with pytest.raises(GameLogicError, match="Game is not pausing"):
-        game.resume()
-
-def test_game_next_turn_no_players():
-    game = Game(turn_based=True)
-    alice = Player("Alice")
-    game.add_player(alice)
-    game.start()
-    game.remove_player(alice.ID)
-    # Now the game is back to PAUSING because of remove_player logic
-    assert game.state == GameState.PAUSING
-    with pytest.raises(GameLogicError, match="Game is not in progress"):
-        game.next_turn()
-
-def test_game_start_already_started():
-    game = Game()
-    game.add_player(Player("Alice"))
-    game.start()
-    with pytest.raises(GameLogicError, match="Game is already in progress"):
-        game.start()
-
-def test_resume_game_raises_error_if_not_pending():
-    """
-    Tests that resuming a game that is not pausing raises GameLogicError.
-    """
-    game = Game()
-    game.add_player(Player("Alice"))
-    game.start()
-    with pytest.raises(GameLogicError, match="Game is not pausing"):
-        game.resume()
-
-def test_stop_game():
-    """
-    Tests that a game can be stopped.
-    """
-    game = Game()
-    game.add_player(Player("Alice"))
-    game.start()
-    game.stop()
-    assert game.state == GameState.FINISHED
-
-def test_next_turn():
-    """
-    Tests that the turn can be advanced in a turn-based game.
-    """
-    game = Game(turn_based=True)
-    alice = Player("Alice")
-    bob = Player("Bob")
-    game.add_player(alice)
-    game.add_player(bob)
-    game.start()
-    assert game.current_player == alice
-    game.next_turn()
-    assert game.current_player == bob
-    game.next_turn()
-    assert game.current_player == alice
-
-def test_next_turn_raises_error_if_not_turn_based():
-    """
-    Tests that advancing the turn in a non-turn-based game raises GameLogicError.
-    """
-    game = Game()
-    with pytest.raises(GameLogicError, match="Game is not turn-based"):
-        game.next_turn()
-
-def test_current_player_raises_error_if_not_turn_based():
-    """
-    Tests that getting the current player in a non-turn-based game raises GameLogicError.
-    """
-    game = Game()
-    with pytest.raises(GameLogicError, match="Game is not turn-based"):
-        _ = game.current_player
-
-def test_remove_player():
-    """
-    Tests that a player can be removed from a game.
-    """
-    game = Game(turn_based=True)
-    alice = Player("Alice")
-    bob = Player("Bob")
-    game.add_player(alice)
-    game.add_player(bob)
-    game.start()
-    
-    assert len(game.players) == 2
-    game.remove_player(alice.ID)
-    assert len(game.players) == 1
-    assert game.players[0] == bob
-    assert game.current_player == bob

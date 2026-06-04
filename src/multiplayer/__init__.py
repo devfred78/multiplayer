@@ -1,54 +1,20 @@
-"""
-This package provides classes for managing a multiplayer game, both locally and over a network.
-"""
-__version__ = "1.1.1"
-from .game import Game, Player, Observer, GameState, GameGroup
-from .server import GameServer
-from .client import GameClient, RemoteGame, ServerAdmin, GroupAdmin
+"""Multiplayer package initialization."""
+from enum import Enum
 
-from .utils import (
-    suggest_game_name,
-    suggest_player_name,
-    get_available_categories,
-    register_name_category,
-    unregister_name_category,
-)
-from .exceptions import (
-    MultiplayerError,
-    GameLogicError,
-    PlayerLimitReachedError,
-    ObserverLimitReachedError,
-    GameNotFoundError,
-    NetworkError,
-    ConnectionError,
-    ServerError,
-    AuthenticationError,
-)
+class PlayerRole(Enum):
+    """Enumeration for player account roles."""
+    PLAYER = "player"
+    GROUP_ADMIN = "group_admin"
+    SERVER_ADMIN = "server_admin"
 
-__all__ = [
-    'Game',
-    'Player',
-    'Observer',
-    'GameState',
-    'GameGroup',
-    'GameServer',
-    'GameClient',
-    'RemoteGame',
-    'ServerAdmin',
-    'GroupAdmin',
-    'suggest_game_name',
-    'suggest_player_name',
-    'get_available_categories',
-    'register_name_category',
-    'unregister_name_category',
-    'MultiplayerError',
-    'GameLogicError',
-    'PlayerLimitReachedError',
-    'ObserverLimitReachedError',
-    'GameNotFoundError',
-    'NetworkError',
-    'ConnectionError',
-    'ServerError',
-    'AuthenticationError',
-    '__version__',
-]
+class GameState(Enum):
+    """Enumeration for the current status of a game."""
+    PENDING = "pending"
+    PAUSING = "pausing"
+    IN_PROGRESS = "in_progress"
+    FINISHED = "finished"
+
+class ParameterFamily(Enum):
+    """Enumeration for optional parameter families."""
+    STATIC = "static"
+    DYNAMIC = "dynamic"

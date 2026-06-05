@@ -6,24 +6,150 @@ on:
       - 'v*'
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Version to release (e.g. 1.0.0)'
-        required: true
+      dry_run:
+        description: 'Simulate the release without creation'
+        required: false
+        default: false
+        type: boolean
+
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
+  build:
+    name: Build wheels on ${{ matrix.os }}
+    # Run if the ref is a tag starting with 'v' OR if triggered manually via workflow_dispatch
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
+
       - name: Set up Python
-        run: uv python install 3.12
-      - name: Build package
-        run: uv build
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: actions/setup-python@v5
         with:
-          files: dist/*
+          python-version: "3.14"
+
+      - name: Build wheel
+        shell: bash
+        run: |
+          # Extract version from tag (remove 'v' prefix if present)
+          # If not a tag, use a placeholder version for the dry-run
+          if [[ $GITHUB_REF == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF_NAME#v}
+          else
+            VERSION="0.0.0-dev+${GITHUB_SHA::7}"
+          fi
+          echo "Building version $VERSION"
+          
+          # Update version in pyproject.toml
+          # We use python to safely update the toml file
+          export VERSION
+          python -c "
+          import re, os
+          version = os.environ.get('VERSION', '0.0.0')
+          with open('pyproject.toml', 'r') as f:
+              content = f.read()
+          # Match version = \"X.Y.Z\" under [project]
+          # Use raw string for the replacement pattern to avoid SyntaxWarning
+          content = re.sub(r'(^version\s*=\s*\").*(\")', rf'\g<1>{version}\g<2>', content, flags=re.MULTILINE)
+          with open('pyproject.toml', 'w') as f:
+              f.write(content)
+          "
+          
+          uv build --wheel
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: dist/*.whl
+
+  create-release:
+    name: Create GitHub Release
+    needs: [build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Junie CLI
+        run: curl -fsSL https://raw.githubusercontent.com/JetBrains/junie/main/install.sh | bash
+
+      - name: Generate Release Description with Junie
+        id: prepare_release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JUNIE_API_KEY: ${{ secrets.JUNIE_API_KEY }}
+        run: |
+          # Get the previous tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 ${{ github.ref_name }}^ 2>/dev/null || echo "")
+          
+          if [ -z "$PREVIOUS_TAG" ]; then
+            TASK="Acting as a technical writer, generate a professional release description in English for the first release ${{ github.ref_name }}. Focus exclusively on the main features, architecture, and purpose of the project. Do NOT mention that you are generating this text or analyzing the code. OUTPUT ONLY the final content starting directly with '### Summary'."
+          else
+            TASK="Acting as a technical writer, analyze the commits between $PREVIOUS_TAG and ${{ github.ref_name }}. Generate professional release notes in English. Summarize new features, improvements, and bug fixes for the end user. Do NOT include meta-comments about your analysis process (e.g., 'Analyzed X commits') or mentions of yourself. OUTPUT ONLY the final content starting directly with '### Summary'."
+          fi
+          
+          # Run Junie to generate the description
+          junie --auth "$JUNIE_API_KEY" --task "$TASK" > raw_output.txt
+          
+          # Clean ANSI escape sequences and non-printable characters
+          # 1. Remove ANSI escape codes (more comprehensive pattern)
+          # 2. Remove other non-printable characters except newlines and tabs
+          sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,3})*)?[mGK]//g" raw_output.txt | tr -cd '\11\12\15\40-\176' > cleaned_output.txt
+          
+          # Junie output may contain logs, we keep extraction to get only the description
+          if grep -q "### Summary" cleaned_output.txt; then
+            # Extract content starting from the first markdown header
+            # And stop before ### Verification if it exists
+            sed -n '/### Summary/,$p' cleaned_output.txt | sed '/### Verification/,$d' > release_description.txt
+          elif grep -q "TASK RESULT:" cleaned_output.txt; then
+            sed -n '/TASK RESULT:/,$p' cleaned_output.txt | sed '1d' | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,3})*)?[mGK]//g" | sed '/### Verification/,$d' > release_description.txt
+          else
+            sed '/### Verification/,$d' cleaned_output.txt > release_description.txt
+          fi
+          
+          # Final check: if the file is still empty or too short, use a fallback
+          if [ ! -s release_description.txt ]; then
+             echo "Release $GITHUB_REF_NAME" > release_description.txt
+          fi
+
+          # Determine if it is a pre-release (version starts with 0)
+          # Tag is usually vX.Y.Z, so we check if the part after 'v' starts with '0.'
+          VERSION_NAME=${GITHUB_REF_NAME#v}
+          if [[ $VERSION_NAME == 0.* ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "Version $VERSION_NAME detected as pre-release"
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "Version $VERSION_NAME detected as stable release"
+          fi
+
+          # Display the description in the logs (especially useful for dry-run)
+          echo "========================================="
+          echo "GENERATED RELEASE DESCRIPTION:"
+          cat release_description.txt
+          echo "========================================="
+
+      - name: Download all wheels
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: wheels-*
+          merge-multiple: true
+
+      - name: Create Release
+        if: github.event.inputs.dry_run != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.whl
+          body_path: release_description.txt
+          tag_name: ${{ github.ref_name }}
+          name: multiplayer ${{ github.ref_name }}
+          prerelease: ${{ steps.prepare_release.outputs.is_prerelease == 'true' }}

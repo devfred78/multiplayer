@@ -5,110 +5,138 @@ This document provides a comprehensive reference for the `multiplayer` library's
 ## Core Models
 
 ### Player
-`multiplayer.game.Player`
+`multiplayer.game.Player(name, **kwargs)`
 
 Represents a player in a game context.
 
-**Instantiation Arguments:**
-- `name (str)`: **Mandatory**. The name of the player.
-- `**kwargs`: **Optional**. Custom parameters in the format `parameter_name=(ParameterFamily, initial_value)`.
+**Parameters:**
 
-**Attributes:**
-- `name (str)`: The name of the player.
-- `static_state (dict)`: Custom attributes that rarely change (e.g., team).
-- `dynamic_state (dict)`: Custom attributes that frequently change (e.g., score).
+| Name | Type | Description | Required | Default |
+|------|------|-------------|----------|---------|
+| `name` | `str` | The name of the player. | Yes | - |
+| `**kwargs` | variable | Optional parameters. Each parameter must be a tuple `(family, initial_value)` where `family` is a `ParameterFamily`. | No | - |
 
-**Properties:**
-- `ID (str)`: Unique identifier (UUID) generated automatically. Read-only.
+**Attributes & Properties:**
+
+| Name | Type | Description | Settable | Implementation Detail |
+|------|------|-------------|----------|-----------------------|
+| `ID` | `str` | Unique identifier. | No | Automatically generated using `uuid.uuid4()`. |
+| `name` | `str` | The name of the player. | Yes | Initialized with the name provided at creation. |
+| `static_state` | `dict` | Custom attributes for data that rarely changes. | Yes | Initialized with parameters from `ParameterFamily.STATIC`. |
+| `dynamic_state` | `dict` | Custom attributes for data that changes frequently. | Yes | Initialized with parameters from `ParameterFamily.DYNAMIC`. |
 
 ---
 
 ### User
-`multiplayer.game.User`
+`multiplayer.game.User(username, password, email)`
 
-Represents a user account with authentication.
+Represents a user account with authentication and role management.
 
-**Instantiation Arguments:**
-- `username (str)`: **Mandatory**. The account username.
-- `password (str)`: **Mandatory**. The account password (will be hashed).
-- `email (str)`: **Optional**. Email address (default: `""`).
+**Parameters:**
 
-**Properties:**
-- `ID (str)`: Unique identifier (UUID). Read-only.
-- `username (str)`: The account username. Read-only.
-- `hash (str)`: The hashed password. Read-only.
-- `email (str)`: The email address associated with the account.
-- `role (PlayerRole)`: The role of the user (defaults to `PLAYER`).
-- `groups_id (list[str])`: List of group IDs the user belongs to.
-- `player (Player)`: The `Player` instance associated with this user.
+| Name | Type | Description | Required | Default |
+|------|------|-------------|----------|---------|
+| `username` | `str` | The account username. | Yes | - |
+| `password` | `str` | The account password. | Yes | - |
+| `email` | `str` | Email address. | No | `""` |
+
+*Note: Raises `UserAlreadyExistsError` if the username is already taken.*
+
+**Attributes & Properties:**
+
+| Name | Type | Description | Settable | Implementation Detail |
+|------|------|-------------|----------|-----------------------|
+| `ID` | `str` | Unique identifier. | No | Automatically generated using `uuid.uuid4()`. |
+| `username` | `str` | The account username. | No | - |
+| `hash` | `str` | Hashed password. | No | Automatically generated using `bcrypt`. |
+| `email` | `str` | Email address. | Yes | - |
+| `role` | `PlayerRole` | User's permission level. | Yes | Defaults to `PlayerRole.PLAYER`. |
+| `groups_id` | `list[str]` | IDs of groups where the user is admin. | No (but mutable) | Raises `GroupNotFoundError` if an ID is invalid. |
+| `player` | `Player` | Associated `Player` instance. | No (but mutable) | Created with `name=username`. Exists for the user's lifetime. |
 
 **Methods:**
-- `change_password(new_password: str)`: Updates the user's password.
+
+- `change_password(new_password: str)`: Updates the user's password and regenerates the hash using `bcrypt`.
 
 ---
 
 ### Game
-`multiplayer.game.Game`
+`multiplayer.game.Game(name, max_players, max_observers, password, observer_password, turn_based, **kwargs)`
 
-Manages a single game session.
+Manages a single game session, players, and state transitions.
 
-**Instantiation Arguments:**
-- `name (str)`: **Mandatory**. The name of the game.
-- `password (str | None)`: **Optional**. Password for players (default: `None`).
-- `observer_password (str | None)`: **Optional**. Password for observers (default: `None`).
-- `max_players (int)`: **Optional**. Maximum number of players (default: `10`).
-- `max_observers (int)`: **Optional**. Maximum number of observers (default: `10`).
-- `turn_based (bool)`: **Optional**. Whether the game is turn-based (default: `False`).
-- `**kwargs`: **Optional**. Additional configuration parameters.
+**Parameters:**
 
-**Properties:**
-- `ID (str)`: Unique identifier (UUID). Read-only.
-- `name (str)`: The name of the game.
-- `max_players (int)`: Maximum number of players.
-- `max_observers (int)`: Maximum number of observers.
-- `hash (str)`: Hashed player password. Read-only.
-- `observer_hash (str)`: Hashed observer password. Read-only.
-- `turn_based (bool)`: Whether the game is turn-based. Read-only.
-- `players (list[Player])`: List of joined players. Read-only.
-- `observers (list[Player])`: List of joined observers. Read-only.
-- `current_player (Player | None)`: The player whose turn it is.
-- `game_state (GameState)`: Current state of the game. Read-only.
-- `parameters (dict)`: Additional game parameters.
+| Name | Type | Description | Required | Default |
+|------|------|-------------|----------|---------|
+| `name` | `str \| None` | The name of the game. | No | `None` |
+| `max_players` | `int \| None` | Max players allowed. `None` for unlimited, `<= 0` for none. | No | `None` |
+| `max_observers` | `int \| None` | Max observers allowed. `None` for unlimited, `<= 0` for none. | No | `None` |
+| `password` | `str \| None` | Password for players. `None` for public. | No | `None` |
+| `observer_password` | `str \| None` | Password for observers. If `None`, uses `password`. | No | `None` |
+| `turn_based` | `bool` | Whether the game is turn-based. | No | `False` |
+| `**kwargs` | variable | Optional custom parameters (tuple of family and value). | No | - |
+
+**Attributes & Properties:**
+
+| Name | Type | Description | Settable | Implementation Detail |
+|------|------|-------------|----------|-----------------------|
+| `ID` | `str` | Unique identifier. | No | Automatically generated using `uuid.uuid4()`. |
+| `name` | `str` | The name of the game. | Yes | - |
+| `hash` | `str \| None` | Hashed player password. | No | Generated via `bcrypt`. |
+| `observer_hash` | `str \| None` | Hashed observer password. | No | Generated via `bcrypt`. |
+| `turn_based` | `bool` | Turn-based flag. | No | - |
+| `players` | `tuple[Player]` | Read-only tuple of players in turn order. | No | Backed by internal list `_players`. |
+| `observers` | `tuple[Player]` | Read-only tuple of observers. | No | Backed by internal list `_observers`. |
+| `current_player` | `Player \| None` | The player whose turn it is. | No | Only relevant for turn-based games. |
+| `game_state` | `GameState` | Current state of the game. | No | - |
+| `static_state` | `dict` | Static custom attributes. | Yes | Initialized from `ParameterFamily.STATIC`. |
+| `dynamic_state` | `dict` | Dynamic custom attributes. | Yes | Initialized from `ParameterFamily.DYNAMIC`. |
 
 **Methods:**
-- `change_password(new_password: str)`: Changes the game's player password.
-- `join_game_as_player(player: Player | str, password: str | None = None)`: Adds a player to the game.
-- `remove_player(player: Player | str)`: Removes a player.
-- `join_game_as_observer(player: Player | str, password: str | None = None)`: Adds an observer.
-- `remove_observer(player: Player | str)`: Removes an observer.
-- `start()`: Transitions the game state to `IN_PROGRESS`.
-- `pause()`: Transitions the game state to `PAUSING`.
-- `resume()`: Resumes the game to `IN_PROGRESS`.
-- `stop()`: Transitions the game state to `FINISHED`.
-- `next_turn()`: Advances to the next player (turn-based games only).
-- `reverse_order()`: Reverses the player turn order.
-- `set_player_rank(player: Player | str, rank: int)`: Sets the final rank for a player.
+
+| Method | Description | Parameters | Raises |
+|--------|-------------|------------|--------|
+| `change_password` | Changes the player password. | `new_password (str)` | - |
+| `join_game_as_player` | Adds a player to the game. | `player (Player\|str)`, `password (str\|None)` | `PlayerNotFoundError`, `PasswordError`, `GameIsFullError` |
+| `remove_player` | Removes a player. | `player (Player\|str)` | `PlayerNotFoundInGameError` |
+| `join_game_as_observer` | Adds an observer. | `player (Player\|str)`, `password (str\|None)` | `PlayerNotFoundError`, `PasswordError`, `GameIsFullError` |
+| `remove_observer` | Removes an observer. | `player (Player\|str)` | `PlayerNotFoundInGameError` |
+| `start` | Sets state to `IN_PROGRESS`. | - | `GameAlreadyStartedError`, `GameIsFinishedError` |
+| `pause` | Sets state to `PAUSING`. | - | `GameNotStartedError`, `GameAlreadyPausedError` |
+| `resume` | Sets state back to `IN_PROGRESS`. | - | `GameNotPausedError` |
+| `stop` | Sets state to `FINISHED`. | - | `GameNotStartedError` |
+| `next_turn` | Advances to the next player. | - | `GameNotStartedError`, `GameIsFinishedError`, `GameNotTurnBasedError` |
+| `reverse_order` | Inverses the player order. | - | `GameIsFinishedError`, `GameNotTurnBasedError` |
+| `set_player_rank` | Sets a specific rank for a player. | `player (Player\|str)`, `rank (int)` | `IndexError`, `GameIsFinishedError`, `GameNotTurnBasedError`, `PlayerNotFoundInGameError` |
 
 ---
 
 ### GameGroup
 `multiplayer.game.GameGroup`
 
-Organizes multiple games into a group.
+Organizes multiple games into a group for parallel management.
 
-**Instantiation Arguments:**
-- `name (str)`: **Mandatory**. The name of the group.
-- `**kwargs`: **Optional**. Custom group parameters.
+**Parameters:**
 
-**Properties:**
-- `ID (str)`: Unique identifier (UUID). Read-only.
-- `name (str)`: The name of the group.
-- `games (list[Game])`: List of games in the group. Read-only.
-- `parameters (dict)`: Custom group parameters.
+| Name | Type | Description | Required | Default |
+|------|------|-------------|----------|---------|
+| `name` | `str` | The name of the group. | Yes | - |
+| `**kwargs` | variable | Optional custom parameters. | No | - |
+
+**Attributes & Properties:**
+
+| Name | Type | Description | Settable | Implementation Detail |
+|------|------|-------------|----------|-----------------------|
+| `ID` | `str` | Unique identifier. | No | Automatically generated using `uuid.uuid4()`. |
+| `name` | `str` | The name of the group. | Yes | - |
+| `games` | `tuple[Game]` | Read-only tuple of games in the group. | No | Backed by internal list `_games`. |
+| `parameters` | `dict` | Custom group parameters. | Yes | Initialized from `kwargs`. |
 
 **Methods:**
-- `add_game(game: Game | str)`: Adds a game to the group.
-- `remove_game(game: Game | str)`: Removes a game from the group.
+
+- `add_game(game: Game | str)`: Adds a game to the end of the group. Raises `GameNotFoundError` if invalid.
+- `remove_game(game: Game | str)`: Removes a game from the group. Raises `GameNotFoundInGroupError` if not present.
 
 ---
 
@@ -116,16 +144,16 @@ Organizes multiple games into a group.
 
 ### PlayerRole
 `multiplayer.PlayerRole`
-- `PLAYER`: Regular player.
-- `GROUP_ADMIN`: Administrator for a specific group.
-- `SERVER_ADMIN`: Global server administrator.
+- `PLAYER`: Standard player.
+- `GROUP_ADMIN`: Admin for specific groups (includes `PLAYER` permissions).
+- `SERVER_ADMIN`: Global administrator (includes `GROUP_ADMIN` permissions).
 
 ### GameState
 `multiplayer.GameState`
-- `PENDING`: Waiting to start.
-- `IN_PROGRESS`: Game is active.
-- `PAUSING`: Game is paused.
-- `FINISHED`: Game has ended.
+- `PENDING`: Created, waiting for players.
+- `PAUSING`: Temporarily suspended.
+- `IN_PROGRESS`: Currently active.
+- `FINISHED`: Completed; results are final.
 
 ### ParameterFamily
 `multiplayer.ParameterFamily`
@@ -135,15 +163,40 @@ Organizes multiple games into a group.
 ---
 
 ## Utility Functions
-
-### Name Suggestions
 `multiplayer.utils`
 
-- `suggest_game_name(category: str | None = None) -> str`: Returns a random game name.
-- `suggest_player_name(category: str | None = None) -> str`: Returns a random player name.
-- `get_available_categories(category_type: str = "all") -> list[str]`: Lists available name categories.
-- `register_name_category(category_name: str, data: Any, category_type: str)`: Registers a new category.
-- `unregister_name_category(category_name: str) -> bool`: Removes a category.
+The library provides utilities for suggesting names based on categories.
+
+### Name Suggestion Categories
+
+**For Games:**
+- `cities`: Major world cities.
+- `countries`: Sovereign nations.
+- `rivers`: Important rivers.
+- `seas_oceans`: Main bodies of salt water.
+- `planets_moons`: Celestial bodies.
+
+**For Players:**
+- `roman_gods`: Roman mythology deities.
+- `greek_gods`: Ancient Greek mythology deities.
+- `egyptian_gods`: Ancient Egyptian mythology deities.
+- `european_kings`: Historical European kings.
+- `european_queens`: Historical European queens.
+
+*Implementation Note: Data is stored in `src/multiplayer/data` as text or CSV files. Names are normalized to avoid duplicates and special characters.*
+
+### Functions
+
+- `register_name_category(category_name: str, data: Any, category_type: str)`
+  Registers a new custom category. `data` can be a list, string, or Path to a text/CSV file. `category_type` is either `"game"` or `"player"`.
+- `unregister_name_category(category_name: str) -> bool`
+  Removes a custom category. Returns `True` on success.
+- `get_available_categories(category_type: str = "all") -> list[str]`
+  Returns available categories for `"all"`, `"game"`, or `"player"`.
+- `suggest_game_name(category: str | None = None) -> str`
+  Suggests a random game name. Picks a random category if `None`.
+- `suggest_player_name(category: str | None = None) -> str`
+  Suggests a random player name. Picks a random category if `None`.
 
 ---
 
@@ -151,17 +204,19 @@ Organizes multiple games into a group.
 
 All exceptions inherit from `multiplayer.exceptions.MultiplayerError`.
 
-- `UserAlreadyExistsError`: Raised when a username is already taken.
-- `PasswordError`: Raised when an incorrect password is provided.
-- `GameIsFullError`: Raised when a game reached its player/observer limit.
-- `GameAlreadyStartedError`: Raised when trying to start an already started game.
-- `GameIsFinishedError`: Raised when performing actions on a finished game.
-- `GameNotStartedError`: Raised when an action requires the game to be started.
-- `GameAlreadyPausedError`: Raised when trying to pause a paused game.
-- `GameNotPausedError`: Raised when trying to resume a non-paused game.
-- `GameNotTurnBasedError`: Raised when using turn-based methods on non-turn-based games.
-- `GameNotFoundError`: Raised when a game ID cannot be found.
-- `PlayerNotFoundError`: Raised when a player ID cannot be found.
-- `GroupNotFoundError`: Raised when a group ID cannot be found.
-- `PlayerNotFoundInGameError`: Raised when a player is not in the specified game.
-- `GameNotFoundInGroupError`: Raised when a game is 
+| Exception | Description |
+|-----------|-------------|
+| `UserAlreadyExistsError` | Raised when a username is already taken. |
+| `GroupNotFoundError` | Raised when a group ID does not exist. Returns the faulty ID in the message. |
+| `PlayerNotFoundError` | Raised when a player ID does not exist. Returns the faulty ID if provided. |
+| `PlayerNotFoundInGameError` | Raised when trying to remove a player who is not in the game. |
+| `PasswordError` | Raised when an incorrect password is provided. |
+| `GameIsFullError` | Raised when a game has reached its player or observer limit. |
+| `GameAlreadyStartedError` | Raised when trying to start a game that is already active or paused. |
+| `GameIsFinishedError` | Raised when attempting to modify a finished game. |
+| `GameNotStartedError` | Raised when an action (pause, stop, next_turn) requires the game to be started. |
+| `GameAlreadyPausedError` | Raised when trying to pause an already paused game. |
+| `GameNotPausedError` | Raised when trying to resume a game that is not paused. |
+| `GameNotTurnBasedError` | Raised when a turn-based action is called on a non-turn-based game. |
+| `GameNotFoundError` | Raised when a game ID does not exist. Returns the faulty ID if provided. |
+| `GameNotFoundInGroupError` | Raised when trying to remove a game not present in the specified group. |

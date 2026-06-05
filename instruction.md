@@ -92,6 +92,12 @@ Une énumération représentant les familles de paramètres optionnels de person
 *   `ParameterFamily.STATIC` : Paramètres statiques qui ne changent pas ou peu pendant la partie.
 *   `ParameterFamily.DYNAMIC` : Paramètres dynamiques qui peuvent être modifiés souvent pendant la partie.
 
+#### `SaveFormat` (Enum)
+Une énumération représentant les formats de stockage pris en charge par un fichier de sauvegarde.
+
+*   `SaveFormat.JSON` : Sauvegarde dans un unique document JSON.
+*   `SaveFormat.SQLITE` : Sauvegarde dans une base de données SQLite.
+
 ### Contenu du fichier src/multiplayer/exceptions.py
 
 Ce fichier contient les définitions des exceptions personnalisées utilisées dans ce module. Il définit les classes et les fonctions nécessaires pour la gestion des erreurs spécifiques au jeu.
@@ -102,6 +108,9 @@ Cette classe est la classe de base pour toutes les exceptions liées au module `
 
 #### Classe `UserAlreadyExistsError`
 Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative de création d'un compte utilisateur avec un nom déjà existant.
+
+#### Classe `SaveError`
+Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler qu'un fichier de sauvegarde est incompatible, corrompu, ou ne peut pas être lu ou écrit. Elle est également levée lorsqu'un format de sauvegarde inconnu est demandé, ou qu'une classe non prise en charge est sauvegardée ou chargée.
 
 #### Classe `GroupNotFoundError`
 Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative d'utilisation d'un groupe (ou d'un ID de groupe) qui n'existe pas. Cette exception retourne dans son message l'ID erroné.
@@ -434,6 +443,62 @@ Suggère un nom aléatoire pour une partie. Si `category` est `None`, une catég
 
 #### Fonction `suggest_player_name(category=None)`
 Suggère un nom aléatoire pour un joueur. Si `category` est `None`, une catégorie liée aux joueurs est choisie aléatoirement.
+
+### Contenu du fichier src/multiplayer/save.py
+
+Ce fichier contient la logique de sauvegarde et de restauration des objets instanciés à partir des classes `Player`, `User`, `Game` et `GameGroup`. Il définit la classe `Save`, dont chaque instance représente un fichier de sauvegarde et fait le lien entre un tampon en mémoire et un fichier persistant (document JSON ou base de données SQLite).
+
+#### Classe `Save`
+Cette classe permet de sauvegarder, de mettre à jour et de restaurer les objets du module. Les objets sont d'abord enregistrés dans un tampon en mémoire, puis écrits dans le fichier uniquement lors de l'appel explicite à la méthode `flush`. Elle s'instantie avec les paramètres suivants:
+
+| Nom           | Type                | Description | Obligatoire | Valeur par défaut |
+|---------------|---------------------|-------------|-------------|-------------------|
+| `file_path`   | `Path`              | Le chemin du fichier de sauvegarde. | Oui | - |
+| `save_format` | `SaveFormat`\|str   | Le format de sauvegarde. Il s'agit soit d'un membre de l'énumération `SaveFormat`, soit d'une chaîne de caractères (`"json"` ou `"sqlite"`). | Oui | - |
+
+Comportement à l'instantiation:
+*   Si le fichier n'existe pas, il est créé avec une structure vide mais valide.
+*   Si le fichier existe déjà, sa structure est contrôlée. S'il est compatible avec le format demandé, son contenu est chargé dans le tampon en mémoire. Sinon, une exception `SaveError` est levée.
+*   Si le format de sauvegarde est inconnu, une exception `SaveError` est levée.
+
+La classe présente les attributs suivants:
+
+| Nom           | Type         | Description | Modifiable | Précision d'implémentation |
+|---------------|--------------|-------------|------------|----------------------------|
+| `file_path`   | `Path`       | Le chemin du fichier de sauvegarde. | Oui | S'initialise à partir du paramètre `file_path`. |
+| `save_format` | `SaveFormat` | Le format de stockage utilisé. | Oui | S'initialise à partir du paramètre `save_format`. |
+
+La classe `Save` présente les méthodes suivantes:
+
+- `save`: permet de sauvegarder ou de mettre à jour une instance individuelle dans le tampon en mémoire.
+  - Description: L'objet est sérialisé et stocké dans le tampon, indexé par sa classe et son ID. Si un objet de même classe et de même ID existe déjà, il est remplacé. La modification n'est persistée dans le fichier qu'à l'appel de `flush`.
+  - Paramètres:
+    - `obj` (`Player`|`User`|`Game`|`GameGroup`): l'instance à sauvegarder. Obligatoire.
+  - Exceptions émises:
+    - `SaveError`: levée si l'objet n'est pas une instance d'une classe prise en charge.
+  - Valeur de retour: Aucune.
+
+- `load`: permet de charger toutes les instances d'une classe donnée.
+  - Description: Reconstruit et retourne la liste des instances de la classe demandée à partir du tampon en mémoire.
+  - Paramètres:
+    - `target` (str\|type): la classe à charger ou son nom (`Player`, `User`, `Game` ou `GameGroup`). Obligatoire.
+  - Exceptions émises:
+    - `SaveError`: levée si la cible ne correspond pas à une classe prise en charge.
+  - Valeur de retour: La liste des instances reconstruites de la classe demandée.
+
+- `reset`: permet de réinitialiser le fichier de sauvegarde.
+  - Description: Vide le tampon en mémoire et réécrit le fichier de sauvegarde avec une structure vide mais valide.
+  - Paramètres:
+    - Aucun.
+  - Valeur de retour: Aucune.
+
+- `flush`: permet d'écrire effectivement le tampon en mémoire dans le fichier de sauvegarde.
+  - Description: Persiste l'ensemble des objets du tampon dans le fichier selon le format choisi. Cette méthode doit être appelée pour rendre les sauvegardes effectives sur le disque.
+  - Paramètres:
+    - Aucun.
+  - Exceptions émises:
+    - `SaveError`: levée si les données ne peuvent pas être écrites dans le fichier.
+  - Valeur de retour: Aucune.
 
 
 ## Workflows

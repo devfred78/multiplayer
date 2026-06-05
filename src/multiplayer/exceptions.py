@@ -8,6 +8,10 @@ class UserAlreadyExistsError(MultiplayerError):
     """Raised when a user with the same name already exists."""
     pass
 
+class SaveError(MultiplayerError):
+    """Raised when a save file is incompatible, corrupted or cannot be processed."""
+    pass
+
 class GroupNotFoundError(MultiplayerError):
     """Raised when a group ID is not found."""
     def __init__(self, group_id: str):

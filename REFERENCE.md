@@ -160,6 +160,45 @@ Organizes multiple games into a group for parallel management.
 - `STATIC`: Parameters that rarely change.
 - `DYNAMIC`: Parameters that change frequently.
 
+### SaveFormat
+`multiplayer.SaveFormat`
+- `JSON`: Persists data into a single JSON document.
+- `SQLITE`: Persists data into an SQLite database.
+
+---
+
+## Persistence
+
+### Save
+`multiplayer.save.Save(file_path, save_format)`
+
+Handles saving and restoring `Player`, `User`, `Game` and `GameGroup` instances to and from a save file. Objects are kept in an in-memory buffer and written to disk only when `flush()` is called.
+
+**Parameters:**
+
+| Name | Type | Description | Required | Default |
+|------|------|-------------|----------|---------|
+| `file_path` | `Path` | The path of the save file. Created if missing; validated and loaded if it exists. | Yes | - |
+| `save_format` | `SaveFormat \| str` | The storage format. A `SaveFormat` member or one of the strings `"json"` / `"sqlite"`. | Yes | - |
+
+*Note: Raises `SaveError` if the format is unknown or if an existing file has an incompatible structure.*
+
+**Attributes & Properties:**
+
+| Name | Type | Description | Settable | Implementation Detail |
+|------|------|-------------|----------|-----------------------|
+| `file_path` | `Path` | Path of the underlying save file. | Yes | Initialized from `file_path`. |
+| `save_format` | `SaveFormat` | Storage format used. | Yes | Initialized from `save_format`. |
+
+**Methods:**
+
+| Method | Description | Parameters | Raises |
+|--------|-------------|------------|--------|
+| `save` | Saves or updates an instance in the in-memory buffer (replaces if same class and ID). | `obj (Player\|User\|Game\|GameGroup)` | `SaveError` |
+| `load` | Returns the list of all stored instances of a given class. | `target (str\|type)` | `SaveError` |
+| `reset` | Clears the buffer and rewrites the file with an empty valid structure. | - | `SaveError` |
+| `flush` | Persists the in-memory buffer to the save file. | - | `SaveError` |
+
 ---
 
 ## Utility Functions
@@ -220,3 +259,4 @@ All exceptions inherit from `multiplayer.exceptions.MultiplayerError`.
 | `GameNotTurnBasedError` | Raised when a turn-based action is called on a non-turn-based game. |
 | `GameNotFoundError` | Raised when a game ID does not exist. Returns the faulty ID if provided. |
 | `GameNotFoundInGroupError` | Raised when trying to remove a game not present in the specified group. |
+| `SaveError` | Raised when a save file is incompatible or corrupted, when an unknown save format is requested, or when an unsupported class is saved or loaded. |

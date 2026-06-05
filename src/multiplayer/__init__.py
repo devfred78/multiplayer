@@ -18,3 +18,8 @@ class ParameterFamily(Enum):
     """Enumeration for optional parameter families."""
     STATIC = "static"
     DYNAMIC = "dynamic"
+
+class SaveFormat(Enum):
+    """Enumeration for the supported persistence formats of a save file."""
+    JSON = "json"
+    SQLITE = "sqlite"

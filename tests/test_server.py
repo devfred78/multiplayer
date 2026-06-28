@@ -4,6 +4,13 @@ import struct
 
 import pytest
 
+try:
+    import msgpack
+    _MSGPACK_AVAILABLE = True
+except ImportError:
+    msgpack = None
+    _MSGPACK_AVAILABLE = False
+
 from multiplayer import SaveFormat
 from multiplayer.game import User
 from multiplayer.server import (
@@ -43,7 +50,13 @@ def _decode_messages(buffer):
         offset += 4
         body = bytes(buffer[offset : offset + length])
         offset += length
-        messages.append(json.loads(body.decode("utf-8")))
+        try:
+            messages.append(json.loads(body.decode("utf-8")))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            if _MSGPACK_AVAILABLE:
+                messages.append(msgpack.unpackb(body, raw=False))
+            else:
+                raise
     return messages
 
 

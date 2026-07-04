@@ -201,6 +201,88 @@ Handles saving and restoring `Player`, `User`, `Game` and `GameGroup` instances 
 
 ---
 
+## Networking
+
+### GameServer
+`multiplayer.server.GameServer(host, port, unencrypted_port, password, name, use_tls, tls_self_signed, tls_domain, tls_cert_path, tls_key_path, discoverable, multicast_group, multicast_port, persistence_mode, persistence_path, garbage_collection_periodicity)`
+
+Manages the server side of the multiplayer protocol. It handles client connections, authentication, and game state distribution.
+
+**Parameters:**
+
+| Name | Type | Description | Required | Default |
+|------|------|-------------|----------|---------|
+| `host` | `str` | IPv4 address to listen on. | No | `"0.0.0.0"` |
+| `port` | `int` | Main TCP port (TLS-secured if `use_tls` is `True`). | No | `65432` |
+| `unencrypted_port` | `int \| None` | Optional secondary TCP port without encryption. | No | `None` |
+| `password` | `str \| None` | Optional password required for initial connection. | No | `None` |
+| `name` | `str` | Human-readable server name. | No | `""` |
+| `use_tls` | `bool` | Enable TLS 1.3 on the main port. | No | `False` |
+| `tls_self_signed` | `bool` | Generate and use a self-signed certificate. | No | `False` |
+| `tls_domain` | `str` | Domain name used for the certificate. | No | `"localhost"` |
+| `tls_cert_path` | `Path \| None` | Path to the TLS certificate. | No | `None` |
+| `tls_key_path` | `Path \| None` | Path to the TLS private key. | No | `None` |
+| `discoverable` | `bool` | Enable multicast discovery. | No | `False` |
+| `multicast_group` | `str` | Multicast address for discovery. | No | `"239.255.0.1"` |
+| `multicast_port` | `int` | UDP multicast port for discovery. | No | `65434` |
+| `persistence_mode` | `SaveFormat \| None` | Persistence storage format. | No | `None` |
+| `persistence_path` | `Path \| None` | Path to the persistence file. | No | `None` |
+| `garbage_collection_periodicity` | `int` | Seconds between orphan player cleanups. | No | `900` |
+
+**Attributes & Properties:**
+
+| Name | Type | Description | Settable |
+|------|------|-------------|----------|
+| `password_required` | `bool` | Indicates whether a server password is required. | No |
+
+**Methods:**
+
+| Method | Description | Parameters |
+|--------|-------------|------------|
+| `start` | Starts the server asynchronously. | - |
+| `stop` | Stops the server asynchronously and persists data. | - |
+| `restart` | Restarts the server asynchronously. | - |
+
+---
+
+### GameClient
+`multiplayer.client.GameClient(host, port, use_tls, tls_ca_path)`
+
+Client side for connecting to and communicating with a `GameServer`.
+
+**Parameters:**
+
+| Name | Type | Description | Required | Default |
+|------|------|-------------|----------|---------|
+| `host` | `str` | Server IPv4 address or host name. | No | `"127.0.0.1"` |
+| `port` | `int` | Server TCP port. | No | `65432` |
+| `use_tls` | `bool` | Enable TLS for the connection. | No | `False` |
+| `tls_ca_path` | `Path \| None` | Path to CA/server certificate for TLS validation. | No | `None` |
+
+**Attributes & Properties:**
+
+| Name | Type | Description | Settable |
+|------|------|-------------|----------|
+| `host` | `str` | Server IPv4 address or host name. | No |
+| `port` | `int` | Server TCP port. | No |
+| `use_tls` | `bool` | Whether TLS is enabled. | No |
+| `is_connected` | `bool` | Whether the client is currently connected. | No |
+| `session_player` | `Player \| None` | The default player associated with the current session. | No |
+
+**Methods:**
+
+| Method | Description | Parameters |
+|--------|-------------|------------|
+| `discover` | (Class method) Discovers servers on the local network. | `timeout (float)`, `multicast_group (str)`, `multicast_port (int)` |
+| `connect` | Opens the TCP connection. | - |
+| `disconnect` | Closes the connection. | - |
+| `login` | Authenticates a user and retrieves the account info. | `username (str)`, `password (str)` |
+| `create_player` | Creates a new player for the session. | `name (str)` |
+| `send_request` | Sends a protocol request and waits for a response. | `req_type (str)`, `payload (dict)` |
+| `on_notification` | Registers a callback to handle server notifications. | `type (str\|None)`, `callback (Callable)` |
+
+---
+
 ## Utility Functions
 `multiplayer.utils`
 

@@ -3793,6 +3793,22 @@ sequenceDiagram
 
 ---
 
+## Annexe : Récapitulatif des notifications
+
+Ce tableau regroupe l'ensemble des notifications envoyées par le serveur, classées par domaine.
+
+| Type de notification | Description | Diffusion |
+|---|---|---|
+| `SERVER_SHUTDOWN` | Prévient les clients que le serveur va s'arrêter prochainement. | Tous les clients connectés |
+| `GROUP_GAME_ADDED` | Informe les clients qu'une partie vient d'être ajoutée à un groupe. | Clients abonnés au groupe |
+| `GROUP_GAME_REMOVED` | Informe les clients qu'une partie vient d'être retirée d'un groupe. | Clients abonnés au groupe |
+| `GROUP_GAME_UPDATED` | Informe les clients qu'une partie d'un groupe a changé d'état ou de propriétés visibles. | Clients abonnés au groupe |
+| `GAME_EVENT` | Notifie les participants d'une action effectuée par l'un d'entre eux ou par le serveur. | Clients connectés à la partie |
+| `GAME_STATE_CHANGED` | Informe les clients que l'état global ou personnalisé de la partie a été modifié. | Clients connectés à la partie |
+| `GAME_TURN_CHANGED` | Prévient les clients connectés qu'un nouveau tour commence et identifie le joueur actif. | Clients connectés à la partie |
+
+---
+
 ## Annexe : Récapitulatif des codes d'erreur
 
 Ce tableau regroupe l'ensemble des codes d'erreur définis dans le protocole, classés par ordre alphabétique.

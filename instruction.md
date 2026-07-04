@@ -571,6 +571,108 @@ La classe `GameServer` présente les méthodes suivantes:
   - Paramètres: aucun
   - Retour: aucun
 
+### Contenu du fichier src/multiplayer/client.py
+
+Ce fichier contient la logique de gestion des clients multijoueur.
+
+#### Classe GameClient
+La classe `GameClient` est responsable de la connexion et de la communication avec un serveur `GameServer`. Elle permet de découvrir des serveurs sur le réseau, de s'y connecter de manière sécurisée ou non, de s'authentifier et d'échanger des messages (requêtes, réponses et notifications) selon le protocole défini.
+
+##### Paramètres
+
+La classe `GameClient` s'instancie avec les paramètres suivants:
+
+| Nom | Type | Description | Obligatoire | Valeur par défaut |
+|---|---|---|---|---|
+| `host` | str | L'adresse IPv4 ou le nom d'hôte du serveur | Non | `"127.0.0.1"` |
+| `port` | int | Le numéro de port TCP du serveur | Non | 65432 |
+| `use_tls` | bool | Utiliser le protocole TLS pour la communication sécurisée | Non | `False` |
+| `tls_ca_path` | `Path\|None` | Le chemin vers le certificat de l'autorité de certification (ou le certificat auto-signé du serveur) pour la validation TLS. Si `None`, les certificats de confiance du système sont utilisés. | Non | `None` |
+
+##### Attributs
+
+La classe présente les attributs suivants:
+
+| Nom | Type | Description | Modifiable | Précision d'implémentation |
+|---|---|---|---|---|
+| `host` | str | L'adresse IPv4 ou le nom d'hôte du serveur | Oui | - |
+| `port` | int | Le numéro de port TCP du serveur | Oui | - |
+| `tls_ca_path` | `Path\|None` | Le chemin vers le certificat de validation TLS. Si `None`, utilise les certificats du système. | Non | - |
+| `is_connected` | bool | Indique si le client est actuellement connecté au serveur | Non | - |
+| `session_player` | `Player\|None` | Le joueur par défaut associé à la session actuelle | Non | Mis à jour automatiquement lors de l'authentification ou de la création d'un joueur. |
+
+##### Méthodes
+
+La classe `GameClient` présente les méthodes suivantes:
+
+- `discover` (méthode de classe): Recherche les serveurs disponibles sur le réseau local.
+  - Description: Envoie un message de découverte multicast en UDP et collecte les réponses des serveurs actifs.
+  - Paramètres:
+    - `timeout` (float): Temps d'attente maximum pour la réception des réponses (en secondes). Optionnel. Valeur par défaut: 2.0.
+    - `multicast_group` (str): L'adresse multicast à utiliser. Optionnel. Valeur par défaut: `"239.255.0.1"`.
+    - `multicast_port` (int): Le port multicast à utiliser. Optionnel. Valeur par défaut: 65434.
+  - Valeur de retour: Une liste de dictionnaires, chaque dictionnaire contenant les informations d'un serveur découvert (nom, host, port, etc.).
+- `connect`: Établit la connexion TCP avec le serveur.
+  - Description: Tente d'ouvrir une connexion avec le serveur en utilisant les paramètres `host`, `port` et `use_tls` (ainsi que `tls_ca_path` si fourni, sinon utilise les certificats racines du système).
+  - Paramètres: Aucun.
+  - Valeur de retour: Aucun.
+  - Exceptions émises:
+    - `ConnectionError`: si la connexion échoue.
+- `disconnect`: Ferme la connexion avec le serveur.
+  - Description: Ferme proprement la connexion TCP actuelle.
+  - Paramètres: Aucun.
+  - Valeur de retour: Aucun.
+- `login`: S'authentifie auprès du serveur.
+  - Description: Envoie une requête d'authentification avec les identifiants fournis. En cas de succès, le client récupère les informations de l'utilisateur et son joueur associé.
+  - Paramètres:
+    - `username` (str): Le nom d'utilisateur. Obligatoire.
+    - `password` (str): Le mot de passe. Obligatoire.
+  - Valeur de retour: L'instance `User` correspondant à l'utilisateur authentifié.
+  - Exceptions émises:
+    - `PasswordError`: si le mot de passe est incorrect.
+    - `PlayerNotFoundError`: si l'utilisateur n'existe pas.
+- `send_request`: Envoie une requête au serveur et attend sa réponse.
+  - Description: Méthode de bas niveau permettant d'envoyer n'importe quelle commande supportée par le protocole et de recevoir la réponse correspondante.
+  - Paramètres:
+    - `command` (str): Le nom de la commande/action à exécuter. Obligatoire.
+    - `**kwargs`: Les arguments associés à la commande.
+  - Valeur de retour: Un dictionnaire contenant les données de la réponse du serveur.
+  - Exceptions émises:
+    - `MultiplayerError` (ou une sous-classe): si le serveur retourne une erreur.
+- `on_notification`: Enregistre une fonction de rappel pour traiter les notifications.
+  - Description: Permet d'associer une fonction à un type de notification spécifique ou à toutes les notifications.
+  - Paramètres:
+    - `notification_type` (str|None): Le type de notification à écouter (ex: `"GAME_EVENT"`). Si `None`, le callback reçoit toutes les notifications.
+    - `callback` (callable): La fonction à appeler, acceptant le dictionnaire de notification en argument.
+  - Valeur de retour: Aucun.
+
+Informations complémentaires:
+- **Gestion des notifications**: Le client doit être capable de recevoir et de traiter les notifications envoyées spontanément par le serveur. L'implémentation repose sur l'enregistrement de fonctions de rappel (*callbacks*) via la méthode `on_notification`. Lorsqu'une notification arrive, le client identifie les callbacks enregistrés pour ce type (ou les callbacks globaux) et les exécute de manière asynchrone ou séquentielle selon l'architecture choisie.
+
+  **Liste exhaustive des types de notifications (extraits du protocole) :**
+  - `SERVER_SHUTDOWN` : Prévient les clients que le serveur va s'arrêter prochainement.
+  - `GROUP_GAME_ADDED` : Informe les clients qu'une partie vient d'être ajoutée à un groupe.
+  - `GROUP_GAME_REMOVED` : Informe les clients qu'une partie vient d'être retirée d'un groupe.
+  - `GROUP_GAME_UPDATED` : Informe les clients qu'une partie d'un groupe a changé d'état ou de propriétés visibles.
+  - `GAME_EVENT` : Notifie les participants d'une action effectuée par l'un d'entre eux ou par le serveur.
+  - `GAME_STATE_CHANGED` : Informe les clients que l'état global ou personnalisé de la partie a été modifié.
+  - `GAME_TURN_CHANGED` : Prévient les clients connectés qu'un nouveau tour commence et identifie le joueur actif.
+
+  **Exemple d'utilisation :**
+  ```python
+  # Gestion des événements de jeu
+  def my_game_handler(notification):
+      payload = notification["payload"]
+      print(f"Action {payload['action_type']} reçue de {payload['player_id']}")
+
+  client.on_notification("GAME_EVENT", my_game_handler)
+
+  # Gestion globale des notifications (log)
+  client.on_notification(None, lambda n: logging.info(f"Notification reçue: {n['type']}"))
+  ```
+
+- **Sérialisation**: Le client doit supporter les formats JSON et MessagePack pour les échanges, conformément aux exigences du protocole.
+
 ## Workflows
 
 Les workflows Github sont stockés dans `.github/workflows` et sont utilisés pour automatiser les tâches de développement et de déploiement. Les fichiers sont écrits en YAML et suivent un format standardisé pour garantir la cohérence et la lisibilité.

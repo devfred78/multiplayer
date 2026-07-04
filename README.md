@@ -9,6 +9,7 @@ A Python library for managing multiplayer game sessions, users, and groups.
 - **Game Sessions**: Support for turn-based and simultaneous games, private games with passwords, and observers.
 - **Game Groups**: Organize multiple games into manageable groups.
 - **Persistence**: Save and restore your game state using JSON or SQLite formats.
+- **Networking**: Client-Server architecture using TCP with optional TLS 1.3 encryption, automatic server discovery, and real-time notifications.
 - **Name Suggestions**: Built-in utility to suggest random names for players and games from various categories.
 
 ## Installation
@@ -81,6 +82,40 @@ save_handler.flush()  # Effective write to disk
 
 # Load objects
 loaded_games = save_handler.load("Game")
+```
+
+### Networking
+
+#### Starting a Server
+
+```python
+import asyncio
+from multiplayer.server import GameServer
+
+async def main():
+    # Create and start a discoverable server
+    server = GameServer(name="Battle Server", discoverable=True)
+    await server.start()
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+#### Connecting a Client
+
+```python
+from multiplayer.client import GameClient
+
+# Connect to a server
+client = GameClient(host="127.0.0.1")
+client.connect()
+
+# Login to an existing account
+user = client.login("alice_92", "secret_password")
+print(f"Logged in as {user.username}")
+
+# Register a notification handler
+client.on_notification("GAME_EVENT", lambda p: print(f"Received event: {p}"))
 ```
 
 ## Documentation

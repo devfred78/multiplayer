@@ -695,3 +695,12 @@ Les scripts sont stockés dans le répertoire `scripts`:
     - Exécute la vérification de la qualité du code et de la conformité aux standards
     - Exécute les tests unitaires et de fonctionnalité
   - Peut utiliser l'option `--fix` pour corriger automatiquement les erreurs de style et de confor
+
+- `local_game.py`: lance une démonstration locale visible d'une partie multijoueur:
+  - Ouvre une fenêtre de console pour le serveur local et une fenêtre pour chaque joueur.
+  - Accepte en argument le nombre de joueurs; la valeur par défaut est `2`.
+  - Chaque joueur se connecte au serveur, rejoint la même partie et simule plusieurs échanges et tours à une vitesse lisible par un humain.
+  - Termine la partie normalement, puis arrête proprement le serveur.
+  - Utilisation:
+    - `uv run python scripts/local_game.py`: lance une partie avec deux joueurs.
+    - `uv run python scripts/local_game.py 4`: lance une partie avec quatre joueurs.

@@ -31,14 +31,13 @@ from . import GameState, PlayerRole, SaveFormat
 from .exceptions import (
     GameAlreadyStartedError,
     GameIsFinishedError,
-    GameNotFoundError,
+    GameIsFullError,
     GameNotFoundInGroupError,
     GameNotPausedError,
     GameNotStartedError,
     GameNotTurnBasedError,
     MultiplayerError,
     PasswordError,
-    PlayerNotFoundError,
     PlayerNotFoundInGameError,
     UserAlreadyExistsError,
 )

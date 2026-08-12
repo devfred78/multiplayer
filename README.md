@@ -32,23 +32,23 @@ pip install multiplayer-2.0.0-py3-none-any.whl
 
 ```python
 from multiplayer.game import Player, User
-from multiplayer import ParameterFamily, PlayerRole
+from multiplayer import ParameterFamily
 
 # Create a player with attributes
 player = Player("Alice", score=(ParameterFamily.DYNAMIC, 0), team=(ParameterFamily.STATIC, "Red"))
 
-# Create a user account associated with the player
-user = User(username="alice_92", password="secret_password", role=PlayerRole.PLAYER)
+# Create a user account associated with its own player profile
+user = User(username="alice_92", password="secret_password", email="alice@example.com")
 ```
 
 ### Managing Games
 
 ```python
 from multiplayer.game import Game
-from multiplayer.utils import suggest_name
+from multiplayer.utils import suggest_game_name
 
 # Create a turn-based game with a suggested name
-game_name = suggest_name("egyptian_gods")
+game_name = suggest_game_name("cities")
 game = Game(name=game_name, turn_based=True)
 
 # Join and start the game
@@ -96,9 +96,16 @@ async def main():
     # Create and start a discoverable server
     server = GameServer(name="Battle Server", discoverable=True)
     await server.start()
+    try:
+        await asyncio.Event().wait()
+    finally:
+        await server.stop()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
 ```
 
 #### Connecting a Client
@@ -108,20 +115,27 @@ from multiplayer.client import GameClient
 
 # Connect to a server
 client = GameClient(host="127.0.0.1")
-client.connect()
+try:
+    client.connect()
 
-# Login to an existing account
-user = client.login("alice_92", "secret_password")
-print(f"Logged in as {user.username}")
+    # Register a notification handler
+    client.on_notification("GAME_EVENT", lambda p: print(f"Received event: {p}"))
 
-# Register a notification handler
-client.on_notification("GAME_EVENT", lambda p: print(f"Received event: {p}"))
+    # Create a player for this client session
+    player = client.create_player("Alice")
+    print(f"Connected as {player.name}")
+finally:
+    client.disconnect()
 ```
+
+For a command-line server, run `uv run python scripts/run_server.py --help`.
+Press `CTRL+C` to stop it cleanly.
 
 ## Documentation
 
 For more detailed information, please refer to:
 - [REFERENCE.md](REFERENCE.md): Full API reference.
+- [INSTALL_DOCKER_CONTAINER_SYNOLOGY_DSM71.md](INSTALL_DOCKER_CONTAINER_SYNOLOGY_DSM71.md): Install the Docker image on Synology DSM 7.1, including data and TLS certificate volume mappings.
 
 ## Development
 

@@ -51,7 +51,7 @@ Represents a user account with authentication and role management.
 | `hash` | `str` | Hashed password. | No | Automatically generated using `bcrypt`. |
 | `email` | `str` | Email address. | Yes | - |
 | `role` | `PlayerRole` | User's permission level. | Yes | Defaults to `PlayerRole.PLAYER`. |
-| `groups_id` | `list[str]` | IDs of groups where the user is admin. | No (but mutable) | Raises `GroupNotFoundError` if an ID is invalid. |
+| `groups_id` | `list[str]` | IDs of groups where the user is admin. | No (but mutable) | Initialized as an empty list; the list itself does not validate group IDs. |
 | `player` | `Player` | Associated `Player` instance. | No (but mutable) | Created with `name=username`. Exists for the user's lifetime. |
 
 **Methods:**
@@ -103,7 +103,7 @@ Manages a single game session, players, and state transitions.
 | `join_game_as_observer` | Adds an observer. | `player (Player\|str)`, `password (str\|None)` | `PlayerNotFoundError`, `PasswordError`, `GameIsFullError` |
 | `remove_observer` | Removes an observer. | `player (Player\|str)` | `PlayerNotFoundInGameError` |
 | `start` | Sets state to `IN_PROGRESS`. | - | `GameAlreadyStartedError`, `GameIsFinishedError` |
-| `pause` | Sets state to `PAUSING`. | - | `GameNotStartedError`, `GameAlreadyPausedError` |
+| `pause` | Sets state to `PAUSING`. | - | `GameNotStartedError` |
 | `resume` | Sets state back to `IN_PROGRESS`. | - | `GameNotPausedError` |
 | `stop` | Sets state to `FINISHED`. | - | `GameNotStartedError` |
 | `next_turn` | Advances to the next player. | - | `GameNotStartedError`, `GameIsFinishedError`, `GameNotTurnBasedError` |
@@ -239,6 +239,7 @@ Manages the server side of the multiplayer protocol. It handles client connectio
 
 | Method | Description | Parameters |
 |--------|-------------|------------|
+| `build_discovery_response` | Builds the information returned to a multicast discovery request. | - |
 | `start` | Starts the server asynchronously. | - |
 | `stop` | Stops the server asynchronously and persists data. | - |
 | `restart` | Restarts the server asynchronously. | - |
@@ -263,9 +264,10 @@ Client side for connecting to and communicating with a `GameServer`.
 
 | Name | Type | Description | Settable |
 |------|------|-------------|----------|
-| `host` | `str` | Server IPv4 address or host name. | No |
-| `port` | `int` | Server TCP port. | No |
-| `use_tls` | `bool` | Whether TLS is enabled. | No |
+| `host` | `str` | Server IPv4 address or host name. | Yes |
+| `port` | `int` | Server TCP port. | Yes |
+| `use_tls` | `bool` | Whether TLS is enabled. | Yes |
+| `tls_ca_path` | `Path \| None` | TLS validation certificate path, or `None` to use the system trust store. | No |
 | `is_connected` | `bool` | Whether the client is currently connected. | No |
 | `session_player` | `Player \| None` | The default player associated with the current session. | No |
 
@@ -273,13 +275,13 @@ Client side for connecting to and communicating with a `GameServer`.
 
 | Method | Description | Parameters |
 |--------|-------------|------------|
-| `discover` | (Class method) Discovers servers on the local network. | `timeout (float)`, `multicast_group (str)`, `multicast_port (int)` |
+| `discover` | (Class method) Discovers servers on the local network. | `timeout (float = 2.0)`, `multicast_group (str = "239.255.0.1")`, `multicast_port (int = 65434)` |
 | `connect` | Opens the TCP connection. | - |
 | `disconnect` | Closes the connection. | - |
 | `login` | Authenticates a user and retrieves the account info. | `username (str)`, `password (str)` |
-| `create_player` | Creates a new player for the session. | `name (str)` |
-| `send_request` | Sends a protocol request and waits for a response. | `req_type (str)`, `payload (dict)` |
-| `on_notification` | Registers a callback to handle server notifications. | `type (str\|None)`, `callback (Callable)` |
+| `create_player` | Creates a new player for the session. | `name (str)`, `is_default (bool = True)` |
+| `send_request` | Sends a protocol request and returns its response payload. | `command (str)`, `timeout (float = 10.0)`, `**kwargs` |
+| `on_notification` | Registers a callback to handle server notifications. | `notification_type (str\|None)`, `callback (Callable[[dict], None])` |
 
 ---
 
@@ -304,12 +306,12 @@ The library provides utilities for suggesting names based on categories.
 - `european_kings`: Historical European kings.
 - `european_queens`: Historical European queens.
 
-*Implementation Note: Data is stored in `src/multiplayer/data` as text or CSV files. Names are normalized to avoid duplicates and special characters.*
+*Implementation Note: Data is stored in `src/multiplayer/data` as CSV files. Registered names are stripped, empty names are removed, and duplicates are removed; special characters are preserved.*
 
 ### Functions
 
 - `register_name_category(category_name: str, data: Any, category_type: str)`
-  Registers a new custom category. `data` can be a list, string, or Path to a text/CSV file. `category_type` is either `"game"` or `"player"`.
+  Registers a new custom category. `data` can be a list or a string/`Path` pointing to a CSV file. `category_type` is stored as supplied; use `"game"` or `"player"` for it to be returned by the corresponding suggestion functions.
 - `unregister_name_category(category_name: str) -> bool`
   Removes a custom category. Returns `True` on success.
 - `get_available_categories(category_type: str = "all") -> list[str]`
@@ -327,6 +329,7 @@ All exceptions inherit from `multiplayer.exceptions.MultiplayerError`.
 
 | Exception | Description |
 |-----------|-------------|
+| `MultiplayerError` | Base class for all multiplayer exceptions. |
 | `UserAlreadyExistsError` | Raised when a username is already taken. |
 | `GroupNotFoundError` | Raised when a group ID does not exist. Returns the faulty ID in the message. |
 | `PlayerNotFoundError` | Raised when a player ID does not exist. Returns the faulty ID if provided. |

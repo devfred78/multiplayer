@@ -100,32 +100,38 @@ echo "YOUR_GITHUB_TOKEN" | sudo docker login ghcr.io -u YOUR_GITHUB_USERNAME --p
 
 1. Open the **Docker** application, then the **Image** tab.
 2. Select the downloaded image, for example
-   `ghcr.io/devfred78/multiplayer-server-amd64:latest`, then click **Launch**.
-3. Name the container `multiplayer-server`.
-4. In **Advanced Settings > Port Settings**, add the TCP mapping:
+   `devfred78/multiplayer-server-amd64:latest`, then click **Launch**.
+3. Select the `bridge` network and click **Next**.
+4. Name the container `multiplayer-server`.
+5. Check **Enable automatic restart**, then click **Next**.
+6. In the **Port Settings** window that appears, add the following TCP and UDP
+   mappings (the UDP mapping is optional; see the **Optional network discovery**
+   section):
 
    | NAS local port | Container port | Protocol |
    |---:|---:|---|
    | `65432` | `65432` | TCP |
+   | `65434` | `65434` | UDP |
 
-5. In **Advanced Settings > Volume**, add the read-write data mapping:
+7. Click **Next**.
+8. In the **Volume Settings** window that appears, add the following volume
+   mappings (the **certs** mapping is optional; see the **Enable TLS with a
+   mounted certificate** section):
 
    | NAS local directory | Container mount path | Access |
    |---|---|---|
    | `/volume1/docker/multiplayer/data` | `/app/data` | Read/write |
+   | `/volume1/docker/multiplayer/certs` | `/app/certs` | Read-only |
 
-6. Enable an automatic restart policy if available, then finish the wizard and
-   start the container.
-
-The image's default command starts the server on `0.0.0.0:65432` and enables
-SQLite persistence. No environment variable is required for this basic
-configuration.
+9. Click **Next**.
+10. Check that everything is correct in the summary that appears, check **Run
+    this container when the wizard is finished**, and click **Done**.
 
 ### Optional network discovery
 
 Multicast discovery is disabled by default. If it is enabled through a custom
 command, also map UDP port `65434` to `65434` in the port settings. Multicast
-may not work in a `bridge` network; start with a direct connection to the NAS
+may not work on a `bridge` network; start with a direct connection to the NAS
 IP address instead.
 
 ## 6. Enable TLS with a mounted certificate

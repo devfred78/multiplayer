@@ -22,6 +22,27 @@ SQLite database at `/app/data/server_data.db` inside the container.
 Connect to the NAS through SSH and run:
 
 ```bash
+sudo -v
+```
+
+This command authenticates your sudo session and keeps it authenticated for
+the timeout configured by DSM. You should not need to re-enter your password
+for every `sudo` command in the same SSH session. If the timeout expires, run
+`sudo -v` again.
+
+For several administrative commands in a longer session, you can also open a
+root shell:
+
+```bash
+sudo -i
+```
+
+The following commands can then be run without the `sudo` prefix. Use `exit`
+to return to your normal user account.
+
+Then check the NAS architecture:
+
+```bash
 uname -m
 ```
 

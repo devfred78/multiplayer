@@ -1,0 +1,46 @@
+name: Release pipeline
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  lint:
+    uses: ./.github/workflows/lint.yml
+    with:
+      release_tag: ${{ github.ref_name }}
+    secrets: inherit
+
+  test:
+    needs: lint
+    uses: ./.github/workflows/test.yml
+    with:
+      release_tag: ${{ github.ref_name }}
+    secrets: inherit
+
+  release:
+    needs: test
+    uses: ./.github/workflows/release.yml
+    with:
+      release_tag: ${{ github.ref_name }}
+    secrets: inherit
+
+  pypi:
+    needs: release
+    uses: ./.github/workflows/pypi.yml
+    with:
+      release_tag: ${{ github.ref_name }}
+    secrets: inherit
+
+  docker:
+    needs: pypi
+    uses: ./.github/workflows/docker.yml
+    with:
+      release_tag: ${{ github.ref_name }}
+    secrets: inherit

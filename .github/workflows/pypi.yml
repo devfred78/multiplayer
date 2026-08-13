@@ -6,6 +6,11 @@ on:
       version:
         description: 'Version to deploy'
         required: true
+  workflow_call:
+    inputs:
+      release_tag:
+        required: true
+        type: string
 
 jobs:
   pypi-publish:
@@ -16,6 +21,8 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
       - name: Install uv
         uses: astral-sh/setup-uv@v5
       - name: Build package

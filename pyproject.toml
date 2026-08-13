@@ -3,10 +3,25 @@ name = "multiplayer"
 version = "2.0.1"
 description = "Library that allows you to manage multiple players, locally, on a network, or on the Internet."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
 authors = [
     { name = "devfred78", email = "devfred78@gmail.com" }
 ]
 requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Games/Entertainment",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = [
     "bcrypt>=5.0.0",
     "msgpack>=1.2.1",

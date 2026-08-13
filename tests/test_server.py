@@ -2,6 +2,7 @@ import asyncio
 import json
 import struct
 
+import bcrypt
 import pytest
 
 try:
@@ -203,3 +204,36 @@ def test_persistence_path_defaults():
     assert str(server.persistence_path).endswith("server_data.db")
     server_json = GameServer(persistence_mode=SaveFormat.JSON)
     assert str(server_json.persistence_path).endswith("server_data.json")
+
+
+def test_start_bootstraps_default_server_admin(tmp_path):
+    async def exercise():
+        server = GameServer(port=0, persistence_mode=SaveFormat.JSON,
+                            persistence_path=tmp_path / "server.json")
+        await server.start()
+        try:
+            admin = server._users["admin"]
+            assert admin.role.name == "SERVER_ADMIN"
+            assert bcrypt.checkpw(b"admin", admin.hash.encode())
+        finally:
+            await server.stop()
+
+    asyncio.run(exercise())
+
+
+def test_start_keeps_persisted_server_admin(tmp_path):
+    path = tmp_path / "server.json"
+    async def exercise():
+        first = GameServer(port=0, persistence_mode=SaveFormat.JSON, persistence_path=path)
+        await first.start()
+        await first.stop()
+
+        second = GameServer(port=0, persistence_mode=SaveFormat.JSON, persistence_path=path)
+        await second.start()
+        try:
+            assert len([u for u in second._users.values()
+                        if u.role.name == "SERVER_ADMIN"]) == 1
+        finally:
+            await second.stop()
+
+    asyncio.run(exercise())

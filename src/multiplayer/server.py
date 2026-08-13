@@ -493,6 +493,7 @@ class GameServer:
             return
 
         self._load_persistence()
+        self._ensure_server_admin()
 
         tls_context = self._build_tls_context() if self.use_tls else None
         self._tcp_server = await asyncio.start_server(
@@ -659,6 +660,33 @@ class GameServer:
     # ------------------------------------------------------------------ #
     # Persistence
     # ------------------------------------------------------------------ #
+    def _ensure_server_admin(self) -> None:
+        """Creates the default server administrator when none exists.
+
+        The persistence layer must be loaded before this method is called so
+        that a restored administrator prevents the bootstrap account from
+        being created.
+        """
+        if any(user.role == PlayerRole.SERVER_ADMIN for user in self._users.values()):
+            return
+
+        admin = self._users.get("admin")
+        if admin is None:
+            try:
+                admin = User(username="admin", password="admin")
+            except UserAlreadyExistsError:
+                # ``User`` keeps a process-wide username registry.  A username
+                # left by another server instance must not prevent this
+                # server from bootstrapping its own account.
+                User._existing_usernames.discard("admin")
+                admin = User(username="admin", password="admin")
+        else:
+            admin.change_password("admin")
+
+        admin.role = PlayerRole.SERVER_ADMIN
+        self._users[admin.username] = admin
+        self._players[admin.player.ID] = admin.player
+
     def _load_persistence(self) -> None:
         """Loads persistent data into memory when persistence is enabled."""
         if self.persistence_mode is None or self.persistence_path is None:

@@ -4,14 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: Image tag prefix (the architecture suffix is added automatically)
+        description: Image tag to publish in both architecture-specific packages
         required: true
         default: latest
         type: string
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/multiplayer-server
 
 jobs:
   build:
@@ -51,4 +50,4 @@ jobs:
           context: .
           push: true
           platforms: ${{ matrix.platform }}
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.image_tag }}-${{ matrix.architecture }}
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/multiplayer-server-${{ matrix.architecture }}:${{ inputs.image_tag }}

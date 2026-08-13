@@ -29,11 +29,12 @@ Choose the image that matches the result:
 
 | Common result | Docker architecture | Image tag to use |
 |---|---|---|
-| `x86_64` | 64-bit Intel/AMD (`linux/amd64`) | `latest-amd64` |
-| `aarch64` or `arm64` | 64-bit ARM (`linux/arm64`) | `latest-arm64` |
+| `x86_64` | 64-bit Intel/AMD (`linux/amd64`) | `multiplayer-server-amd64:latest` |
+| `aarch64` or `arm64` | 64-bit ARM (`linux/arm64`) | `multiplayer-server-arm64:latest` |
 
-The workflow can be run manually with a different tag prefix. For example, the
-`v2.0.0` prefix produces the `v2.0.0-amd64` and `v2.0.0-arm64` tags.
+The workflow can be run manually with a different tag. For example, the
+`v2.0.0` tag is published as `multiplayer-server-amd64:v2.0.0` and
+`multiplayer-server-arm64:v2.0.0`.
 
 ## 3. Prepare NAS directories
 
@@ -60,12 +61,13 @@ Never put the private key in the `data` directory. Restrict access to the
 ## 4. Download the image
 
 DSM 7.1's Docker interface generally cannot list GHCR images directly, so
-download the image through SSH. Replace `latest-amd64` with `latest-arm64` on
-an ARM NAS:
+download the image through SSH. For an Intel/AMD NAS, use:
 
 ```bash
-sudo docker pull ghcr.io/devfred78/multiplayer-server:latest-amd64
+sudo docker pull ghcr.io/devfred78/multiplayer-server-amd64:latest
 ```
+
+For an ARM NAS, use `ghcr.io/devfred78/multiplayer-server-arm64:latest`.
 
 If the GHCR package is private, authenticate first:
 
@@ -77,7 +79,7 @@ echo "YOUR_GITHUB_TOKEN" | sudo docker login ghcr.io -u YOUR_GITHUB_USERNAME --p
 
 1. Open the **Docker** application, then the **Image** tab.
 2. Select the downloaded image, for example
-   `ghcr.io/devfred78/multiplayer-server:latest-amd64`, then click **Launch**.
+   `ghcr.io/devfred78/multiplayer-server-amd64:latest`, then click **Launch**.
 3. Name the container `multiplayer-server`.
 4. In **Advanced Settings > Port Settings**, add the TCP mapping:
 
@@ -137,7 +139,7 @@ sudo docker run -d \
   --restart unless-stopped \
   -p 65432:65432/tcp \
   -v /volume1/docker/multiplayer/data:/app/data \
-  ghcr.io/devfred78/multiplayer-server:latest-amd64
+  ghcr.io/devfred78/multiplayer-server-amd64:latest
 ```
 
 Example with TLS:
@@ -149,7 +151,7 @@ sudo docker run -d \
   -p 65432:65432/tcp \
   -v /volume1/docker/multiplayer/data:/app/data \
   -v /volume1/docker/multiplayer/certs:/app/certs:ro \
-  ghcr.io/devfred78/multiplayer-server:latest-amd64 \
+  ghcr.io/devfred78/multiplayer-server-amd64:latest \
   --host 0.0.0.0 \
   --port 65432 \
   --persistence-mode sqlite \

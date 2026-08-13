@@ -203,17 +203,34 @@ started with `--use-tls`.
 
 ## 9. Update the image
 
-1. Download the new tag that matches the NAS architecture using `docker pull`.
-2. Stop and remove the current container:
+Here is how to keep your server up to date:
+
+1. **On GitHub**:
+   * **Automatic**: Each new release (a tag beginning with `v`) automatically
+     generates a new Docker image with the `latest` tag and the version number
+     (for example, `v1.1.1`).
+   * **Manual**: You can still manually trigger the
+     **Build Synology-Compatible Docker Image** workflow if you need an
+     intermediate image or a specific tag.
+2. **Through SSH on the NAS**: Pull the image matching your architecture to
+   retrieve the latest version. For example, on an Intel/AMD NAS, use:
 
    ```bash
-   sudo docker stop multiplayer-server
-   sudo docker rm multiplayer-server
+   sudo docker pull ghcr.io/devfred78/multiplayer-server-amd64:latest
    ```
+   *Note: You can also use a specific version tag (for example, `:v1.1.1`) if
+   you do not want to use `:latest`.*
+3. **In the Synology Docker interface**:
+   * Go to the **Container** tab.
+   * Right-click the `multiplayer-server` container and choose **Action** >
+     **Stop** to stop the server.
+   * Once it has stopped, right-click it again and choose **Action** >
+     **Reset**. *Note: This recreates the container from the new image while
+     preserving your port and directory mappings.*
+   * Finally, right-click it once more and choose **Action** > **Start** to
+     restart the container with its new version.
 
-3. Recreate it with the same mappings and the new image.
-
-The save file remains intact because it is stored outside the container in
+The save file remains intact because it is stored outside the container at
 `/volume1/docker/multiplayer/data`.
 
 ## 10. Quick troubleshooting

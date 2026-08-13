@@ -15,7 +15,8 @@ RUN pip install --no-cache-dir .
 VOLUME ["/app/data", "/app/certs"]
 
 EXPOSE 65432/tcp
+EXPOSE 65433/tcp
 EXPOSE 65434/udp
 
 ENTRYPOINT ["python", "scripts/run_server.py"]
-CMD ["--host", "0.0.0.0", "--port", "65432", "--persistence-mode", "sqlite", "--persistence-path", "/app/data/server_data.db"]
+CMD ["--host", "0.0.0.0", "--port", "65432", "--unencrypted-port", "65433", "--persistence-mode", "sqlite", "--persistence-path", "/app/data/server_data.db"]

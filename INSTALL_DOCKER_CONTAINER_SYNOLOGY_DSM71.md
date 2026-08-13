@@ -14,7 +14,8 @@ Actions `docker.yml` workflow to GitHub Container Registry (GHCR).
   package is private, a GitHub access token with the `read:packages`
   permission is also required before downloading the image.
 
-The server uses TCP port `65432` by default. It stores its data in a persistent
+The server uses TCP port `65432` as its main port and opens TCP port `65433`
+for unencrypted communications by default. It stores its data in a persistent
 SQLite database at `/app/data/server_data.db` inside the container.
 
 ## 2. Identify the NAS architecture
@@ -111,6 +112,7 @@ echo "YOUR_GITHUB_TOKEN" | sudo docker login ghcr.io -u YOUR_GITHUB_USERNAME --p
    | NAS local port | Container port | Protocol |
    |---:|---:|---|
    | `65432` | `65432` | TCP |
+   | `65433` | `65433` | TCP |
    | `65434` | `65434` | UDP |
 
 7. Click **Next**.
@@ -147,13 +149,12 @@ command replaces the image's default arguments, which is why the persistence
 options are included:
 
 ```text
---host 0.0.0.0 --port 65432 --persistence-mode sqlite --persistence-path /app/data/server_data.db --use-tls --tls-cert-path /app/certs/cert.pem --tls-key-path /app/certs/key.pem
+--host 0.0.0.0 --port 65432 --unencrypted-port 65433 --persistence-mode sqlite --persistence-path /app/data/server_data.db --use-tls --tls-cert-path /app/certs/cert.pem --tls-key-path /app/certs/key.pem
 ```
 
 Replace `cert.pem` and `key.pem` with the actual filenames. TCP port `65432`
-then carries the TLS connection, so the port mapping from the previous section
-is unchanged. An additional unencrypted port can be configured using
-`--unencrypted-port PORT_NUMBER` and a second TCP port mapping.
+then carries the TLS connection, while port `65433` carries unencrypted
+connections. Both TCP ports must be mapped in the container settings.
 
 ## 7. Command-line equivalent
 
@@ -165,6 +166,7 @@ sudo docker run -d \
   --name multiplayer-server \
   --restart unless-stopped \
   -p 65432:65432/tcp \
+  -p 65433:65433/tcp \
   -v /volume1/docker/multiplayer/data:/app/data \
   ghcr.io/devfred78/multiplayer-server-amd64:latest
 ```
@@ -176,11 +178,13 @@ sudo docker run -d \
   --name multiplayer-server \
   --restart unless-stopped \
   -p 65432:65432/tcp \
+  -p 65433:65433/tcp \
   -v /volume1/docker/multiplayer/data:/app/data \
   -v /volume1/docker/multiplayer/certs:/app/certs:ro \
   ghcr.io/devfred78/multiplayer-server-amd64:latest \
   --host 0.0.0.0 \
   --port 65432 \
+  --unencrypted-port 65433 \
   --persistence-mode sqlite \
   --persistence-path /app/data/server_data.db \
   --use-tls \
@@ -198,8 +202,9 @@ sudo docker logs -f multiplayer-server
 
 The log should show the listening address and port, followed by the number of
 connected clients. From a client on the local network, connect to the NAS IP
-address on port `65432`. Enable TLS on the client only if the server was
-started with `--use-tls`.
+address on port `65432` for the main connection or port `65433` for an
+unencrypted connection. Enable TLS on the client only when using port `65432`
+and the server was started with `--use-tls`.
 
 ## 9. Update the image
 
@@ -246,10 +251,12 @@ sudo docker run -d \
   --name multiplayer-server \
   --restart unless-stopped \
   -p 65432:65432/tcp \
+  -p 65433:65433/tcp \
   -v /volume1/docker/multiplayer/data:/app/data \
   ghcr.io/devfred78/multiplayer-server-amd64:latest \
   --host 0.0.0.0 \
   --port 65432 \
+  --unencrypted-port 65433 \
   --persistence-mode sqlite \
   --persistence-path /app/data/server_data.db
 ```

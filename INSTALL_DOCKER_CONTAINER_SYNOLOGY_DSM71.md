@@ -233,6 +233,49 @@ Here is how to keep your server up to date:
 The save file remains intact because it is stored outside the container at
 `/volume1/docker/multiplayer/data`.
 
+### Relaunching the server with a new command line
+
+To change the server startup options, such as the port or persistence mode,
+stop and remove the container, then recreate it with the new command. The
+`server.py` options must be placed after the image name:
+
+```bash
+sudo docker stop multiplayer-server
+sudo docker rm multiplayer-server
+sudo docker run -d \
+  --name multiplayer-server \
+  --restart unless-stopped \
+  -p 65432:65432/tcp \
+  -v /volume1/docker/multiplayer/data:/app/data \
+  ghcr.io/devfred78/multiplayer-server-amd64:latest \
+  --host 0.0.0.0 \
+  --port 65432 \
+  --persistence-mode sqlite \
+  --persistence-path /app/data/server_data.db
+```
+
+On an ARM NAS, replace the `multiplayer-server-amd64` image with
+`multiplayer-server-arm64`. Adapt the arguments to your configuration; the
+available options are documented by `python scripts/run_server.py --help`.
+
+#### Using the DSM graphical interface
+
+This can also be done without an SSH terminal. In the DSM 7.1 **Docker**
+application:
+
+1. Stop the `multiplayer-server` container.
+2. Remove the container without deleting the mounted directories.
+3. Select the appropriate image and click **Launch**.
+4. In the advanced settings, configure the port mappings, the `/app/data` and,
+   if needed, `/app/certs` volumes, and the custom command containing the
+   `server.py` arguments.
+5. Enable automatic restart, then create and start the container.
+
+Depending on the DSM interface, the command of an existing container may not
+be directly editable; recreating the container is then required. Data is
+preserved as long as `/volume1/docker/multiplayer/data` remains mounted at
+`/app/data`.
+
 ## 10. Quick troubleshooting
 
 - **The NAS cannot download the image:** Check the architecture tag, Internet

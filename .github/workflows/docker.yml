@@ -1,6 +1,8 @@
 name: Build Synology Docker images
 
 on:
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       image_tag:
@@ -30,6 +32,8 @@ jobs:
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -50,4 +54,4 @@ jobs:
           context: .
           push: true
           platforms: ${{ matrix.platform }}
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/multiplayer-server-${{ matrix.architecture }}:${{ inputs.image_tag }}
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/multiplayer-server-${{ matrix.architecture }}:${{ github.event_name == 'release' && github.event.release.tag_name || inputs.image_tag }}

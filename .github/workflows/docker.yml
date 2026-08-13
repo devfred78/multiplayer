@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: Image tag to publish in both architecture-specific packages
+        description: Git tag to publish (latest or an existing v* tag)
         required: true
         default: latest
         type: string
@@ -36,15 +36,34 @@ jobs:
           ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}
           fetch-depth: 0
 
+      - name: Validate manually selected tag
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          REQUESTED_TAG: ${{ inputs.image_tag }}
+        shell: bash
+        run: |
+          if [[ "${REQUESTED_TAG}" == "latest" ]]; then
+            exit 0
+          fi
+
+          if [[ "${REQUESTED_TAG}" != v* ]] || ! git for-each-ref \
+            --format='%(refname:short)' refs/tags | grep -Fx -- "${REQUESTED_TAG}" > /dev/null; then
+            echo "Invalid image tag: ${REQUESTED_TAG}" >&2
+            echo "Choose 'latest' or an existing Git tag starting with 'v'." >&2
+            exit 1
+          fi
+
       - name: Determine image tags
         id: image_tags
+        env:
+          REQUESTED_TAG: ${{ inputs.image_tag }}
         shell: bash
         run: |
           if [[ "${{ github.event_name }}" == "release" ]]; then
             release_tag="${{ github.event.release.tag_name }}"
             latest_tag=$(git tag --list 'v*' | sort -V | tail -n 1)
           else
-            release_tag="${{ inputs.image_tag }}"
+            release_tag="${REQUESTED_TAG}"
             latest_tag=""
           fi
 

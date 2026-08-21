@@ -171,6 +171,7 @@ def _group_to_dict(group: GameGroup) -> Dict[str, Any]:
     return {
         "id": group.ID,
         "name": group.name,
+        "hash": group.hash,
         "games": [_game_to_dict(g) for g in group.games],
         "parameters": group.parameters,
     }
@@ -188,6 +189,8 @@ def _group_from_dict(data: Dict[str, Any]) -> GameGroup:
     group = GameGroup.__new__(GameGroup)
     group._id = data["id"]
     group.name = data["name"]
+    # ``hash`` is optional for backward compatibility with older save files.
+    group._hash = data.get("hash")
     group._games = [_game_from_dict(g) for g in data.get("games", [])]
     group.parameters = data.get("parameters", {})
     return group

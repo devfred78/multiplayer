@@ -92,7 +92,7 @@ def test_save_and_load_game_with_players(tmp_path, save_format):
 def test_save_and_load_group(tmp_path, save_format):
     file_path = tmp_path / "save.dat"
     save = Save(file_path, save_format)
-    group = GameGroup("Tournament", type="ranked")
+    group = GameGroup("Tournament", password="group-secret", type="ranked")
     group.add_game(Game("G1"))
     save.save(group)
     save.flush()
@@ -101,6 +101,9 @@ def test_save_and_load_group(tmp_path, save_format):
     groups = reloaded.load(GameGroup)
     assert len(groups) == 1
     assert groups[0].name == "Tournament"
+    assert groups[0].hash == group.hash
+    assert groups[0].check_password("group-secret") is True
+    assert groups[0].check_password("wrong-secret") is False
     assert groups[0].parameters["type"] == "ranked"
     assert len(groups[0].games) == 1
 

@@ -1473,6 +1473,8 @@ Permet de créer une nouvelle instance de jeu sur le serveur.
   "version": 2,
   "payload": {
     "name": "Ma Super Partie",
+    "group_id": "uuid_du_groupe",
+    "group_password": "secret_groupe",
     "max_players": 4,
     "max_observers": 10,
     "turn_based": true,
@@ -1508,6 +1510,8 @@ Permet de créer une nouvelle instance de jeu sur le serveur.
 | `payload.max_observers` | `number` | Non | Nombre maximum d'observateurs. Peut être `null` (illimité). |
 | `payload.turn_based` | `boolean` | Non | `true` si la partie est au tour par tour. |
 | `payload.password` | `string` | Non | Mot de passe pour rejoindre la partie. |
+| `payload.group_id` | `string` | Non | UUID du groupe dans lequel créer la partie. |
+| `payload.group_password` | `string` | Non | Mot de passe du groupe, requis si la session n'est pas déjà autorisée. |
 | `payload.attributes` | `object` | Non | Attributs personnalisés de la partie. |
 
 #### Champs (`GAME_CREATE_RESPONSE`)
@@ -1581,6 +1585,7 @@ Récupère la liste des parties disponibles sur le serveur.
 | `type` | `string` | Oui | `GAME_LIST` |
 | `version` | `number` | Oui | `2` |
 | `payload.group_id` | `string` | Non | UUID du groupe pour restreindre la liste aux parties de ce groupe uniquement. |
+| `payload.group_password` | `string` | Non | Mot de passe du groupe, requis pour lister un groupe protégé avant autorisation. |
 
 #### Champs (`GAME_LIST_RESPONSE`)
 
@@ -1657,6 +1662,7 @@ Si l'identifiant du joueur (`player_id`) n'est pas précisé dans la requête, l
 | `payload.player_id` | `string` | Non | UUID du joueur (`Player`) qui rejoint la partie (par défaut : le joueur par défaut de la session). |
 | `payload.role` | `string` | Oui | Rôle souhaité : `PLAYER` (Joueur) ou `OBSERVER` (Observateur). |
 | `payload.password` | `string` | Non | Mot de passe pour rejoindre la partie (si requis). |
+| `payload.group_password` | `string` | Non | Mot de passe d'un groupe protégé contenant la partie (si requis). |
 
 #### Champs (`GAME_JOIN_RESPONSE`)
 
@@ -1672,6 +1678,7 @@ Si l'identifiant du joueur (`player_id`) n'est pas précisé dans la requête, l
 |---|---|
 | `GAME_NOT_FOUND` | La partie spécifiée n'existe pas. |
 | `INVALID_PASSWORD` | Le mot de passe de la partie est incorrect. |
+| `INVALID_GROUP_PASSWORD` | Le mot de passe du groupe est absent ou incorrect. |
 | `GAME_FULL` | Le nombre maximum de joueurs (pour `PLAYER`) ou d'observateurs (pour `OBSERVER`) est atteint. |
 | `ALREADY_IN_GAME` | L'utilisateur participe déjà à cette partie ou à une autre partie incompatible. |
 | `GAME_ALREADY_STARTED` | La partie a déjà commencé et n'accepte plus de nouveaux joueurs (n'affecte pas les observateurs). |
@@ -2461,6 +2468,7 @@ Permet de créer un nouveau groupe de parties sur le serveur.
   "version": 2,
   "payload": {
     "name": "Tournoi d'été",
+    "password": "secret_groupe",
     "attributes": {
       "type": "ranked",
       "season": "2026"
@@ -2490,6 +2498,7 @@ Permet de créer un nouveau groupe de parties sur le serveur.
 | `type` | `string` | Oui | `"GROUP_CREATE"` |
 | `version` | `number` | Oui | `2` |
 | `payload.name` | `string` | Oui | Nom du groupe. |
+| `payload.password` | `string` | Non | Mot de passe protégeant l'accès au groupe. |
 | `payload.attributes` | `object` | Non | Attributs personnalisés du groupe. |
 
 #### Champs (`GROUP_CREATE_RESPONSE`)
@@ -2541,7 +2550,8 @@ Récupère la liste des groupes disponibles sur le serveur.
       {
         "group_id": "uuid_1",
         "name": "Tournoi d'été",
-        "games_count": 5
+        "games_count": 5,
+        "requires_password": true
       }
     ]
   }
@@ -2565,6 +2575,7 @@ Récupère la liste des groupes disponibles sur le serveur.
 | `payload.groups[].group_id` | `string` | - | UUID du groupe. |
 | `payload.groups[].name` | `string` | - | Nom du groupe. |
 | `payload.groups[].games_count` | `number` | - | Nombre de parties dans ce groupe. |
+| `payload.groups[].requires_password` | `boolean` | - | `true` si un mot de passe est requis pour accéder au groupe. |
 
 ---
 
@@ -2591,7 +2602,8 @@ L'abonnement est attaché à la session courante et est supprimé automatiquemen
   "type": "GROUP_SUBSCRIBE",
   "version": 2,
   "payload": {
-    "group_id": "uuid_du_groupe"
+    "group_id": "uuid_du_groupe",
+    "password": "secret_groupe"
   }
 }
 ```
@@ -2617,6 +2629,7 @@ L'abonnement est attaché à la session courante et est supprimé automatiquemen
 | `type` | `string` | Oui | `"GROUP_SUBSCRIBE"` |
 | `version` | `number` | Oui | `2` |
 | `payload.group_id` | `string` | Oui | UUID du groupe à suivre. |
+| `payload.password` | `string` | Non | Mot de passe du groupe, requis pour un groupe protégé. |
 
 #### Champs (`GROUP_SUBSCRIBE_RESPONSE`)
 
@@ -2632,6 +2645,8 @@ L'abonnement est attaché à la session courante et est supprimé automatiquemen
 | Code | Description |
 |---|---|
 | `GROUP_NOT_FOUND` | Le groupe spécifié n'existe pas. |
+| `INVALID_GROUP_PASSWORD` | Le mot de passe du groupe est absent ou incorrect. |
+| `INVALID_GROUP_PASSWORD` | Le mot de passe du groupe est absent ou incorrect. |
 | `ALREADY_SUBSCRIBED` | Le client est déjà abonné à ce groupe. |
 | `INSUFFICIENT_PERMISSIONS` | Le client n'a pas les droits nécessaires pour suivre ce groupe. |
 
@@ -2695,6 +2710,30 @@ Permet à un client de se désabonner des notifications d'un groupe de parties.
 |---|---|
 | `GROUP_NOT_FOUND` | Le groupe spécifié n'existe pas. |
 | `NOT_SUBSCRIBED` | Le client n'est pas abonné à ce groupe. |
+
+---
+
+### Modification de la protection par mot de passe d'un groupe
+
+**Direction :** Client → Serveur
+**Niveau d'accès minimal :** `GROUP_ADMIN` du groupe concerné
+
+Le message `GROUP_PASSWORD_SET` permet de définir ou modifier le mot de passe
+du groupe. La valeur `null` dans `payload.password` supprime la protection.
+Le serveur ne renvoie jamais le mot de passe ; seul `requires_password` est
+exposé.
+
+```json
+{
+  "type": "GROUP_PASSWORD_SET",
+  "version": 2,
+  "payload": { "group_id": "uuid_du_groupe", "password": null }
+}
+```
+
+La réponse est `GROUP_PASSWORD_SET_RESPONSE` et contient `success`,
+`group_id` et `requires_password`. Les erreurs possibles sont
+`GROUP_NOT_FOUND`, `INVALID_DATA` et `INSUFFICIENT_PERMISSIONS`.
 
 ---
 

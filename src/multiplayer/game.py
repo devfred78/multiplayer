@@ -524,17 +524,22 @@ class GameGroup:
         parameters (dict): Custom parameters for the group.
     """
 
-    def __init__(self, name: str, **kwargs: Any):
+    def __init__(self, name: str, password: str | None = None, **kwargs: Any):
         """Initializes a new game group.
 
         Args:
             name (str): The name of the group.
+            password: Optional password required to access the group.
             **kwargs: Optional custom parameters for the group.
         """
         self._id: str = str(uuid.uuid4())
         self.name: str = name
         self._games: List[Game] = []
         self.parameters: Dict[str, Any] = kwargs
+        self._hash: str | None = (
+            bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+            if password else None
+        )
 
     @property
     def ID(self) -> str:
@@ -553,6 +558,31 @@ class GameGroup:
             Tuple[Game, ...]: A read-only tuple of Game instances.
         """
         return tuple(self._games)
+
+    @property
+    def hash(self) -> str | None:
+        """The bcrypt hash of the group access password, if configured."""
+        return self._hash
+
+    @property
+    def password_required(self) -> bool:
+        """Whether access to the group requires a password."""
+        return self._hash is not None
+
+    def check_password(self, password: str | None) -> bool:
+        """Checks a plain-text group password."""
+        return bool(
+            self._hash
+            and isinstance(password, str)
+            and bcrypt.checkpw(password.encode(), self._hash.encode())
+        )
+
+    def change_password(self, new_password: str | None) -> None:
+        """Sets a password or removes protection when ``None`` is supplied."""
+        self._hash = (
+            bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
+            if new_password else None
+        )
 
     def add_game(self, game: Game | str) -> None:
         """Adds a game session to the group.

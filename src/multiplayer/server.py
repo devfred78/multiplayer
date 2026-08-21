@@ -151,6 +151,7 @@ class ClientSession:
         self._writer: "asyncio.StreamWriter" = writer
         self._guest_default_player_id: Optional[str] = None
         self.subscribed_groups: Set[str] = set()
+        self.authorized_groups: Set[str] = set()
         self.joined_games: Set[str] = set()
 
     @property
@@ -284,6 +285,7 @@ class GameServer:
         "GROUP_REMOVE_GAME": AccessLevel.GROUP_ADMIN,
         "GROUP_DELETE": AccessLevel.ADMIN,
         "GROUP_GAME_LIST_ALL": AccessLevel.GROUP_ADMIN,
+        "GROUP_PASSWORD_SET": AccessLevel.GROUP_ADMIN,
         "SERVER_INFO_GET": AccessLevel.ADMIN,
         "SERVER_CONFIG_GET": AccessLevel.ADMIN,
         "SERVER_CONFIG_SET": AccessLevel.ADMIN,
@@ -326,6 +328,7 @@ class GameServer:
         "GROUP_REMOVE_GAME": "GROUP_REMOVE_GAME_RESPONSE",
         "GROUP_DELETE": "GROUP_DELETE_RESPONSE",
         "GROUP_GAME_LIST_ALL": "GROUP_GAME_LIST_ALL_RESPONSE",
+        "GROUP_PASSWORD_SET": "GROUP_PASSWORD_SET_RESPONSE",
         "SERVER_INFO_GET": "SERVER_INFO_GET_RESPONSE",
         "SERVER_CONFIG_GET": "SERVER_CONFIG_GET_RESPONSE",
         "SERVER_CONFIG_SET": "SERVER_CONFIG_SET_RESPONSE",
@@ -1641,6 +1644,20 @@ class GameServer:
                 "error_code": "INVALID_DATA",
                 "message": "A game name is required.",
             }
+        group_id = payload.get("group_id")
+        group = None
+        if group_id is not None:
+            group = self._groups.get(group_id)
+            if group is None:
+                return "GAME_CREATE_RESPONSE", {
+                    "success": False, "error_code": "GROUP_NOT_FOUND",
+                    "message": "Group not found.",
+                }
+            if not self._authorize_group(session, group, payload.get("group_password")):
+                return "GAME_CREATE_RESPONSE", {
+                    "success": False, "error_code": "INVALID_GROUP_PASSWORD",
+                    "message": "Invalid group password.",
+                }
         game = Game(
             name=name,
             max_players=payload.get("max_players"),
@@ -1655,6 +1672,8 @@ class GameServer:
         self._game_roles[game.ID] = {}
         self._game_custom_state[game.ID] = {}
         self._game_creator_session[game.ID] = session.session_id
+        if group is not None:
+            group.add_game(game)
         return "GAME_CREATE_RESPONSE", {
             "success": True,
             "game_id": game.ID,
@@ -1682,6 +1701,11 @@ class GameServer:
                     "error_code": "GROUP_NOT_FOUND",
                     "message": "Group not found.",
                 }
+            if not self._authorize_group(session, group, payload.get("group_password")):
+                return "GAME_LIST_RESPONSE", {
+                    "success": False, "error_code": "INVALID_GROUP_PASSWORD",
+                    "message": "Invalid group password.",
+                }
             games = [self._game_summary(game) for game in group.games]
         else:
             games = [self._game_summary(game) for game in self._games.values()]
@@ -1706,6 +1730,15 @@ class GameServer:
                 "error_code": "GAME_NOT_FOUND",
                 "message": "Game not found.",
             }
+        group_password = payload.get("group_password")
+        for group in self._groups.values():
+            if any(group_game.ID == game.ID for group_game in group.games):
+                if not self._authorize_group(session, group, group_password):
+                    return "GAME_JOIN_RESPONSE", {
+                        "success": False,
+                        "error_code": "INVALID_GROUP_PASSWORD",
+                        "message": "Invalid group password.",
+                    }
         role = payload.get("role")
         if role not in ("PLAYER", "OBSERVER"):
             return "GAME_JOIN_RESPONSE", {
@@ -2217,7 +2250,20 @@ class GameServer:
                 "message": "A group name is required.",
             }
         attributes = payload.get("attributes")
-        group = GameGroup(name=name, **(attributes if isinstance(attributes, dict) else {}))
+        password = payload.get("password")
+        if password is not None and (not isinstance(password, str) or not password):
+            return "GROUP_CREATE_RESPONSE", {
+                "success": False,
+                "error_code": "INVALID_DATA",
+                "message": "Password must be a non-empty string.",
+            }
+        group_attributes = dict(attributes) if isinstance(attributes, dict) else {}
+        group_attributes.pop("password", None)
+        group = GameGroup(
+            name=name,
+            password=password,
+            **group_attributes,
+        )
         self._groups[group.ID] = group
         self._audit("GROUP_CREATE", session, group.ID)
         return "GROUP_CREATE_RESPONSE", {
@@ -2239,7 +2285,12 @@ class GameServer:
             Tuple[str, Dict[str, Any]]: The response type and payload.
         """
         groups = [
-            {"group_id": group.ID, "name": group.name, "games_count": len(group.games)}
+            {
+                "group_id": group.ID,
+                "name": group.name,
+                "games_count": len(group.games),
+                "requires_password": group.password_required,
+            }
             for group in self._groups.values()
         ]
         return "GROUP_LIST_RESPONSE", {"success": True, "groups": groups}
@@ -2262,6 +2313,13 @@ class GameServer:
                 "success": False,
                 "error_code": "GROUP_NOT_FOUND",
                 "message": "Group not found.",
+            }
+        group = self._groups[group_id]
+        if not self._authorize_group(session, group, payload.get("password")):
+            return "GROUP_SUBSCRIBE_RESPONSE", {
+                "success": False,
+                "error_code": "INVALID_GROUP_PASSWORD",
+                "message": "Invalid group password.",
             }
         if group_id in session.subscribed_groups:
             return "GROUP_SUBSCRIBE_RESPONSE", {
@@ -2307,6 +2365,20 @@ class GameServer:
             "group_id": group_id,
             "message": "Unsubscribed from group successfully",
         }
+
+    def _authorize_group(
+        self, session: ClientSession, group: GameGroup, password: Any
+    ) -> bool:
+        """Validates group access and remembers successful session authorization."""
+        if not group.password_required:
+            session.authorized_groups.add(group.ID)
+            return True
+        if group.ID in session.authorized_groups:
+            return True
+        if group.check_password(password):
+            session.authorized_groups.add(group.ID)
+            return True
+        return False
 
     def _can_admin_group(self, session: ClientSession, group_id: str) -> bool:
         """Checks whether a session can administer a given group.
@@ -2422,6 +2494,44 @@ class GameServer:
         return "GROUP_REMOVE_GAME_RESPONSE", {
             "success": True,
             "message": "Game removed from group successfully",
+        }
+
+    def _handle_group_password_set(
+        self, session: ClientSession, payload: Dict[str, Any]
+    ) -> Tuple[str, Dict[str, Any]]:
+        """Sets, changes, or removes a group's access password."""
+        group_id = payload.get("group_id")
+        group = self._groups.get(group_id)
+        if group is None:
+            return "GROUP_PASSWORD_SET_RESPONSE", {
+                "success": False, "error_code": "GROUP_NOT_FOUND",
+                "message": "Group not found.",
+            }
+        if not self._can_admin_group(session, group.ID):
+            return "GROUP_PASSWORD_SET_RESPONSE", {
+                "success": False, "error_code": "INSUFFICIENT_PERMISSIONS",
+                "message": "Cannot modify this group.",
+            }
+        password = payload.get("password")
+        if password is not None and (not isinstance(password, str) or not password):
+            return "GROUP_PASSWORD_SET_RESPONSE", {
+                "success": False, "error_code": "INVALID_DATA",
+                "message": "Password must be a non-empty string or null.",
+            }
+        group.change_password(password)
+        if password is None:
+            for client in self._sessions.values():
+                client.authorized_groups.add(group.ID)
+        else:
+            for client in self._sessions.values():
+                client.authorized_groups.discard(group.ID)
+            session.authorized_groups.add(group.ID)
+        self._audit("GROUP_PASSWORD_SET", session, group.ID)
+        return "GROUP_PASSWORD_SET_RESPONSE", {
+            "success": True,
+            "group_id": group.ID,
+            "requires_password": group.password_required,
+            "message": "Group password updated successfully",
         }
 
     def _handle_group_delete(

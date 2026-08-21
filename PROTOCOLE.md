@@ -1422,6 +1422,8 @@ Allows you to create a new game instance on the server.
   "version": 2,
   "payload": {
     "name": "Ma Super Partie",
+    "group_id": "optional_group_uuid",
+    "group_password": "group_secret",
     "max_players": 4,
     "max_observers": 10,
     "turn_based": true,
@@ -1454,6 +1456,8 @@ Allows you to create a new game instance on the server.
 | `payload.max_observers` | `number` | No | Maximum number of observers. Can be `null` (unlimited). |
 | `payload.turn_based` | `boolean` | No | `true` if the game is turn-based. |
 | `payload.password` | `string` | No | Password to join the game. |
+| `payload.group_id` | `string` | No | Group UUID in which to create the game. |
+| `payload.group_password` | `string` | No | Group password, required when the session has not already been authorized. |
 | `payload.attributes` | `object` | No | Custom game attributes. |
 
 #### Fields (`GAME_CREATE_RESPONSE`)
@@ -1523,6 +1527,7 @@ Retrieves the list of games available on the server.
 | `type` | `string` | Yes | `GAME_LIST` |
 | `version` | `number` | Yes | `2` |
 | `payload.group_id` | `string` | No | Group UUID to restrict the list to parts of this group only. |
+| `payload.group_password` | `string` | No | Group password, required when listing a protected group before authorization. |
 
 #### Fields (`GAME_LIST_RESPONSE`)
 
@@ -1548,6 +1553,7 @@ Retrieves the list of games available on the server.
 | Code | Description |
 |---|---|
 | `GROUP_NOT_FOUND` | The specified group ID does not exist. |
+| `INVALID_GROUP_PASSWORD` | The group password is missing or incorrect. |
 | `INSUFFICIENT_PERMISSIONS` | The client's access level does not allow listing the parties. |
 
 ---
@@ -1595,6 +1601,7 @@ If the player identifier (`player_id`) is not specified in the request, the serv
 | `payload.player_id` | `string` | No | UUID of the player who joins the game (default: the default player of the session). |
 | `payload.role` | `string` | Yes | Desired role: `PLAYER` (Player) or `OBSERVER` (Observer). |
 | `payload.password` | `string` | No | Password to join the game (if required). |
+| `payload.group_password` | `string` | No | Password of a protected group containing the game (if required). |
 
 #### Fields (`GAME_JOIN_RESPONSE`)
 
@@ -1610,6 +1617,7 @@ If the player identifier (`player_id`) is not specified in the request, the serv
 |---|---|
 | `GAME_NOT_FOUND` | The specified part does not exist. |
 | `INVALID_PASSWORD` | The game password is incorrect. |
+| `INVALID_GROUP_PASSWORD` | The group password is missing or incorrect. |
 | `GAME_FULL` | The maximum number of players (for `PLAYER`) or observers (for `OBSERVER`) is reached. |
 | `ALREADY_IN_GAME` | The user is already participating in this game or another incompatible game. |
 | `GAME_ALREADY_STARTED` | The game has already started and is no longer accepting new players (does not affect observers). |
@@ -2354,6 +2362,7 @@ Allows you to create a new game group on the server.
   "version": 2,
   "payload": {
     "name": "Summer tournament",
+    "password": "group_secret",
     "attributes": {
       "type": "ranked",
       "season": "2026"
@@ -2380,6 +2389,7 @@ Allows you to create a new game group on the server.
 | `type` | `string` | Yes | `"GROUP_CREATE"` |
 | `version` | `number` | Yes | `2` |
 | `payload.name` | `string` | Yes | Group name. |
+| `payload.password` | `string` | No | Password protecting access to the group. |
 | `payload.attributes` | `object` | No | Custom group attributes. |
 
 #### Fields (`GROUP_CREATE_RESPONSE`)
@@ -2428,7 +2438,8 @@ Retrieves the list of groups available on the server.
       {
         "group_id": "uuid_1",
         "name": "Summer tournament",
-        "games_count": 5
+        "games_count": 5,
+        "requires_password": true
       }
     ]
   }
@@ -2451,6 +2462,7 @@ Retrieves the list of groups available on the server.
 | `payload.groups[].group_id` | `string` | - | Group UUID. |
 | `payload.groups[].name` | `string` | - | Group name. |
 | `payload.groups[].games_count` | `number` | - | Number of games in this group. |
+| `payload.groups[].requires_password` | `boolean` | - | `true` if a password is required to access the group. |
 
 ---
 
@@ -2476,7 +2488,8 @@ The subscription is attached to the current session and is automatically deleted
   "type": "GROUP_SUBSCRIBE",
   "version": 2,
   "payload": {
-    "group_id": "group_uuid"
+    "group_id": "group_uuid",
+    "password": "group_secret"
   }
 }
 ```
@@ -2499,6 +2512,7 @@ The subscription is attached to the current session and is automatically deleted
 | `type` | `string` | Yes | `"GROUP_SUBSCRIBE"` |
 | `version` | `number` | Yes | `2` |
 | `payload.group_id` | `string` | Yes | UUID of the group to follow. |
+| `payload.password` | `string` | No | Group password, required for a protected group. |
 
 #### Fields (`GROUP_SUBSCRIBE_RESPONSE`)
 
@@ -2514,6 +2528,7 @@ The subscription is attached to the current session and is automatically deleted
 | Code | Description |
 |---|---|
 | `GROUP_NOT_FOUND` | The specified group does not exist. |
+| `INVALID_GROUP_PASSWORD` | The group password is missing or incorrect. |
 | `ALREADY_SUBSCRIBED` | The customer is already subscribed to this group. |
 | `INSUFFICIENT_PERMISSIONS` | The client does not have the necessary rights to follow this group. |
 
@@ -2573,6 +2588,31 @@ Allows a customer to unsubscribe from notifications from a group of parties.
 |---|---|
 | `GROUP_NOT_FOUND` | The specified group does not exist. |
 | `NOT_SUBSCRIBED` | The customer is not subscribed to this group. |
+
+---
+
+### Adding a game to a group
+
+### Changing group password protection
+
+**Direction:** Client → Server
+**Minimum access level:** `GROUP_ADMIN` of the group concerned
+
+Use `GROUP_PASSWORD_SET` to set or change a group password. Send `null` as
+`payload.password` to remove password protection. Passwords are never returned
+by the server; only `requires_password` is exposed.
+
+```json
+{
+  "type": "GROUP_PASSWORD_SET",
+  "version": 2,
+  "payload": { "group_id": "group_uuid", "password": null }
+}
+```
+
+The response is `GROUP_PASSWORD_SET_RESPONSE` and contains `success`,
+`group_id`, and `requires_password`. It can return `GROUP_NOT_FOUND`,
+`INVALID_DATA`, or `INSUFFICIENT_PERMISSIONS`.
 
 ---
 

@@ -2742,9 +2742,11 @@ La réponse est `GROUP_PASSWORD_SET_RESPONSE` et contient `success`,
 **Direction :** Client → Serveur  
 **Transport :** TCP  
 **Encodage :** JSON UTF-8  
-**Niveau d'accès minimal :** `GROUP_ADMIN` du groupe concerné
+**Niveau d'accès minimal :** `BASE`
 
-Permet d'ajouter une partie existante à un groupe.
+Permet d'ajouter une partie existante à un groupe. La session ayant créé la
+partie peut effectuer cette opération au niveau `BASE` ; un administrateur du
+groupe peut également l'effectuer. Un groupe protégé exige son mot de passe.
 
 #### Exemple
 
@@ -2754,7 +2756,8 @@ Permet d'ajouter une partie existante à un groupe.
   "version": 2,
   "payload": {
     "group_id": "uuid_du_groupe",
-    "game_id": "uuid_de_la_partie"
+    "game_id": "uuid_de_la_partie",
+    "group_password": "secret_groupe"
   }
 }
 ```
@@ -2780,6 +2783,7 @@ Permet d'ajouter une partie existante à un groupe.
 | `version` | `number` | Oui | `2` |
 | `payload.group_id` | `string` | Oui | UUID du groupe cible. |
 | `payload.game_id` | `string` | Oui | UUID de la partie à ajouter. |
+| `payload.group_password` | `string` | Non | Mot de passe du groupe, requis pour un groupe protégé si la session n'est pas déjà autorisée. |
 
 #### Codes d'erreur (`GROUP_ADD_GAME_RESPONSE`)
 
@@ -2788,6 +2792,7 @@ Permet d'ajouter une partie existante à un groupe.
 | `GROUP_NOT_FOUND` | Le groupe spécifié n'existe pas. |
 | `GAME_NOT_FOUND` | La partie spécifiée n'existe pas. |
 | `INSUFFICIENT_PERMISSIONS` | Le client n'a pas les droits pour modifier ce groupe. |
+| `INVALID_GROUP_PASSWORD` | Le mot de passe du groupe est absent ou incorrect. |
 
 ---
 
@@ -3012,7 +3017,7 @@ Cette section décrit les messages réservés aux administrateurs pour la gestio
 | Groupes | Lister les groupes | `GROUP_LIST` | `BASE` ou supérieur | Globale |
 | Groupes | S'abonner à un groupe | `GROUP_SUBSCRIBE` | `BASE` | Par session |
 | Groupes | Se désabonner d'un groupe | `GROUP_UNSUBSCRIBE` | `BASE` | Par session |
-| Groupes | Ajouter une partie à un groupe | `GROUP_ADD_GAME` | `ADMIN` ou `GROUP_ADMIN` du groupe | Par groupe |
+| Groupes | Ajouter une partie à un groupe | `GROUP_ADD_GAME` | `BASE` (créateur) ou `GROUP_ADMIN` | Par groupe |
 | Groupes | Retirer une partie d'un groupe | `GROUP_REMOVE_GAME` | `ADMIN` ou `GROUP_ADMIN` du groupe | Par groupe |
 | Groupes | Supprimer un groupe | `GROUP_DELETE` | `ADMIN` | Globale |
 | Groupes | Lister toutes les parties d'un groupe | `GROUP_GAME_LIST_ALL` | `ADMIN` ou `GROUP_ADMIN` du groupe | Par groupe |

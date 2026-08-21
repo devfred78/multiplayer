@@ -2596,7 +2596,7 @@ Allows a customer to unsubscribe from notifications from a group of parties.
 ### Changing group password protection
 
 **Direction:** Client → Server
-**Minimum access level:** `GROUP_ADMIN` of the group concerned
+**Minimum access level:** `BASE`
 
 Use `GROUP_PASSWORD_SET` to set or change a group password. Send `null` as
 `payload.password` to remove password protection. Passwords are never returned
@@ -2621,9 +2621,11 @@ The response is `GROUP_PASSWORD_SET_RESPONSE` and contains `success`,
 **Direction:** Client → Server  
 **Transport:** TCP  
 **Encoding:** JSON UTF-8  
-**Minimum access level:** `GROUP_ADMIN` of the group concerned
+**Minimum access level:** `BASE`
 
-Allows you to add an existing game to a group.
+Allows you to add an existing game to a group. The session that created the
+game may perform this operation at `BASE` level; a group administrator may also
+perform it. A protected group requires authorization with its password.
 
 #### Example
 ```json
@@ -2632,7 +2634,8 @@ Allows you to add an existing game to a group.
   "version": 2,
   "payload": {
     "group_id": "group_uuid",
-    "game_id": "game_uuid"
+    "game_id": "game_uuid",
+    "group_password": "group_secret"
   }
 }
 ```
@@ -2655,6 +2658,7 @@ Allows you to add an existing game to a group.
 | `version` | `number` | Yes | `2` |
 | `payload.group_id` | `string` | Yes | UUID of the target group. |
 | `payload.game_id` | `string` | Yes | UUID of the part to add. |
+| `payload.group_password` | `string` | No | Group password, required when the group is protected and the session is not already authorized. |
 
 #### Error codes (`GROUP_ADD_GAME_RESPONSE`)
 
@@ -2663,6 +2667,7 @@ Allows you to add an existing game to a group.
 | `GROUP_NOT_FOUND` | The specified group does not exist. |
 | `GAME_NOT_FOUND` | The specified part does not exist. |
 | `INSUFFICIENT_PERMISSIONS` | The client does not have the rights to modify this group. |
+| `INVALID_GROUP_PASSWORD` | The group password is missing or incorrect. |
 
 ---
 
@@ -2875,7 +2880,7 @@ This section describes messages reserved for administrators for overall server, 
 | Groups | List groups | `GROUP_LIST` | `BASE` or higher | Global |
 | Groups | Subscribe to a group | `GROUP_SUBSCRIBE` | `BASIC` | By session |
 | Groups | Unsubscribe from a group | `GROUP_UNSUBSCRIBE` | `BASIC` | By session |
-| Groups | Add a game to a group | `GROUP_ADD_GAME` | `ADMIN` or `GROUP_ADMIN` of the group | By group |
+| Groups | Add a game to a group | `GROUP_ADD_GAME` | `BASE` (creator) or `GROUP_ADMIN` | By group |
 | Groups | Remove part of a group | `GROUP_REMOVE_GAME` | `ADMIN` or `GROUP_ADMIN` of the group | By group |
 | Groups | Delete a group | `GROUP_DELETE` | `ADMIN` | Global |
 | Groups | List all parts of a group | `GROUP_GAME_LIST_ALL` | `ADMIN` or `GROUP_ADMIN` of the group | By group |

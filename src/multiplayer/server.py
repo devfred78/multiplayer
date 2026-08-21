@@ -281,7 +281,7 @@ class GameServer:
         "GROUP_LIST": AccessLevel.BASE,
         "GROUP_SUBSCRIBE": AccessLevel.BASE,
         "GROUP_UNSUBSCRIBE": AccessLevel.BASE,
-        "GROUP_ADD_GAME": AccessLevel.GROUP_ADMIN,
+        "GROUP_ADD_GAME": AccessLevel.BASE,
         "GROUP_REMOVE_GAME": AccessLevel.GROUP_ADMIN,
         "GROUP_DELETE": AccessLevel.ADMIN,
         "GROUP_GAME_LIST_ALL": AccessLevel.GROUP_ADMIN,
@@ -2416,18 +2416,25 @@ class GameServer:
                 "error_code": "GROUP_NOT_FOUND",
                 "message": "Group not found.",
             }
-        if not self._can_admin_group(session, group.ID):
-            return "GROUP_ADD_GAME_RESPONSE", {
-                "success": False,
-                "error_code": "INSUFFICIENT_PERMISSIONS",
-                "message": "Cannot modify this group.",
-            }
         game = self._games.get(payload.get("game_id"))
         if game is None:
             return "GROUP_ADD_GAME_RESPONSE", {
                 "success": False,
                 "error_code": "GAME_NOT_FOUND",
                 "message": "Game not found.",
+            }
+        is_creator = self._game_creator_session.get(game.ID) == session.session_id
+        if not is_creator and not self._can_admin_group(session, group.ID):
+            return "GROUP_ADD_GAME_RESPONSE", {
+                "success": False,
+                "error_code": "INSUFFICIENT_PERMISSIONS",
+                "message": "Only the game creator or a group administrator can add this game.",
+            }
+        if not self._authorize_group(session, group, payload.get("group_password")):
+            return "GROUP_ADD_GAME_RESPONSE", {
+                "success": False,
+                "error_code": "INVALID_GROUP_PASSWORD",
+                "message": "Invalid group password.",
             }
         group.add_game(game)
         await self._broadcast_group(

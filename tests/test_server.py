@@ -13,7 +13,7 @@ except ImportError:
     _MSGPACK_AVAILABLE = False
 
 from multiplayer import SaveFormat
-from multiplayer.game import User
+from multiplayer.game import User, GameGroup
 from multiplayer.server import (
     AccessLevel,
     ClientSession,
@@ -175,6 +175,33 @@ def test_game_create_join_and_control():
 
     state = _dispatch(server, session, "GAME_STATE_GET", {"game_id": game_id})
     assert state["payload"]["state"]["status"] == "IN_PROGRESS"
+
+
+def test_game_creator_can_add_game_to_group_at_base_level():
+    server = GameServer()
+    session, _ = _make_session(server, level=AccessLevel.BASE)
+    group = GameGroup("Private group", password="group-secret")
+    server._groups[group.ID] = group
+
+    created = _dispatch(server, session, "GAME_CREATE", {"name": "Chess"})
+    game_id = created["payload"]["game_id"]
+
+    rejected = _dispatch(
+        server,
+        session,
+        "GROUP_ADD_GAME",
+        {"group_id": group.ID, "game_id": game_id, "group_password": "wrong"},
+    )
+    assert rejected["payload"]["error_code"] == "INVALID_GROUP_PASSWORD"
+
+    added = _dispatch(
+        server,
+        session,
+        "GROUP_ADD_GAME",
+        {"group_id": group.ID, "game_id": game_id, "group_password": "group-secret"},
+    )
+    assert added["payload"]["success"] is True
+    assert group.games[0].ID == game_id
 
 
 def test_user_login_grants_player_level():

@@ -1,6 +1,6 @@
 [project]
 name = "multiplayer"
-version = "2.1.0"
+version = "2.2.0"
 description = "Library that allows you to manage multiple players, locally, on a network, or on the Internet."
 readme = "README.md"
 license = "MIT"

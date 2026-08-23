@@ -3457,6 +3457,11 @@ Retrieves the list of all user accounts registered on the server.
 
 Allows you to modify server configuration settings in real time.
 
+> **Warning:** Defining or changing `payload.server_password` immediately
+> disconnects all clients currently connected to the server, including the
+> administrator issuing the request. All clients must reconnect and provide the
+> new server password.
+
 #### Example (Disabling persistent accounts)
 ```json
 {

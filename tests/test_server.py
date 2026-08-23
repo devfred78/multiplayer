@@ -154,6 +154,24 @@ def test_server_auth_required_then_granted():
     assert session.access_level == AccessLevel.BASE
 
 
+def test_changing_server_password_disconnects_all_clients():
+    server = GameServer(password="old-secret")
+    admin_session, admin_writer = _make_session(server, level=AccessLevel.ADMIN)
+    admin_session.session_id = "admin-session"
+    server._sessions[admin_session.session_id] = server._sessions.pop("session-test")
+    client_session, client_writer = _make_session(server, level=AccessLevel.BASE)
+
+    response = _dispatch(
+        server, admin_session, "SERVER_CONFIG_SET", {"server_password": "new-secret"}
+    )
+
+    assert response["payload"]["success"] is True
+    assert admin_writer.closed is True
+    assert client_writer.closed is True
+    assert server._server_hash is not None
+    assert bcrypt.checkpw(b"new-secret", server._server_hash.encode())
+
+
 def test_game_create_join_and_control():
     server = GameServer()
     session, _ = _make_session(server)

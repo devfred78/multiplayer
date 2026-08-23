@@ -3321,6 +3321,11 @@ Demande l'arrêt immédiat ou le redémarrage du serveur.
 
 ### Configuration du serveur
 
+> **Avertissement :** La définition ou la modification de `payload.server_password`
+> déconnecte immédiatement tous les clients actuellement connectés au serveur,
+> y compris l'administrateur à l'origine de la requête. Tous les clients doivent
+> se reconnecter en fournissant le nouveau mot de passe serveur.
+
 **Direction :** Client → Serveur  
 **Transport :** TCP  
 **Encodage :** JSON UTF-8  

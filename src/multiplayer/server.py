@@ -2720,6 +2720,8 @@ class GameServer:
                 payload["server_password"].encode(), bcrypt.gensalt()
             ).decode()
             updated.append("server_password")
+            for client in list(self._sessions.values()):
+                self._close_session(client)
         self._audit("SERVER_CONFIG_SET", session, "server")
         return "SERVER_CONFIG_SET_RESPONSE", {
             "success": True,

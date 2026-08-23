@@ -2591,8 +2591,6 @@ Allows a customer to unsubscribe from notifications from a group of parties.
 
 ---
 
-### Adding a game to a group
-
 ### Changing group password protection
 
 **Direction:** Client → Server
@@ -2676,7 +2674,7 @@ perform it. A protected group requires authorization with its password.
 **Direction:** Client → Server  
 **Transport:** TCP  
 **Encoding:** JSON UTF-8  
-**Minimum access level:** `GROUP_ADMIN` of the group concerned
+**Minimum access level:** `BASE`
 
 Remove part of a group. The part itself is not deleted.
 

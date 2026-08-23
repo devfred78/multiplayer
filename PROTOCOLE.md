@@ -392,7 +392,7 @@ The current access level is retained until one of the following events:
 - revocation of rights;
 - server shutdown.
 
-Server persistence does not remember the current access level of clients. When a client reconnects, it starts a new session at the `OPEN` level.
+Server persistence does not remember the current access level of clients. When a client reconnects, it starts a new session at the `OPEN` level. When persistence is enabled, server configuration changes made through `SERVER_CONFIG_SET` are also saved and restored, including the server name, access policies, visibility, and server password hash.
 
 ### Query access control
 

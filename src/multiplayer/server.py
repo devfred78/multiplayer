@@ -700,6 +700,21 @@ class GameServer:
         self.persistence_path.parent.mkdir(parents=True, exist_ok=True)
         try:
             self._save = Save(self.persistence_path, self.persistence_mode)
+            config = self._save.load_server_config()
+            if isinstance(config.get("name"), str):
+                self.name = config["name"]
+            for field in (
+                "user_registration_enabled",
+                "orphan_games_allowed",
+                "unauthenticated_game_creation_allowed",
+                "unauthenticated_player_join_allowed",
+                "unauthenticated_observer_join_allowed",
+                "hidden",
+            ):
+                if isinstance(config.get(field), bool):
+                    setattr(self, field, config[field])
+            if isinstance(config.get("server_hash"), str) or config.get("server_hash") is None:
+                self._server_hash = config.get("server_hash")
             for game in self._save.load(Game):
                 self._games[game.ID] = game
             for group in self._save.load(GameGroup):
@@ -727,6 +742,16 @@ class GameServer:
                 self._save.save(player)
             for user in self._users.values():
                 self._save.save(user)
+            self._save.save_server_config({
+                "name": self.name,
+                "user_registration_enabled": self.user_registration_enabled,
+                "orphan_games_allowed": self.orphan_games_allowed,
+                "unauthenticated_game_creation_allowed": self.unauthenticated_game_creation_allowed,
+                "unauthenticated_player_join_allowed": self.unauthenticated_player_join_allowed,
+                "unauthenticated_observer_join_allowed": self.unauthenticated_observer_join_allowed,
+                "hidden": self.hidden,
+                "server_hash": self._server_hash,
+            })
             self._save.flush()
         except MultiplayerError:
             logger.exception("Failed to persist data.")
@@ -2789,6 +2814,7 @@ class GameServer:
             updated.append("server_password")
             for client in list(self._sessions.values()):
                 self._close_session(client)
+        self._save_persistence()
         self._audit("SERVER_CONFIG_SET", session, "server")
         return "SERVER_CONFIG_SET_RESPONSE", {
             "success": True,

@@ -393,7 +393,7 @@ Le niveau d’accès courant est conservé jusqu’à l’un des événements su
 - révocation des droits ;
 - arrêt du serveur.
 
-La persistance du serveur ne mémorise pas le niveau d’accès courant des clients. Lorsqu’un client se reconnecte, il commence une nouvelle session au niveau `OPEN`.
+La persistance du serveur ne mémorise pas le niveau d’accès courant des clients. Lorsqu’un client se reconnecte, il commence une nouvelle session au niveau `OPEN`. Lorsque la persistance est activée, les changements de configuration effectués via `SERVER_CONFIG_SET` sont également sauvegardés et restaurés, notamment le nom du serveur, les règles d’accès, la visibilité et le hash du mot de passe serveur.
 
 ### Contrôle d’accès aux requêtes
 

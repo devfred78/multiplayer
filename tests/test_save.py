@@ -108,6 +108,22 @@ def test_save_and_load_group(tmp_path, save_format):
     assert len(groups[0].games) == 1
 
 
+def test_save_and_load_server_config(tmp_path, save_format):
+    file_path = tmp_path / "save.dat"
+    save = Save(file_path, save_format)
+    config = {
+        "name": "Configured server",
+        "hidden": True,
+        "server_hash": "bcrypt-hash",
+        "orphan_games_allowed": False,
+    }
+    save.save_server_config(config)
+    save.flush()
+
+    reloaded = Save(file_path, save_format)
+    assert reloaded.load_server_config() == config
+
+
 def test_update_existing_object(tmp_path, save_format):
     file_path = tmp_path / "save.dat"
     save = Save(file_path, save_format)

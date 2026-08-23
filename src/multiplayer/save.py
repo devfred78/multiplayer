@@ -32,6 +32,7 @@ _SUPPORTED_CLASSES: Dict[str, type] = {
 
 # Name of the table used for the SQLite storage format.
 _SQLITE_TABLE = "objects"
+_SERVER_CONFIG_CLASS = "__server_config__"
 
 
 def _player_to_dict(player: Player) -> Dict[str, Any]:
@@ -246,6 +247,7 @@ class Save:
         self._data: Dict[str, Dict[str, Dict[str, Any]]] = {
             name: {} for name in _SUPPORTED_CLASSES
         }
+        self._server_config: Dict[str, Any] = {}
 
         if self.file_path.exists():
             self._load_file()
@@ -295,7 +297,8 @@ class Save:
             logger.exception("Failed to read JSON save file.")
             raise SaveError(f"Cannot read save file: {self.file_path}") from exc
 
-        if not isinstance(content, dict) or set(content) != set(_SUPPORTED_CLASSES):
+        expected = set(_SUPPORTED_CLASSES)
+        if not isinstance(content, dict) or not expected.issubset(content) or set(content) - expected - {_SERVER_CONFIG_CLASS}:
             raise SaveError(f"Incompatible save file structure: {self.file_path}")
 
         for name in _SUPPORTED_CLASSES:
@@ -303,6 +306,10 @@ class Save:
             if not isinstance(section, dict):
                 raise SaveError(f"Incompatible save file structure: {self.file_path}")
             self._data[name] = dict(section)
+        config = content.get(_SERVER_CONFIG_CLASS, {})
+        if not isinstance(config, dict):
+            raise SaveError(f"Incompatible save file structure: {self.file_path}")
+        self._server_config = dict(config)
 
     def _load_sqlite(self) -> None:
         """Loads the in-memory buffer from an SQLite save file.
@@ -324,9 +331,15 @@ class Save:
 
             cursor.execute(f"SELECT class, id, data FROM {_SQLITE_TABLE}")
             for class_name, obj_id, raw in cursor.fetchall():
-                if class_name not in _SUPPORTED_CLASSES:
+                if class_name not in _SUPPORTED_CLASSES and class_name != _SERVER_CONFIG_CLASS:
                     raise SaveError(f"Incompatible save file structure: {self.file_path}")
-                self._data[class_name][obj_id] = json.loads(raw)
+                data = json.loads(raw)
+                if class_name == _SERVER_CONFIG_CLASS:
+                    if not isinstance(data, dict):
+                        raise SaveError(f"Incompatible save file structure: {self.file_path}")
+                    self._server_config = data
+                else:
+                    self._data[class_name][obj_id] = data
         except sqlite3.DatabaseError as exc:
             logger.exception("Failed to read SQLite save file.")
             raise SaveError(f"Cannot read save file: {self.file_path}") from exc
@@ -373,7 +386,16 @@ class Save:
         The save file is rewritten with an empty but valid structure.
         """
         self._data = {name: {} for name in _SUPPORTED_CLASSES}
+        self._server_config = {}
         self.flush()
+
+    def save_server_config(self, config: Dict[str, Any]) -> None:
+        """Stores the serializable server configuration in the save buffer."""
+        self._server_config = dict(config)
+
+    def load_server_config(self) -> Dict[str, Any]:
+        """Returns the stored server configuration, or an empty mapping."""
+        return dict(self._server_config)
 
     def flush(self) -> None:
         """Persists the in-memory buffer to the underlying save file.
@@ -393,8 +415,11 @@ class Save:
             SaveError: If the data cannot be written.
         """
         try:
+            content = dict(self._data)
+            if self._server_config:
+                content[_SERVER_CONFIG_CLASS] = self._server_config
             with self.file_path.open("w", encoding="utf-8") as handle:
-                json.dump(self._data, handle, indent=2)
+                json.dump(content, handle, indent=2)
         except OSError as exc:
             logger.exception("Failed to write JSON save file.")
             raise SaveError(f"Cannot write save file: {self.file_path}") from exc
@@ -420,6 +445,8 @@ class Save:
                 for name, section in self._data.items()
                 for obj_id, data in section.items()
             ]
+            if self._server_config:
+                rows.append((_SERVER_CONFIG_CLASS, "server", json.dumps(self._server_config)))
             cursor.executemany(
                 f"INSERT INTO {_SQLITE_TABLE} (class, id, data) VALUES (?, ?, ?)",
                 rows,

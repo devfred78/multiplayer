@@ -1618,6 +1618,7 @@ If the player identifier (`player_id`) is not specified in the request, the serv
 | `GAME_NOT_FOUND` | The specified part does not exist. |
 | `INVALID_PASSWORD` | The game password is incorrect. |
 | `INVALID_GROUP_PASSWORD` | The group password is missing or incorrect. |
+| `AUTHENTICATION_REQUIRED` | An authenticated user is required to join as a player. |
 | `GAME_FULL` | The maximum number of players (for `PLAYER`) or observers (for `OBSERVER`) is reached. |
 | `ALREADY_IN_GAME` | The user is already participating in this game or another incompatible game. |
 | `GAME_ALREADY_STARTED` | The game has already started and is no longer accepting new players (does not affect observers). |
@@ -3188,6 +3189,7 @@ Retrieves the current server configuration. Sensitive values are never returned 
       "user_registration_enabled": true,
       "orphan_games_allowed": true,
       "unauthenticated_game_creation_allowed": true,
+      "unauthenticated_player_join_allowed": true,
       "hidden": false,
       "server_password_set": true
     }
@@ -3203,6 +3205,7 @@ Retrieves the current server configuration. Sensitive values are never returned 
 | `payload.config.user_registration_enabled` | `boolean` | - | Indicates whether the creation of new user accounts by a non-administrator client is allowed (`USER_CREATE` at the `BASE` level). |
 | `payload.config.orphan_games_allowed` | `boolean` | - | Indicates whether clients may create games without assigning them to a group. |
 | `payload.config.unauthenticated_game_creation_allowed` | `boolean` | - | Indicates whether clients at `BASE` level without an authenticated user may create games. |
+| `payload.config.unauthenticated_player_join_allowed` | `boolean` | - | Indicates whether clients at `BASE` level without an authenticated user may join games as players. |
 | `payload.config.hidden` | `boolean` | - | Indicates whether the server is hidden on the network. |
 | `payload.config.server_password_set` | `boolean` | - | Indicates whether a server password is set. |
 | `payload.error_code` | `string` | No | Error code on failure. |
@@ -3472,7 +3475,8 @@ Allows you to modify server configuration settings in real time.
   "payload": {
     "user_registration_enabled": false,
     "orphan_games_allowed": false,
-    "unauthenticated_game_creation_allowed": false
+    "unauthenticated_game_creation_allowed": false,
+    "unauthenticated_player_join_allowed": false
   }
 }
 ```
@@ -3485,6 +3489,7 @@ Allows you to modify server configuration settings in real time.
 | `payload.user_registration_enabled` | `boolean` | No | Enables/Disables the registration of new user accounts via `USER_CREATE` at the `BASE` level. |
 | `payload.orphan_games_allowed` | `boolean` | No | Allows or disallows creation of orphan games, without a `group_id`. |
 | `payload.unauthenticated_game_creation_allowed` | `boolean` | No | Allows or disallows game creation by a `BASE` session without an authenticated user. |
+| `payload.unauthenticated_player_join_allowed` | `boolean` | No | Allows or disallows joining a game as a player by a `BASE` session without an authenticated user. |
 | `payload.server_password` | `string` | No | Sets the new general server password. |
 | `payload.hidden` | `boolean` | No | Defines whether the server is hidden on the network. |
 

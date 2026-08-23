@@ -416,6 +416,7 @@ class GameServer:
         self.user_registration_enabled: bool = True
         self.orphan_games_allowed: bool = True
         self.unauthenticated_game_creation_allowed: bool = True
+        self.unauthenticated_player_join_allowed: bool = True
         self.hidden: bool = False
 
         # Persistence configuration.
@@ -1759,6 +1760,12 @@ class GameServer:
                 "error_code": "INVALID_ACTION",
                 "message": "Invalid role.",
             }
+        if role == "PLAYER" and session.user is None and not self.unauthenticated_player_join_allowed:
+            return "GAME_JOIN_RESPONSE", {
+                "success": False,
+                "error_code": "AUTHENTICATION_REQUIRED",
+                "message": "An authenticated user is required to join as a player.",
+            }
         player = self._resolve_player(session, payload.get("player_id"))
         if player is None:
             return "GAME_JOIN_RESPONSE", {
@@ -2675,6 +2682,7 @@ class GameServer:
                 "user_registration_enabled": self.user_registration_enabled,
                 "orphan_games_allowed": self.orphan_games_allowed,
                 "unauthenticated_game_creation_allowed": self.unauthenticated_game_creation_allowed,
+                "unauthenticated_player_join_allowed": self.unauthenticated_player_join_allowed,
                 "hidden": self.hidden,
                 "server_password_set": self._server_hash is not None,
             },
@@ -2723,6 +2731,16 @@ class GameServer:
                 }
             self.unauthenticated_game_creation_allowed = value
             updated.append("unauthenticated_game_creation_allowed")
+        if "unauthenticated_player_join_allowed" in payload:
+            value = payload["unauthenticated_player_join_allowed"]
+            if not isinstance(value, bool):
+                return "SERVER_CONFIG_SET_RESPONSE", {
+                    "success": False,
+                    "error_code": "INVALID_DATA",
+                    "message": "unauthenticated_player_join_allowed must be a boolean.",
+                }
+            self.unauthenticated_player_join_allowed = value
+            updated.append("unauthenticated_player_join_allowed")
         if "hidden" in payload:
             value = payload["hidden"]
             if not isinstance(value, bool):

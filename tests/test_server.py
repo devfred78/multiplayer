@@ -241,6 +241,37 @@ def test_admin_can_disable_unauthenticated_game_creation():
     assert created["payload"]["success"] is True
 
 
+def test_admin_can_disable_unauthenticated_player_join():
+    server = GameServer()
+    session, _ = _make_session(server, level=AccessLevel.ADMIN)
+    game = _dispatch(server, session, "GAME_CREATE", {"name": "Private players"})
+    game_id = game["payload"]["game_id"]
+    player = _dispatch(server, session, "PLAYER_CREATE", {"name": "Guest"})
+    player_id = player["payload"]["player_id"]
+
+    _dispatch(
+        server,
+        session,
+        "SERVER_CONFIG_SET",
+        {"unauthenticated_player_join_allowed": False},
+    )
+    rejected = _dispatch(
+        server,
+        session,
+        "GAME_JOIN",
+        {"game_id": game_id, "role": "PLAYER", "player_id": player_id},
+    )
+    assert rejected["payload"]["error_code"] == "AUTHENTICATION_REQUIRED"
+
+    observed = _dispatch(
+        server,
+        session,
+        "GAME_JOIN",
+        {"game_id": game_id, "role": "OBSERVER", "player_id": player_id},
+    )
+    assert observed["payload"]["success"] is True
+
+
 def test_game_creator_can_add_game_to_group_at_base_level():
     server = GameServer()
     session, _ = _make_session(server, level=AccessLevel.BASE)

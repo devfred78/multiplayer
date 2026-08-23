@@ -173,6 +173,24 @@ def test_changing_server_password_disconnects_all_clients():
     assert bcrypt.checkpw(b"new-secret", server._server_hash.encode())
 
 
+def test_changing_server_name_disconnects_all_clients():
+    server = GameServer(name="Old name")
+    admin_session, admin_writer = _make_session(server, level=AccessLevel.ADMIN)
+    admin_session.session_id = "admin-name-session"
+    server._sessions[admin_session.session_id] = server._sessions.pop("session-test")
+    client_session, client_writer = _make_session(server, level=AccessLevel.BASE)
+
+    response = _dispatch(
+        server, admin_session, "SERVER_CONFIG_SET", {"name": "New name"}
+    )
+
+    assert response["payload"]["success"] is True
+    assert response["payload"]["updated_fields"] == ["name"]
+    assert server.name == "New name"
+    assert admin_writer.closed is True
+    assert client_writer.closed is True
+
+
 def test_game_create_join_and_control():
     server = GameServer()
     session, _ = _make_session(server)

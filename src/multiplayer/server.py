@@ -2709,6 +2709,19 @@ class GameServer:
             Tuple[str, Dict[str, Any]]: The response type and payload.
         """
         updated: List[str] = []
+        if "name" in payload:
+            value = payload["name"]
+            if not isinstance(value, str):
+                return "SERVER_CONFIG_SET_RESPONSE", {
+                    "success": False,
+                    "error_code": "INVALID_DATA",
+                    "message": "name must be a string.",
+                }
+            if value != self.name:
+                self.name = value
+                updated.append("name")
+                for client in list(self._sessions.values()):
+                    self._close_session(client)
         if "user_registration_enabled" in payload:
             value = payload["user_registration_enabled"]
             if not isinstance(value, bool):

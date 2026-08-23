@@ -3327,6 +3327,11 @@ Demande l'arrêt immédiat ou le redémarrage du serveur.
 > y compris l'administrateur à l'origine de la requête. Tous les clients doivent
 > se reconnecter en fournissant le nouveau mot de passe serveur.
 
+> **Avertissement :** La définition ou la modification de `payload.name`
+> déconnecte immédiatement tous les clients actuellement connectés au serveur,
+> y compris l'administrateur à l'origine de la requête. Tous les clients doivent
+> se reconnecter au serveur renommé.
+
 **Direction :** Client → Serveur  
 **Transport :** TCP  
 **Encodage :** JSON UTF-8  
@@ -3671,6 +3676,7 @@ Permet de modifier les paramètres de configuration du serveur en temps réel.
 | `type` | `string` | Oui | `"SERVER_CONFIG_SET"` |
 | `version` | `number` | Oui | `2` |
 | `payload.user_registration_enabled` | `boolean` | Non | Active/Désactive l'inscription de nouveaux comptes utilisateur via `USER_CREATE` au niveau `BASE`. |
+| `payload.name` | `string` | Non | Définit le nom du serveur. Sa modification déconnecte tous les clients connectés. |
 | `payload.orphan_games_allowed` | `boolean` | Non | Autorise ou interdit la création de parties orphelines, sans `group_id`. |
 | `payload.unauthenticated_game_creation_allowed` | `boolean` | Non | Autorise ou interdit la création de parties par une session `BASE` sans utilisateur authentifié. |
 | `payload.unauthenticated_player_join_allowed` | `boolean` | Non | Autorise ou interdit à une session `BASE` sans utilisateur authentifié de rejoindre une partie comme joueur. |

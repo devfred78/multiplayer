@@ -3469,6 +3469,10 @@ Allows you to modify server configuration settings in real time.
 > administrator issuing the request. All clients must reconnect and provide the
 > new server password.
 
+> **Warning:** Defining or changing `payload.name` immediately disconnects all
+> clients currently connected to the server, including the administrator
+> issuing the request. All clients must reconnect to the renamed server.
+
 #### Example (Disabling persistent accounts)
 ```json
 {
@@ -3490,6 +3494,7 @@ Allows you to modify server configuration settings in real time.
 | `type` | `string` | Yes | `"SERVER_CONFIG_SET"` |
 | `version` | `number` | Yes | `2` |
 | `payload.user_registration_enabled` | `boolean` | No | Enables/Disables the registration of new user accounts via `USER_CREATE` at the `BASE` level. |
+| `payload.name` | `string` | No | Sets the server name. Changing it disconnects all connected clients. |
 | `payload.orphan_games_allowed` | `boolean` | No | Allows or disallows creation of orphan games, without a `group_id`. |
 | `payload.unauthenticated_game_creation_allowed` | `boolean` | No | Allows or disallows game creation by a `BASE` session without an authenticated user. |
 | `payload.unauthenticated_player_join_allowed` | `boolean` | No | Allows or disallows joining a game as a player by a `BASE` session without an authenticated user. |

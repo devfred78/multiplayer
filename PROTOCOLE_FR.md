@@ -3348,8 +3348,9 @@ Récupère la configuration courante du serveur. Les valeurs sensibles ne sont j
     "success": true,
     "config": {
       "user_registration_enabled": true,
+      "orphan_games_allowed": true,
       "hidden": false,
-      "server_password_set": true,
+      "server_password_set": true
     }
   }
 }
@@ -3362,6 +3363,7 @@ Récupère la configuration courante du serveur. Les valeurs sensibles ne sont j
 | `payload.success` | `boolean` | Oui | `true` si la récupération a réussi. |
 | `payload.config` | `object` | Non | Objet contenant la configuration courante. |
 | `payload.config.user_registration_enabled` | `boolean` | - | Indique si la création de nouveaux comptes utilisateur par un client non administrateur est autorisée (`USER_CREATE` au niveau `BASE`). |
+| `payload.config.orphan_games_allowed` | `boolean` | - | Indique si les clients peuvent créer des parties sans les affecter à un groupe. |
 | `payload.config.hidden` | `boolean` | - | Indique si le serveur est masqué sur le réseau. |
 | `payload.config.server_password_set` | `boolean` | - | Indique si un mot de passe serveur est défini. |
 | `payload.error_code` | `string` | Non | Code d'erreur en cas d'échec. |
@@ -3641,7 +3643,8 @@ Permet de modifier les paramètres de configuration du serveur en temps réel.
   "type": "SERVER_CONFIG_SET",
   "version": 2,
   "payload": {
-    "user_registration_enabled": false
+    "user_registration_enabled": false,
+    "orphan_games_allowed": false
   }
 }
 ```
@@ -3653,6 +3656,7 @@ Permet de modifier les paramètres de configuration du serveur en temps réel.
 | `type` | `string` | Oui | `"SERVER_CONFIG_SET"` |
 | `version` | `number` | Oui | `2` |
 | `payload.user_registration_enabled` | `boolean` | Non | Active/Désactive l'inscription de nouveaux comptes utilisateur via `USER_CREATE` au niveau `BASE`. |
+| `payload.orphan_games_allowed` | `boolean` | Non | Autorise ou interdit la création de parties orphelines, sans `group_id`. |
 | `payload.server_password` | `string` | Non | Définit le nouveau mot de passe général du serveur. |
 | `payload.hidden` | `boolean` | Non | Définit si le serveur est masqué sur le réseau. |
 
@@ -3688,6 +3692,7 @@ Permet de modifier les paramètres de configuration du serveur en temps réel.
 |---|---|
 | `INSUFFICIENT_PERMISSIONS` | Le client n'a pas les droits nécessaires pour modifier la configuration du serveur. |
 | `INVALID_DATA` | Au moins un paramètre de configuration est invalide ou incohérent. |
+| `ORPHAN_GAMES_DISABLED` | La création de parties sans groupe est interdite par la configuration du serveur. |
 ---
 
 ## Schémas de séquence

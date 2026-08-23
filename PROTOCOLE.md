@@ -3186,8 +3186,9 @@ Retrieves the current server configuration. Sensitive values are never returned 
     "success": true,
     "config": {
       "user_registration_enabled": true,
+      "orphan_games_allowed": true,
       "hidden": false,
-      "server_password_set": true,
+      "server_password_set": true
     }
   }
 }
@@ -3199,6 +3200,7 @@ Retrieves the current server configuration. Sensitive values are never returned 
 | `payload.success` | `boolean` | Yes | `true` if the recovery was successful. |
 | `payload.config` | `object` | No | Object containing the current configuration. |
 | `payload.config.user_registration_enabled` | `boolean` | - | Indicates whether the creation of new user accounts by a non-administrator client is allowed (`USER_CREATE` at the `BASE` level). |
+| `payload.config.orphan_games_allowed` | `boolean` | - | Indicates whether clients may create games without assigning them to a group. |
 | `payload.config.hidden` | `boolean` | - | Indicates whether the server is hidden on the network. |
 | `payload.config.server_password_set` | `boolean` | - | Indicates whether a server password is set. |
 | `payload.error_code` | `string` | No | Error code on failure. |
@@ -3461,7 +3463,8 @@ Allows you to modify server configuration settings in real time.
   "type": "SERVER_CONFIG_SET",
   "version": 2,
   "payload": {
-    "user_registration_enabled": false
+    "user_registration_enabled": false,
+    "orphan_games_allowed": false
   }
 }
 ```
@@ -3472,6 +3475,7 @@ Allows you to modify server configuration settings in real time.
 | `type` | `string` | Yes | `"SERVER_CONFIG_SET"` |
 | `version` | `number` | Yes | `2` |
 | `payload.user_registration_enabled` | `boolean` | No | Enables/Disables the registration of new user accounts via `USER_CREATE` at the `BASE` level. |
+| `payload.orphan_games_allowed` | `boolean` | No | Allows or disallows creation of orphan games, without a `group_id`. |
 | `payload.server_password` | `string` | No | Sets the new general server password. |
 | `payload.hidden` | `boolean` | No | Defines whether the server is hidden on the network. |
 
@@ -3505,6 +3509,7 @@ Allows you to modify server configuration settings in real time.
 |---|---|
 | `INSUFFICIENT_PERMISSIONS` | The client does not have the necessary rights to modify the server configuration. |
 | `INVALID_DATA` | At least one configuration parameter is invalid or inconsistent. |
+| `ORPHAN_GAMES_DISABLED` | Game creation without a group is disabled by server configuration. |
 ---
 
 ## Sequence diagrams

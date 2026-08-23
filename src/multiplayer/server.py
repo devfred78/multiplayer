@@ -414,6 +414,7 @@ class GameServer:
             bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode() if password else None
         )
         self.user_registration_enabled: bool = True
+        self.orphan_games_allowed: bool = True
         self.hidden: bool = False
 
         # Persistence configuration.
@@ -1645,6 +1646,12 @@ class GameServer:
             }
         group_id = payload.get("group_id")
         group = None
+        if group_id is None and not self.orphan_games_allowed:
+            return "GAME_CREATE_RESPONSE", {
+                "success": False,
+                "error_code": "ORPHAN_GAMES_DISABLED",
+                "message": "Creating a game without a group is disabled.",
+            }
         if group_id is not None:
             group = self._groups.get(group_id)
             if group is None:
@@ -2659,6 +2666,7 @@ class GameServer:
             "success": True,
             "config": {
                 "user_registration_enabled": self.user_registration_enabled,
+                "orphan_games_allowed": self.orphan_games_allowed,
                 "hidden": self.hidden,
                 "server_password_set": self._server_hash is not None,
             },
@@ -2687,6 +2695,16 @@ class GameServer:
                 }
             self.user_registration_enabled = value
             updated.append("user_registration_enabled")
+        if "orphan_games_allowed" in payload:
+            value = payload["orphan_games_allowed"]
+            if not isinstance(value, bool):
+                return "SERVER_CONFIG_SET_RESPONSE", {
+                    "success": False,
+                    "error_code": "INVALID_DATA",
+                    "message": "orphan_games_allowed must be a boolean.",
+                }
+            self.orphan_games_allowed = value
+            updated.append("orphan_games_allowed")
         if "hidden" in payload:
             value = payload["hidden"]
             if not isinstance(value, bool):

@@ -81,6 +81,7 @@ def test_server_instantiation_defaults():
     assert server.port == 65432
     assert server.use_tls is False
     assert server.password_required is False
+    assert server.orphan_games_allowed is True
 
 
 def test_invalid_unencrypted_port():
@@ -175,6 +176,24 @@ def test_game_create_join_and_control():
 
     state = _dispatch(server, session, "GAME_STATE_GET", {"game_id": game_id})
     assert state["payload"]["state"]["status"] == "IN_PROGRESS"
+
+
+def test_admin_can_disable_orphan_game_creation():
+    server = GameServer()
+    session, _ = _make_session(server, level=AccessLevel.ADMIN)
+
+    updated = _dispatch(
+        server, session, "SERVER_CONFIG_SET", {"orphan_games_allowed": False}
+    )
+    assert updated["payload"]["success"] is True
+    assert "orphan_games_allowed" in updated["payload"]["updated_fields"]
+
+    rejected = _dispatch(server, session, "GAME_CREATE", {"name": "Orphan"})
+    assert rejected["payload"]["success"] is False
+    assert rejected["payload"]["error_code"] == "ORPHAN_GAMES_DISABLED"
+
+    listed = _dispatch(server, session, "SERVER_CONFIG_GET")
+    assert listed["payload"]["config"]["orphan_games_allowed"] is False
 
 
 def test_game_creator_can_add_game_to_group_at_base_level():

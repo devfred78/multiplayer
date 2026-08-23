@@ -415,6 +415,7 @@ class GameServer:
         )
         self.user_registration_enabled: bool = True
         self.orphan_games_allowed: bool = True
+        self.unauthenticated_game_creation_allowed: bool = True
         self.hidden: bool = False
 
         # Persistence configuration.
@@ -1644,6 +1645,12 @@ class GameServer:
                 "error_code": "INVALID_DATA",
                 "message": "A game name is required.",
             }
+        if session.user is None and not self.unauthenticated_game_creation_allowed:
+            return "GAME_CREATE_RESPONSE", {
+                "success": False,
+                "error_code": "AUTHENTICATION_REQUIRED",
+                "message": "An authenticated user is required to create a game.",
+            }
         group_id = payload.get("group_id")
         group = None
         if group_id is None and not self.orphan_games_allowed:
@@ -2667,6 +2674,7 @@ class GameServer:
             "config": {
                 "user_registration_enabled": self.user_registration_enabled,
                 "orphan_games_allowed": self.orphan_games_allowed,
+                "unauthenticated_game_creation_allowed": self.unauthenticated_game_creation_allowed,
                 "hidden": self.hidden,
                 "server_password_set": self._server_hash is not None,
             },
@@ -2705,6 +2713,16 @@ class GameServer:
                 }
             self.orphan_games_allowed = value
             updated.append("orphan_games_allowed")
+        if "unauthenticated_game_creation_allowed" in payload:
+            value = payload["unauthenticated_game_creation_allowed"]
+            if not isinstance(value, bool):
+                return "SERVER_CONFIG_SET_RESPONSE", {
+                    "success": False,
+                    "error_code": "INVALID_DATA",
+                    "message": "unauthenticated_game_creation_allowed must be a boolean.",
+                }
+            self.unauthenticated_game_creation_allowed = value
+            updated.append("unauthenticated_game_creation_allowed")
         if "hidden" in payload:
             value = payload["hidden"]
             if not isinstance(value, bool):

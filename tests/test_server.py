@@ -82,6 +82,7 @@ def test_server_instantiation_defaults():
     assert server.use_tls is False
     assert server.password_required is False
     assert server.orphan_games_allowed is True
+    assert server.unauthenticated_game_creation_allowed is True
 
 
 def test_invalid_unencrypted_port():
@@ -212,6 +213,32 @@ def test_admin_can_disable_orphan_game_creation():
 
     listed = _dispatch(server, session, "SERVER_CONFIG_GET")
     assert listed["payload"]["config"]["orphan_games_allowed"] is False
+
+
+def test_admin_can_disable_unauthenticated_game_creation():
+    server = GameServer()
+    admin_session, _ = _make_session(server, level=AccessLevel.ADMIN)
+    updated = _dispatch(
+        server,
+        admin_session,
+        "SERVER_CONFIG_SET",
+        {"unauthenticated_game_creation_allowed": False},
+    )
+    assert updated["payload"]["success"] is True
+
+    guest_session, _ = _make_session(server, level=AccessLevel.BASE)
+    guest_session.session_id = "guest-session"
+    server._sessions[guest_session.session_id] = server._sessions.pop("session-test")
+    rejected = _dispatch(server, guest_session, "GAME_CREATE", {"name": "Guest game"})
+    assert rejected["payload"]["error_code"] == "AUTHENTICATION_REQUIRED"
+
+    user = User("authenticated_game_creator", "secret")
+    server._users[user.username] = user
+    server._players[user.player.ID] = user.player
+    guest_session.user = user
+    guest_session.access_level = AccessLevel.PLAYER
+    created = _dispatch(server, guest_session, "GAME_CREATE", {"name": "User game"})
+    assert created["payload"]["success"] is True
 
 
 def test_game_creator_can_add_game_to_group_at_base_level():

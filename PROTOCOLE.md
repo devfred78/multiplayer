@@ -3187,6 +3187,7 @@ Retrieves the current server configuration. Sensitive values are never returned 
     "config": {
       "user_registration_enabled": true,
       "orphan_games_allowed": true,
+      "unauthenticated_game_creation_allowed": true,
       "hidden": false,
       "server_password_set": true
     }
@@ -3201,6 +3202,7 @@ Retrieves the current server configuration. Sensitive values are never returned 
 | `payload.config` | `object` | No | Object containing the current configuration. |
 | `payload.config.user_registration_enabled` | `boolean` | - | Indicates whether the creation of new user accounts by a non-administrator client is allowed (`USER_CREATE` at the `BASE` level). |
 | `payload.config.orphan_games_allowed` | `boolean` | - | Indicates whether clients may create games without assigning them to a group. |
+| `payload.config.unauthenticated_game_creation_allowed` | `boolean` | - | Indicates whether clients at `BASE` level without an authenticated user may create games. |
 | `payload.config.hidden` | `boolean` | - | Indicates whether the server is hidden on the network. |
 | `payload.config.server_password_set` | `boolean` | - | Indicates whether a server password is set. |
 | `payload.error_code` | `string` | No | Error code on failure. |
@@ -3469,7 +3471,8 @@ Allows you to modify server configuration settings in real time.
   "version": 2,
   "payload": {
     "user_registration_enabled": false,
-    "orphan_games_allowed": false
+    "orphan_games_allowed": false,
+    "unauthenticated_game_creation_allowed": false
   }
 }
 ```
@@ -3481,6 +3484,7 @@ Allows you to modify server configuration settings in real time.
 | `version` | `number` | Yes | `2` |
 | `payload.user_registration_enabled` | `boolean` | No | Enables/Disables the registration of new user accounts via `USER_CREATE` at the `BASE` level. |
 | `payload.orphan_games_allowed` | `boolean` | No | Allows or disallows creation of orphan games, without a `group_id`. |
+| `payload.unauthenticated_game_creation_allowed` | `boolean` | No | Allows or disallows game creation by a `BASE` session without an authenticated user. |
 | `payload.server_password` | `string` | No | Sets the new general server password. |
 | `payload.hidden` | `boolean` | No | Defines whether the server is hidden on the network. |
 
@@ -3515,6 +3519,7 @@ Allows you to modify server configuration settings in real time.
 | `INSUFFICIENT_PERMISSIONS` | The client does not have the necessary rights to modify the server configuration. |
 | `INVALID_DATA` | At least one configuration parameter is invalid or inconsistent. |
 | `ORPHAN_GAMES_DISABLED` | Game creation without a group is disabled by server configuration. |
+| `AUTHENTICATION_REQUIRED` | An authenticated user is required to create a game. |
 ---
 
 ## Sequence diagrams

@@ -263,13 +263,19 @@ def test_admin_can_disable_unauthenticated_player_join():
     )
     assert rejected["payload"]["error_code"] == "AUTHENTICATION_REQUIRED"
 
+    _dispatch(
+        server,
+        session,
+        "SERVER_CONFIG_SET",
+        {"unauthenticated_observer_join_allowed": False},
+    )
     observed = _dispatch(
         server,
         session,
         "GAME_JOIN",
         {"game_id": game_id, "role": "OBSERVER", "player_id": player_id},
     )
-    assert observed["payload"]["success"] is True
+    assert observed["payload"]["error_code"] == "AUTHENTICATION_REQUIRED"
 
 
 def test_game_creator_can_add_game_to_group_at_base_level():

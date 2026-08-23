@@ -3357,6 +3357,7 @@ Récupère la configuration courante du serveur. Les valeurs sensibles ne sont j
       "orphan_games_allowed": true,
       "unauthenticated_game_creation_allowed": true,
       "unauthenticated_player_join_allowed": true,
+      "unauthenticated_observer_join_allowed": true,
       "hidden": false,
       "server_password_set": true
     }
@@ -3374,6 +3375,7 @@ Récupère la configuration courante du serveur. Les valeurs sensibles ne sont j
 | `payload.config.orphan_games_allowed` | `boolean` | - | Indique si les clients peuvent créer des parties sans les affecter à un groupe. |
 | `payload.config.unauthenticated_game_creation_allowed` | `boolean` | - | Indique si les clients de niveau `BASE` sans utilisateur authentifié peuvent créer des parties. |
 | `payload.config.unauthenticated_player_join_allowed` | `boolean` | - | Indique si les clients de niveau `BASE` sans utilisateur authentifié peuvent rejoindre des parties comme joueurs. |
+| `payload.config.unauthenticated_observer_join_allowed` | `boolean` | - | Indique si les clients de niveau `BASE` sans utilisateur authentifié peuvent rejoindre des parties comme observateurs. |
 | `payload.config.hidden` | `boolean` | - | Indique si le serveur est masqué sur le réseau. |
 | `payload.config.server_password_set` | `boolean` | - | Indique si un mot de passe serveur est défini. |
 | `payload.error_code` | `string` | Non | Code d'erreur en cas d'échec. |
@@ -3656,7 +3658,8 @@ Permet de modifier les paramètres de configuration du serveur en temps réel.
     "user_registration_enabled": false,
     "orphan_games_allowed": false,
     "unauthenticated_game_creation_allowed": false,
-    "unauthenticated_player_join_allowed": false
+    "unauthenticated_player_join_allowed": false,
+    "unauthenticated_observer_join_allowed": false
   }
 }
 ```
@@ -3671,6 +3674,7 @@ Permet de modifier les paramètres de configuration du serveur en temps réel.
 | `payload.orphan_games_allowed` | `boolean` | Non | Autorise ou interdit la création de parties orphelines, sans `group_id`. |
 | `payload.unauthenticated_game_creation_allowed` | `boolean` | Non | Autorise ou interdit la création de parties par une session `BASE` sans utilisateur authentifié. |
 | `payload.unauthenticated_player_join_allowed` | `boolean` | Non | Autorise ou interdit à une session `BASE` sans utilisateur authentifié de rejoindre une partie comme joueur. |
+| `payload.unauthenticated_observer_join_allowed` | `boolean` | Non | Autorise ou interdit à une session `BASE` sans utilisateur authentifié de rejoindre une partie comme observateur. |
 | `payload.server_password` | `string` | Non | Définit le nouveau mot de passe général du serveur. |
 | `payload.hidden` | `boolean` | Non | Définit si le serveur est masqué sur le réseau. |
 

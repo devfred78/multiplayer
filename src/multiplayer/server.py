@@ -413,7 +413,6 @@ class GameServer:
         self._server_hash: Optional[str] = (
             bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode() if password else None
         )
-        self._admin_hash: Optional[str] = None
         self.user_registration_enabled: bool = True
         self.hidden: bool = False
 
@@ -2662,7 +2661,6 @@ class GameServer:
                 "user_registration_enabled": self.user_registration_enabled,
                 "hidden": self.hidden,
                 "server_password_set": self._server_hash is not None,
-                "admin_password_set": self._admin_hash is not None,
             },
         }
 
@@ -2704,11 +2702,6 @@ class GameServer:
                 payload["server_password"].encode(), bcrypt.gensalt()
             ).decode()
             updated.append("server_password")
-        if isinstance(payload.get("admin_password"), str):
-            self._admin_hash = bcrypt.hashpw(
-                payload["admin_password"].encode(), bcrypt.gensalt()
-            ).decode()
-            updated.append("admin_password")
         self._audit("SERVER_CONFIG_SET", session, "server")
         return "SERVER_CONFIG_SET_RESPONSE", {
             "success": True,

@@ -3350,7 +3350,6 @@ Récupère la configuration courante du serveur. Les valeurs sensibles ne sont j
       "user_registration_enabled": true,
       "hidden": false,
       "server_password_set": true,
-      "admin_password_set": true
     }
   }
 }
@@ -3365,7 +3364,6 @@ Récupère la configuration courante du serveur. Les valeurs sensibles ne sont j
 | `payload.config.user_registration_enabled` | `boolean` | - | Indique si la création de nouveaux comptes utilisateur par un client non administrateur est autorisée (`USER_CREATE` au niveau `BASE`). |
 | `payload.config.hidden` | `boolean` | - | Indique si le serveur est masqué sur le réseau. |
 | `payload.config.server_password_set` | `boolean` | - | Indique si un mot de passe serveur est défini. |
-| `payload.config.admin_password_set` | `boolean` | - | Indique si un mot de passe administrateur est défini. |
 | `payload.error_code` | `string` | Non | Code d'erreur en cas d'échec. |
 | `payload.message` | `string` | Oui | Message d'information ou d'erreur. |
 
@@ -3656,7 +3654,6 @@ Permet de modifier les paramètres de configuration du serveur en temps réel.
 | `version` | `number` | Oui | `2` |
 | `payload.user_registration_enabled` | `boolean` | Non | Active/Désactive l'inscription de nouveaux comptes utilisateur via `USER_CREATE` au niveau `BASE`. |
 | `payload.server_password` | `string` | Non | Définit le nouveau mot de passe général du serveur. |
-| `payload.admin_password` | `string` | Non | Définit le nouveau mot de passe administrateur. |
 | `payload.hidden` | `boolean` | Non | Définit si le serveur est masqué sur le réseau. |
 
 #### Réponse (`SERVER_CONFIG_SET_RESPONSE`)

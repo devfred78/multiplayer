@@ -3188,7 +3188,6 @@ Retrieves the current server configuration. Sensitive values are never returned 
       "user_registration_enabled": true,
       "hidden": false,
       "server_password_set": true,
-      "admin_password_set": true
     }
   }
 }
@@ -3202,7 +3201,6 @@ Retrieves the current server configuration. Sensitive values are never returned 
 | `payload.config.user_registration_enabled` | `boolean` | - | Indicates whether the creation of new user accounts by a non-administrator client is allowed (`USER_CREATE` at the `BASE` level). |
 | `payload.config.hidden` | `boolean` | - | Indicates whether the server is hidden on the network. |
 | `payload.config.server_password_set` | `boolean` | - | Indicates whether a server password is set. |
-| `payload.config.admin_password_set` | `boolean` | - | Indicates whether an administrator password is set. |
 | `payload.error_code` | `string` | No | Error code on failure. |
 | `payload.message` | `string` | Yes | Information or error message. |
 
@@ -3475,7 +3473,6 @@ Allows you to modify server configuration settings in real time.
 | `version` | `number` | Yes | `2` |
 | `payload.user_registration_enabled` | `boolean` | No | Enables/Disables the registration of new user accounts via `USER_CREATE` at the `BASE` level. |
 | `payload.server_password` | `string` | No | Sets the new general server password. |
-| `payload.admin_password` | `string` | No | Sets the new administrator password. |
 | `payload.hidden` | `boolean` | No | Defines whether the server is hidden on the network. |
 
 #### Response (`SERVER_CONFIG_SET_RESPONSE`)

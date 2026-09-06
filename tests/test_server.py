@@ -13,7 +13,7 @@ except ImportError:
     _MSGPACK_AVAILABLE = False
 
 from multiplayer import SaveFormat
-from multiplayer.game import User, GameGroup
+from multiplayer.game import User, Game, GameGroup
 from multiplayer.server import (
     AccessLevel,
     ClientSession,
@@ -321,6 +321,34 @@ def test_game_creator_can_add_game_to_group_at_base_level():
     )
     assert added["payload"]["success"] is True
     assert group.games[0].ID == game_id
+
+
+def test_base_can_list_protected_group_games_with_password():
+    server = GameServer()
+    group = GameGroup("Protected group", password="group-secret")
+    game = Game("Grouped game")
+    group.add_game(game)
+    server._groups[group.ID] = group
+    server._games[game.ID] = game
+
+    session, _ = _make_session(server, level=AccessLevel.BASE)
+    denied = _dispatch(server, session, "GAME_LIST", {"group_id": group.ID})
+    assert denied["payload"]["error_code"] == "INVALID_GROUP_PASSWORD"
+
+    allowed = _dispatch(
+        server,
+        session,
+        "GAME_LIST",
+        {"group_id": group.ID, "group_password": "group-secret"},
+    )
+    assert allowed["payload"]["success"] is True
+    assert allowed["payload"]["games"][0]["game_id"] == game.ID
+
+    admin_session, _ = _make_session(server, level=AccessLevel.ADMIN)
+    admin_session.session_id = "server-admin-session"
+    server._sessions[admin_session.session_id] = server._sessions.pop("session-test")
+    admin_allowed = _dispatch(server, admin_session, "GAME_LIST", {"group_id": group.ID})
+    assert admin_allowed["payload"]["success"] is True
 
 
 def test_user_login_grants_player_level():

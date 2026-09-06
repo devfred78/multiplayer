@@ -1486,7 +1486,9 @@ Allows you to create a new game instance on the server.
 **Encoding:** JSON UTF-8  
 **Minimum access level:** `BASE`
 
-Retrieves the list of games available on the server.
+Retrieves the list of games available on the server. A client at `BASE` level
+may retrieve the games of a protected group by providing `group_password`.
+The group administrator and server administrator do not need to provide it.
 
 #### Example
 ```json
@@ -1494,7 +1496,8 @@ Retrieves the list of games available on the server.
   "type": "GAME_LIST",
   "version": 2,
   "payload": {
-    "group_id": "optional_group_uuid"
+    "group_id": "optional_group_uuid",
+    "group_password": "group_secret"
   }
 }
 ```

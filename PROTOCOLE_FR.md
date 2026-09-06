@@ -1542,6 +1542,10 @@ Permet de créer une nouvelle instance de jeu sur le serveur.
 
 Récupère la liste des parties disponibles sur le serveur.
 
+Un client de niveau `BASE` peut récupérer les parties d'un groupe protégé en
+fournissant `group_password`. L'administrateur du groupe et l'administrateur
+du serveur n'ont pas besoin de le fournir.
+
 #### Exemple
 
 ```json
@@ -1549,7 +1553,8 @@ Récupère la liste des parties disponibles sur le serveur.
   "type": "GAME_LIST",
   "version": 2,
   "payload": {
-    "group_id": "uuid_du_groupe_optionnel"
+    "group_id": "uuid_du_groupe_optionnel",
+    "group_password": "secret_groupe"
   }
 }
 ```

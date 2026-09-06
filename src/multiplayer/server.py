@@ -1741,7 +1741,10 @@ class GameServer:
                     "error_code": "GROUP_NOT_FOUND",
                     "message": "Group not found.",
                 }
-            if not self._authorize_group(session, group, payload.get("group_password")):
+            if (
+                not self._can_admin_group(session, group.ID)
+                and not self._authorize_group(session, group, payload.get("group_password"))
+            ):
                 return "GAME_LIST_RESPONSE", {
                     "success": False, "error_code": "INVALID_GROUP_PASSWORD",
                     "message": "Invalid group password.",

@@ -571,6 +571,10 @@ La classe `GameServer` présente les méthodes suivantes:
   - Description: Redémarre le serveur en fermant proprement les connexions, en sauvegardant et en rechargeant les données si la persistance est activée. Similaire à `stop` puis `start`.
   - Paramètres: aucun
   - Retour: aucun
+- `save_persistence`: Lance une sauvegarde de persistance immédiate.
+  - Description: Déclenche immédiatement la sauvegarde des données persistantes du serveur sur le support configuré. Cette méthode est sans effet si la persistance n'est pas activée.
+  - Paramètres: aucun
+  - Retour: aucun
 
 ### Contenu du fichier src/multiplayer/client.py
 
@@ -646,6 +650,13 @@ La classe `GameClient` présente les méthodes suivantes:
     - `notification_type` (str|None): Le type de notification à écouter (ex: `"GAME_EVENT"`). Si `None`, le callback reçoit toutes les notifications.
     - `callback` (callable): La fonction à appeler, acceptant le dictionnaire de notification en argument.
   - Valeur de retour: Aucun.
+- `save_persistence`: Demande une sauvegarde de persistance immédiate au serveur.
+  - Description: Envoie une requête `SERVER_PERSISTENCE_SAVE` au serveur pour déclencher une sauvegarde immédiate. Requiert le niveau d'accès administrateur (`ADMIN`).
+  - Paramètres: Aucun.
+  - Valeur de retour: Un dictionnaire contenant les données de la réponse du serveur.
+  - Exceptions émises:
+    - `MultiplayerError` (ou une sous-classe): si le serveur retourne une erreur.
+    - `ConnectionError`: si le client n'est pas connecté.
 
 Informations complémentaires:
 - **Gestion des notifications**: Le client doit être capable de recevoir et de traiter les notifications envoyées spontanément par le serveur. L'implémentation repose sur l'enregistrement de fonctions de rappel (*callbacks*) via la méthode `on_notification`. Lorsqu'une notification arrive, le client identifie les callbacks enregistrés pour ce type (ou les callbacks globaux) et les exécute de manière asynchrone ou séquentielle selon l'architecture choisie.

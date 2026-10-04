@@ -666,6 +666,21 @@ class GameClient:
             self.__session_player = player
         return player
 
+    def save_persistence(self) -> Dict[str, Any]:
+        """Requests an immediate persistence save on the server.
+
+        Sends a ``SERVER_PERSISTENCE_SAVE`` request to the server. The current
+        session must have administrator privileges.
+
+        Returns:
+            Dict[str, Any]: The response payload from the server.
+
+        Raises:
+            MultiplayerError: If the server returns an error.
+            ConnectionError: If the client is not connected.
+        """
+        return self.send_request("SERVER_PERSISTENCE_SAVE")
+
     def __enter__(self) -> "GameClient":
         """Enters the context manager, opening the connection.
 

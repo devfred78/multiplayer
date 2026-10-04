@@ -254,3 +254,33 @@ def test_notification_dispatch_over_socket(server):
         assert received[0]["payload"]["action_type"] == "MOVE"
     finally:
         client.disconnect()
+
+
+def test_client_save_persistence(tmp_path):
+    path = tmp_path / "client_save_test.json"
+    from multiplayer import SaveFormat
+    runner = ServerRunner(persistence_mode=SaveFormat.JSON, persistence_path=path)
+    runner.start()
+    try:
+        # Connect client and login as admin (bootstrapped default admin: admin/admin)
+        client = GameClient(host="127.0.0.1", port=runner.port)
+        client.connect()
+        try:
+            client.login("admin", "admin")
+            res = client.save_persistence()
+            assert res.get("success") is True
+            assert "saved_at" in res
+        finally:
+            client.disconnect()
+
+        # Non-admin user should get MultiplayerError when calling save_persistence
+        non_admin_client = GameClient(host="127.0.0.1", port=runner.port)
+        non_admin_client.connect()
+        try:
+            with pytest.raises(MultiplayerError):
+                non_admin_client.save_persistence()
+        finally:
+            non_admin_client.disconnect()
+    finally:
+        runner.stop()
+        User._existing_usernames.discard("admin")

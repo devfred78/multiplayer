@@ -591,6 +591,13 @@ class GameServer:
         await self.stop()
         await self.start()
 
+    def save_persistence(self) -> None:
+        """Immediately saves persistent server data.
+
+        This method has no effect if persistence is not enabled.
+        """
+        self._save_persistence()
+
     def _build_tls_context(self) -> ssl.SSLContext:
         """Builds the TLS 1.3 context used to secure the main TCP port.
 
@@ -2925,7 +2932,7 @@ class GameServer:
                 "error_code": "PERSISTENCE_ERROR",
                 "message": "Persistence is disabled.",
             }
-        self._save_persistence()
+        self.save_persistence()
         self._audit("SERVER_PERSISTENCE_SAVE", session, "server")
         return "SERVER_PERSISTENCE_SAVE_RESPONSE", {
             "success": True,

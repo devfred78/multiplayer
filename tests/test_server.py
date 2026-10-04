@@ -553,3 +553,60 @@ def test_persistence_periodicity_persists_across_restart(tmp_path):
             await second.stop()
 
     asyncio.run(exercise())
+
+
+def test_save_persistence_method_and_protocol(tmp_path):
+    path = tmp_path / "server_immediate_save.json"
+
+    server = GameServer(
+        port=0,
+        persistence_mode=SaveFormat.JSON,
+        persistence_path=path,
+    )
+    try:
+        user = User(username="admin_saved_user", password="secret")
+        server._users[user.username] = user
+        server._players[user.player.ID] = user.player
+
+        # Trigger save_persistence directly
+        server.save_persistence()
+
+        # Verify saved immediately on disk
+        reader = Save(path, SaveFormat.JSON)
+        saved_users = {u.username: u for u in reader.load(User)}
+        assert "admin_saved_user" in saved_users
+
+        # Test SERVER_PERSISTENCE_SAVE via admin session
+        admin_session, _ = _make_session(server, level=AccessLevel.ADMIN)
+        user2 = User(username="admin_saved_user2", password="secret")
+        server._users[user2.username] = user2
+        server._players[user2.player.ID] = user2.player
+
+        res = _dispatch(server, admin_session, "SERVER_PERSISTENCE_SAVE")
+        assert res["payload"]["success"] is True
+        assert "saved_at" in res["payload"]
+
+        reader = Save(path, SaveFormat.JSON)
+        saved_users = {u.username: u for u in reader.load(User)}
+        assert "admin_saved_user2" in saved_users
+
+        # Test permission denied for non-admin
+        player_session, _ = _make_session(server, level=AccessLevel.PLAYER)
+        res_denied = _dispatch(server, player_session, "SERVER_PERSISTENCE_SAVE")
+        assert res_denied["payload"]["success"] is False
+        assert res_denied["payload"]["error_code"] == "INSUFFICIENT_PERMISSIONS"
+    finally:
+        User._existing_usernames.discard("admin_saved_user")
+        User._existing_usernames.discard("admin_saved_user2")
+
+
+def test_save_persistence_when_disabled():
+    # Server with persistence disabled (persistence_mode=None)
+    server = GameServer(persistence_mode=None)
+    # Calling save_persistence should have no effect (no error, no exception)
+    server.save_persistence()
+
+    admin_session, _ = _make_session(server, level=AccessLevel.ADMIN)
+    res = _dispatch(server, admin_session, "SERVER_PERSISTENCE_SAVE")
+    assert res["payload"]["success"] is False
+    assert res["payload"]["error_code"] == "PERSISTENCE_ERROR"

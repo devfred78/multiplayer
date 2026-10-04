@@ -244,6 +244,7 @@ Manages the server side of the multiplayer protocol. It handles client connectio
 | `start` | Starts the server asynchronously. | - |
 | `stop` | Stops the server asynchronously and persists data. | - |
 | `restart` | Restarts the server asynchronously. | - |
+| `save_persistence` | Immediately saves persistent server data (no-op if disabled). | - |
 
 ---
 
@@ -283,6 +284,7 @@ Client side for connecting to and communicating with a `GameServer`.
 | `create_player` | Creates a new player for the session. | `name (str)`, `is_default (bool = True)` |
 | `send_request` | Sends a protocol request and returns its response payload. | `command (str)`, `timeout (float = 10.0)`, `**kwargs` |
 | `on_notification` | Registers a callback to handle server notifications. | `notification_type (str\|None)`, `callback (Callable[[dict], None])` |
+| `save_persistence` | Requests an immediate persistence save from the server (admin only). | - |
 
 ---
 

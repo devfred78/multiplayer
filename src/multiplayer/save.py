@@ -380,13 +380,20 @@ class Save:
         deserializer = _SERIALIZERS[name][1]
         return [deserializer(data) for data in self._data[name].values()]
 
+    def clear(self) -> None:
+        """Clears the in-memory buffer without touching the save file.
+
+        The change is not persisted until :meth:`flush` is called.
+        """
+        self._data = {name: {} for name in _SUPPORTED_CLASSES}
+        self._server_config = {}
+
     def reset(self) -> None:
         """Clears the in-memory buffer and the underlying save file.
 
         The save file is rewritten with an empty but valid structure.
         """
-        self._data = {name: {} for name in _SUPPORTED_CLASSES}
-        self._server_config = {}
+        self.clear()
         self.flush()
 
     def save_server_config(self, config: Dict[str, Any]) -> None:

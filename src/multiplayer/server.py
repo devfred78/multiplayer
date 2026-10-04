@@ -728,12 +728,17 @@ class GameServer:
             logger.exception("Failed to load persistent data.")
 
     def _save_persistence(self) -> None:
-        """Persists the in-memory domain objects when persistence is enabled."""
+        """Persists the in-memory domain objects when persistence is enabled.
+
+        The save buffer is cleared first so that objects deleted from the
+        server are also removed from the save file.
+        """
         if self.persistence_mode is None or self.persistence_path is None:
             return
         try:
             if self._save is None:
                 self._save = Save(self.persistence_path, self.persistence_mode)
+            self._save.clear()
             for game in self._games.values():
                 self._save.save(game)
             for group in self._groups.values():

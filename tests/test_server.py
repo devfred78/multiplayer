@@ -411,3 +411,30 @@ def test_start_keeps_persisted_server_admin(tmp_path):
             await second.stop()
 
     asyncio.run(exercise())
+
+
+@pytest.mark.parametrize("save_format", [SaveFormat.JSON, SaveFormat.SQLITE])
+def test_save_persistence_drops_deleted_objects(tmp_path, save_format):
+    path = tmp_path / f"server.{save_format.value}"
+    async def exercise():
+        first = GameServer(port=0, persistence_mode=save_format, persistence_path=path)
+        await first.start()
+        user = User(username="to_delete", password="secret")
+        first._users[user.username] = user
+        first._players[user.player.ID] = user.player
+        first._save_persistence()
+
+        first._users.pop(user.username)
+        first._players.pop(user.player.ID)
+        await first.stop()
+        User._existing_usernames.discard("to_delete")
+
+        second = GameServer(port=0, persistence_mode=save_format, persistence_path=path)
+        await second.start()
+        try:
+            assert "to_delete" not in second._users
+            assert user.player.ID not in second._players
+        finally:
+            await second.stop()
+
+    asyncio.run(exercise())

@@ -3195,6 +3195,7 @@ Retrieves the current server configuration. Sensitive values are never returned 
       "unauthenticated_player_join_allowed": true,
       "unauthenticated_observer_join_allowed": true,
       "hidden": false,
+      "persistence_periodicity": 0,
       "server_password_set": true
     }
   }
@@ -3212,6 +3213,7 @@ Retrieves the current server configuration. Sensitive values are never returned 
 | `payload.config.unauthenticated_player_join_allowed` | `boolean` | - | Indicates whether clients at `BASE` level without an authenticated user may join games as players. |
 | `payload.config.unauthenticated_observer_join_allowed` | `boolean` | - | Indicates whether clients at `BASE` level without an authenticated user may join games as observers. |
 | `payload.config.hidden` | `boolean` | - | Indicates whether the server is hidden on the network. |
+| `payload.config.persistence_periodicity` | `number` | - | Persistence save period in seconds (`0` if periodic saving is disabled). |
 | `payload.config.server_password_set` | `boolean` | - | Indicates whether a server password is set. |
 | `payload.error_code` | `string` | No | Error code on failure. |
 | `payload.message` | `string` | Yes | Information or error message. |
@@ -3504,6 +3506,7 @@ Allows you to modify server configuration settings in real time.
 | `payload.unauthenticated_observer_join_allowed` | `boolean` | No | Allows or disallows joining a game as an observer by a `BASE` session without an authenticated user. |
 | `payload.server_password` | `string` | No | Sets the new general server password. |
 | `payload.hidden` | `boolean` | No | Defines whether the server is hidden on the network. |
+| `payload.persistence_periodicity` | `number` | No | Sets the persistence save period in seconds (`0` to disable periodic saving). |
 
 #### Response (`SERVER_CONFIG_SET_RESPONSE`)
 ```json

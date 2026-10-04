@@ -65,6 +65,7 @@ DEFAULT_PORT = 65432
 DEFAULT_MULTICAST_GROUP = "239.255.0.1"
 DEFAULT_MULTICAST_PORT = 65434
 DEFAULT_GC_PERIODICITY = 900
+DEFAULT_PERSISTENCE_PERIODICITY = 0
 DEFAULT_TLS_DOMAIN = "localhost"
 
 # Default persistence paths used when none is provided by the caller.
@@ -355,6 +356,7 @@ class GameServer:
         multicast_port: int = DEFAULT_MULTICAST_PORT,
         persistence_mode: Optional[SaveFormat] = None,
         persistence_path: Optional[Path] = None,
+        persistence_periodicity: int = DEFAULT_PERSISTENCE_PERIODICITY,
         garbage_collection_periodicity: int = DEFAULT_GC_PERIODICITY,
     ):
         """Initializes a new multiplayer game server.
@@ -375,6 +377,8 @@ class GameServer:
             multicast_port (int): UDP multicast port for discovery.
             persistence_mode (SaveFormat | None): Persistence storage format.
             persistence_path (Path | None): Path to the persistence file.
+            persistence_periodicity (int): Seconds between cyclic persistence
+                saves (0 to disable periodic saving).
             garbage_collection_periodicity (int): Seconds between orphan player
                 garbage collections.
 
@@ -390,6 +394,12 @@ class GameServer:
                 raise ValueError("The unencrypted port must differ from the main port.")
         if not isinstance(multicast_port, int) or not 1 <= multicast_port <= 65535:
             raise ValueError(f"Invalid multicast port: {multicast_port}")
+        if (
+            not isinstance(persistence_periodicity, int)
+            or isinstance(persistence_periodicity, bool)
+            or persistence_periodicity < 0
+        ):
+            raise ValueError(f"Invalid persistence periodicity: {persistence_periodicity}")
         if use_tls and not tls_self_signed and (tls_cert_path is None or tls_key_path is None):
             raise ValueError(
                 "TLS is enabled without self-signed certificate: both "
@@ -409,6 +419,7 @@ class GameServer:
         self.multicast_group: str = multicast_group
         self.multicast_port: int = multicast_port
         self.garbage_collection_periodicity: int = garbage_collection_periodicity
+        self.persistence_periodicity: int = persistence_periodicity
 
         self._server_hash: Optional[str] = (
             bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode() if password else None
@@ -450,6 +461,7 @@ class GameServer:
         self._unencrypted_server: Optional[asyncio.AbstractServer] = None
         self._discovery_transport: Optional[asyncio.DatagramTransport] = None
         self._gc_task: Optional[asyncio.Task] = None
+        self._persistence_task: Optional[asyncio.Task] = None
         self._running: bool = False
         self._start_time: float = 0.0
         self._actual_port: int = port
@@ -520,6 +532,8 @@ class GameServer:
         self._running = True
         self._start_time = time.monotonic()
         self._gc_task = asyncio.ensure_future(self._garbage_collection_loop())
+        if self.persistence_periodicity > 0:
+            self._persistence_task = asyncio.ensure_future(self._persistence_loop())
         logger.info("Server '%s' started on %s:%s", self.name, self.host, self._actual_port)
 
     async def stop(self) -> None:
@@ -539,6 +553,14 @@ class GameServer:
             except asyncio.CancelledError:
                 pass
             self._gc_task = None
+
+        if self._persistence_task is not None:
+            self._persistence_task.cancel()
+            try:
+                await self._persistence_task
+            except asyncio.CancelledError:
+                pass
+            self._persistence_task = None
 
         await self._broadcast_shutdown()
 
@@ -713,6 +735,12 @@ class GameServer:
             ):
                 if isinstance(config.get(field), bool):
                     setattr(self, field, config[field])
+            if (
+                isinstance(config.get("persistence_periodicity"), int)
+                and not isinstance(config.get("persistence_periodicity"), bool)
+                and config["persistence_periodicity"] >= 0
+            ):
+                self.persistence_periodicity = config["persistence_periodicity"]
             if isinstance(config.get("server_hash"), str) or config.get("server_hash") is None:
                 self._server_hash = config.get("server_hash")
             for game in self._save.load(Game):
@@ -755,6 +783,7 @@ class GameServer:
                 "unauthenticated_player_join_allowed": self.unauthenticated_player_join_allowed,
                 "unauthenticated_observer_join_allowed": self.unauthenticated_observer_join_allowed,
                 "hidden": self.hidden,
+                "persistence_periodicity": self.persistence_periodicity,
                 "server_hash": self._server_hash,
             })
             self._save.flush()
@@ -1120,6 +1149,16 @@ class GameServer:
             except asyncio.CancelledError:
                 break
             self._collect_orphan_players()
+
+    async def _persistence_loop(self) -> None:
+        """Periodically saves server data when persistence is enabled."""
+        while self._running:
+            try:
+                await asyncio.sleep(self.persistence_periodicity)
+            except asyncio.CancelledError:
+                break
+            if self._running and self.persistence_mode is not None:
+                self._save_persistence()
 
     def _collect_orphan_players(self) -> None:
         """Removes players that are neither linked to a user nor to a session."""
@@ -2725,6 +2764,7 @@ class GameServer:
                 "unauthenticated_player_join_allowed": self.unauthenticated_player_join_allowed,
                 "unauthenticated_observer_join_allowed": self.unauthenticated_observer_join_allowed,
                 "hidden": self.hidden,
+                "persistence_periodicity": self.persistence_periodicity,
                 "server_password_set": self._server_hash is not None,
             },
         }
@@ -2815,6 +2855,21 @@ class GameServer:
                 }
             self.hidden = value
             updated.append("hidden")
+        if "persistence_periodicity" in payload:
+            value = payload["persistence_periodicity"]
+            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                return "SERVER_CONFIG_SET_RESPONSE", {
+                    "success": False,
+                    "error_code": "INVALID_DATA",
+                    "message": "persistence_periodicity must be a non-negative integer.",
+                }
+            self.persistence_periodicity = value
+            updated.append("persistence_periodicity")
+            if self._persistence_task is not None:
+                self._persistence_task.cancel()
+                self._persistence_task = None
+            if self._running and self.persistence_periodicity > 0:
+                self._persistence_task = asyncio.ensure_future(self._persistence_loop())
         if isinstance(payload.get("server_password"), str):
             self._server_hash = bcrypt.hashpw(
                 payload["server_password"].encode(), bcrypt.gensalt()

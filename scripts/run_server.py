@@ -21,6 +21,7 @@ from multiplayer.server import (  # noqa: E402
     DEFAULT_HOST,
     DEFAULT_MULTICAST_GROUP,
     DEFAULT_MULTICAST_PORT,
+    DEFAULT_PERSISTENCE_PERIODICITY,
     DEFAULT_PORT,
     DEFAULT_TLS_DOMAIN,
     GameServer,
@@ -65,6 +66,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--persistence-path", type=Path, help="path to the persistence file")
     parser.add_argument(
+        "--persistence-periodicity",
+        type=int,
+        default=DEFAULT_PERSISTENCE_PERIODICITY,
+        help=f"persistence save period in seconds (default: {DEFAULT_PERSISTENCE_PERIODICITY})",
+    )
+    parser.add_argument(
         "--garbage-collection-periodicity",
         type=int,
         default=DEFAULT_GC_PERIODICITY,
@@ -101,6 +108,7 @@ def create_server(args: argparse.Namespace) -> GameServer:
         multicast_port=args.multicast_port,
         persistence_mode=persistence_mode,
         persistence_path=args.persistence_path,
+        persistence_periodicity=args.persistence_periodicity,
         garbage_collection_periodicity=args.garbage_collection_periodicity,
     )
 

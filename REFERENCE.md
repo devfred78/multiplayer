@@ -204,7 +204,7 @@ Handles saving and restoring `Player`, `User`, `Game` and `GameGroup` instances 
 ## Networking
 
 ### GameServer
-`multiplayer.server.GameServer(host, port, unencrypted_port, password, name, use_tls, tls_self_signed, tls_domain, tls_cert_path, tls_key_path, discoverable, multicast_group, multicast_port, persistence_mode, persistence_path, garbage_collection_periodicity)`
+`multiplayer.server.GameServer(host, port, unencrypted_port, password, name, use_tls, tls_self_signed, tls_domain, tls_cert_path, tls_key_path, discoverable, multicast_group, multicast_port, persistence_mode, persistence_path, persistence_periodicity, garbage_collection_periodicity)`
 
 Manages the server side of the multiplayer protocol. It handles client connections, authentication, and game state distribution.
 
@@ -227,6 +227,7 @@ Manages the server side of the multiplayer protocol. It handles client connectio
 | `multicast_port` | `int` | UDP multicast port for discovery. | No | `65434` |
 | `persistence_mode` | `SaveFormat \| None` | Persistence storage format. | No | `None` |
 | `persistence_path` | `Path \| None` | Path to the persistence file. | No | `None` |
+| `persistence_periodicity` | `int` | Seconds between cyclic persistence saves (0 to disable). | No | `0` |
 | `garbage_collection_periodicity` | `int` | Seconds between orphan player cleanups. | No | `900` |
 
 **Attributes & Properties:**

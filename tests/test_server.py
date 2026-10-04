@@ -14,7 +14,9 @@ except ImportError:
 
 from multiplayer import SaveFormat
 from multiplayer.game import User, Game, GameGroup
+from multiplayer.save import Save
 from multiplayer.server import (
+    DEFAULT_PERSISTENCE_PERIODICITY,
     AccessLevel,
     ClientSession,
     GameServer,
@@ -434,6 +436,119 @@ def test_save_persistence_drops_deleted_objects(tmp_path, save_format):
         try:
             assert "to_delete" not in second._users
             assert user.player.ID not in second._players
+        finally:
+            await second.stop()
+
+    asyncio.run(exercise())
+
+
+def test_persistence_periodicity_defaults_and_validation():
+    server = GameServer()
+    assert server.persistence_periodicity == DEFAULT_PERSISTENCE_PERIODICITY
+    assert server.persistence_periodicity == 0
+
+    custom = GameServer(persistence_periodicity=42)
+    assert custom.persistence_periodicity == 42
+
+    with pytest.raises(ValueError):
+        GameServer(persistence_periodicity=-1)
+
+    with pytest.raises(ValueError):
+        GameServer(persistence_periodicity="10")  # type: ignore
+
+    with pytest.raises(ValueError):
+        GameServer(persistence_periodicity=True)  # type: ignore
+
+
+def test_server_config_get_and_set_persistence_periodicity():
+    server = GameServer(persistence_periodicity=100)
+    admin_session, _ = _make_session(server, level=AccessLevel.ADMIN)
+
+    config_res = _dispatch(server, admin_session, "SERVER_CONFIG_GET")
+    assert config_res["payload"]["success"] is True
+    assert config_res["payload"]["config"]["persistence_periodicity"] == 100
+
+    set_res = _dispatch(
+        server, admin_session, "SERVER_CONFIG_SET", {"persistence_periodicity": 30}
+    )
+    assert set_res["payload"]["success"] is True
+    assert "persistence_periodicity" in set_res["payload"]["updated_fields"]
+    assert server.persistence_periodicity == 30
+
+    # Test invalid values for persistence_periodicity
+    bad_res_neg = _dispatch(
+        server, admin_session, "SERVER_CONFIG_SET", {"persistence_periodicity": -5}
+    )
+    assert bad_res_neg["payload"]["success"] is False
+    assert bad_res_neg["payload"]["error_code"] == "INVALID_DATA"
+
+    bad_res_str = _dispatch(
+        server, admin_session, "SERVER_CONFIG_SET", {"persistence_periodicity": "30"}
+    )
+    assert bad_res_str["payload"]["success"] is False
+    assert bad_res_str["payload"]["error_code"] == "INVALID_DATA"
+
+    bad_res_bool = _dispatch(
+        server, admin_session, "SERVER_CONFIG_SET", {"persistence_periodicity": False}
+    )
+    assert bad_res_bool["payload"]["success"] is False
+    assert bad_res_bool["payload"]["error_code"] == "INVALID_DATA"
+
+
+def test_cyclic_persistence_loop_saves_periodically(tmp_path):
+    path = tmp_path / "server_cyclic.json"
+
+    async def exercise():
+        # Start server with short periodicity (1 second)
+        server = GameServer(
+            port=0,
+            persistence_mode=SaveFormat.JSON,
+            persistence_path=path,
+            persistence_periodicity=1,
+        )
+        await server.start()
+        try:
+            assert server._persistence_task is not None
+            # Add user directly into in-memory dictionary without explicit save
+            user = User(username="cyclic_user", password="secret")
+            server._users[user.username] = user
+            server._players[user.player.ID] = user.player
+
+            # Check that file doesn't have the user yet (or wait a bit for cycle)
+            await asyncio.sleep(1.3)
+
+            # Read saved file from disk while server is still running
+            reader = Save(path, SaveFormat.JSON)
+            saved_users = {u.username: u for u in reader.load(User)}
+            assert "cyclic_user" in saved_users
+        finally:
+            await server.stop()
+            User._existing_usernames.discard("cyclic_user")
+
+    asyncio.run(exercise())
+
+
+def test_persistence_periodicity_persists_across_restart(tmp_path):
+    path = tmp_path / "server_config_persist.json"
+
+    async def exercise():
+        first = GameServer(
+            port=0,
+            persistence_mode=SaveFormat.JSON,
+            persistence_path=path,
+            persistence_periodicity=250,
+        )
+        await first.start()
+        await first.stop()
+
+        second = GameServer(
+            port=0,
+            persistence_mode=SaveFormat.JSON,
+            persistence_path=path,
+        )
+        await second.start()
+        try:
+            assert second.persistence_periodicity == 250
         finally:
             await second.stop()
 

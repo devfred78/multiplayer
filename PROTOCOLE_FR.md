@@ -3369,6 +3369,7 @@ Récupère la configuration courante du serveur. Les valeurs sensibles ne sont j
       "unauthenticated_player_join_allowed": true,
       "unauthenticated_observer_join_allowed": true,
       "hidden": false,
+      "persistence_periodicity": 0,
       "server_password_set": true
     }
   }
@@ -3387,6 +3388,7 @@ Récupère la configuration courante du serveur. Les valeurs sensibles ne sont j
 | `payload.config.unauthenticated_player_join_allowed` | `boolean` | - | Indique si les clients de niveau `BASE` sans utilisateur authentifié peuvent rejoindre des parties comme joueurs. |
 | `payload.config.unauthenticated_observer_join_allowed` | `boolean` | - | Indique si les clients de niveau `BASE` sans utilisateur authentifié peuvent rejoindre des parties comme observateurs. |
 | `payload.config.hidden` | `boolean` | - | Indique si le serveur est masqué sur le réseau. |
+| `payload.config.persistence_periodicity` | `number` | - | Période de sauvegarde de la persistance en secondes (`0` si la sauvegarde périodique est désactivée). |
 | `payload.config.server_password_set` | `boolean` | - | Indique si un mot de passe serveur est défini. |
 | `payload.error_code` | `string` | Non | Code d'erreur en cas d'échec. |
 | `payload.message` | `string` | Oui | Message d'information ou d'erreur. |
@@ -3688,6 +3690,7 @@ Permet de modifier les paramètres de configuration du serveur en temps réel.
 | `payload.unauthenticated_observer_join_allowed` | `boolean` | Non | Autorise ou interdit à une session `BASE` sans utilisateur authentifié de rejoindre une partie comme observateur. |
 | `payload.server_password` | `string` | Non | Définit le nouveau mot de passe général du serveur. |
 | `payload.hidden` | `boolean` | Non | Définit si le serveur est masqué sur le réseau. |
+| `payload.persistence_periodicity` | `number` | Non | Définit la période de sauvegarde de la persistance en secondes (`0` pour désactiver la sauvegarde périodique). |
 
 #### Réponse (`SERVER_CONFIG_SET_RESPONSE`)
 

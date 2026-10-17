@@ -753,6 +753,7 @@ class GameServer:
             for game in self._save.load(Game):
                 self._games[game.ID] = game
             for group in self._save.load(GameGroup):
+                self._share_group_games(group)
                 self._groups[group.ID] = group
             for player in self._save.load(Player):
                 self._players[player.ID] = player
@@ -761,6 +762,23 @@ class GameServer:
                 self._players[user.player.ID] = user.player
         except MultiplayerError:
             logger.exception("Failed to load persistent data.")
+
+    def _share_group_games(self, group: GameGroup) -> None:
+        """Makes a restored group hold the games known by the server.
+
+        A save file stores a full copy of every game of a group, so a restored
+        group holds game instances distinct from the ones of ``self._games``:
+        joining, leaving or controlling a game would then never be reflected
+        in the listing of its group. Each copy is replaced by the game of the
+        same ID, keeping the order of the games. A game only known through its
+        group is registered on the server.
+
+        Args:
+            group (GameGroup): The group restored from the save file.
+        """
+        for copy in group.games:
+            group.remove_game(copy.ID)
+            group.add_game(self._games.setdefault(copy.ID, copy))
 
     def _save_persistence(self) -> None:
         """Persists the in-memory domain objects when persistence is enabled.

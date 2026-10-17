@@ -442,6 +442,38 @@ def test_save_persistence_drops_deleted_objects(tmp_path, save_format):
     asyncio.run(exercise())
 
 
+@pytest.mark.parametrize("save_format", [SaveFormat.JSON, SaveFormat.SQLITE])
+def test_restored_groups_share_the_games_of_the_server(tmp_path, save_format):
+    path = tmp_path / f"server.{save_format.value}"
+    async def exercise():
+        first = GameServer(port=0, persistence_mode=save_format, persistence_path=path)
+        await first.start()
+        group = GameGroup("Persisted group")
+        games = [Game("First game"), Game("Second game")]
+        for game in games:
+            group.add_game(game)
+            first._games[game.ID] = game
+        first._groups[group.ID] = group
+        group_only = Game("Group only game")
+        group.add_game(group_only)
+        first._save_persistence()
+        await first.stop()
+
+        second = GameServer(port=0, persistence_mode=save_format, persistence_path=path)
+        await second.start()
+        try:
+            restored = second._groups[group.ID]
+            assert [game.ID for game in restored.games] == [
+                games[0].ID, games[1].ID, group_only.ID
+            ]
+            for game in restored.games:
+                assert game is second._games[game.ID]
+        finally:
+            await second.stop()
+
+    asyncio.run(exercise())
+
+
 def test_persistence_periodicity_defaults_and_validation():
     server = GameServer()
     assert server.persistence_periodicity == DEFAULT_PERSISTENCE_PERIODICITY

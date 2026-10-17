@@ -473,6 +473,7 @@ Examples:
 
 - create a game;
 - list the available parts;
+- list the players and observers of a game;
 - join a game as a player;
 - join a game as an observer;
 - leave a game;
@@ -1558,6 +1559,81 @@ The group administrator and server administrator do not need to provide it.
 | `GROUP_NOT_FOUND` | The specified group ID does not exist. |
 | `INVALID_GROUP_PASSWORD` | The group password is missing or incorrect. |
 | `INSUFFICIENT_PERMISSIONS` | The client's access level does not allow listing the parties. |
+
+---
+
+### List of the participants of a game
+
+**Direction:** Client → Server  
+**Transport:** TCP  
+**Encoding:** JSON UTF-8  
+**Minimum access level:** `BASE`
+
+Retrieves the players and observers of a game. When the
+`participants_visible_to_all` server setting is enabled (see
+`SERVER_CONFIG_SET`), every client may use this request. Otherwise, it is
+reserved to a server administrator (`ADMIN` level), to an administrator of a
+group holding the game (`GROUP_ADMIN` level), and to the creator of the game,
+that is to say the session which created it or, when that session was
+authenticated, the same user from any session.
+
+#### Example
+```json
+{
+  "type": "GAME_PARTICIPANTS_LIST",
+  "version": 2,
+  "payload": {
+    "game_id": "game_uuid"
+  }
+}
+```
+#### Response (`GAME_PARTICIPANTS_LIST_RESPONSE`)
+```json
+{
+  "type": "GAME_PARTICIPANTS_LIST_RESPONSE",
+  "version": 2,
+  "payload": {
+    "success": true,
+    "game_id": "game_uuid",
+    "participants": [
+      {
+        "player_id": "player_uuid",
+        "name": "Alice",
+        "role": "PLAYER"
+      }
+    ]
+  }
+}
+```
+#### Fields (`GAME_PARTICIPANTS_LIST`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `type` | `string` | Yes | `"GAME_PARTICIPANTS_LIST"` |
+| `version` | `number` | Yes | `2` |
+| `payload.game_id` | `string` | Yes | UUID of the game whose participants are requested. |
+
+#### Fields (`GAME_PARTICIPANTS_LIST_RESPONSE`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `type` | `string` | Yes | `"GAME_PARTICIPANTS_LIST_RESPONSE"` |
+| `version` | `number` | Yes | `2` |
+| `payload.success` | `boolean` | Yes | `true` if the request was successful. |
+| `payload.game_id` | `string` | No | UUID of the game (if successful). |
+| `payload.participants` | `array` | No | Players and observers of the game (if successful). |
+| `payload.participants[].player_id` | `string` | - | Player UUID. |
+| `payload.participants[].name` | `string` | - | Player name. |
+| `payload.participants[].role` | `string` | - | Role of the player in the game (`PLAYER` or `OBSERVER`). |
+| `payload.error_code` | `string` | No | Error code in case of failure (see table below). |
+| `payload.message` | `string` | No | Information or error message. |
+
+#### Error codes (`GAME_PARTICIPANTS_LIST_RESPONSE`)
+
+| Code | Description |
+|---|---|
+| `GAME_NOT_FOUND` | The specified game does not exist. |
+| `INSUFFICIENT_PERMISSIONS` | The participants are not visible to every client, and the client is neither a server administrator, nor an administrator of a group holding the game, nor the creator of the game. |
 
 ---
 
@@ -2877,6 +2953,7 @@ This section describes messages reserved for administrators for overall server, 
 | User accounts | Delete an account | `USER_DELETE` | `ADMIN` | Global |
 | User accounts | List all accounts | `USER_LIST_ALL` | `ADMIN` | Global |
 | Players | List all players | `PLAYER_LIST_ALL` | `ADMIN` | Global |
+| Parts | List the participants of a game | `GAME_PARTICIPANTS_LIST` | `ADMIN`, `GROUP_ADMIN` of the group, `BASE` (creator), or `BASE` when `participants_visible_to_all` is enabled | By game or by group |
 | Parts | Exclude a player or observer | `GAME_KICK` | `ADMIN` | Overall or by group |
 | Groups | Create a group | `GROUP_CREATE` | `ADMIN` | Global |
 | Groups | List groups | `GROUP_LIST` | `BASE` or higher | Global |
@@ -3194,6 +3271,7 @@ Retrieves the current server configuration. Sensitive values are never returned 
       "unauthenticated_game_creation_allowed": true,
       "unauthenticated_player_join_allowed": true,
       "unauthenticated_observer_join_allowed": true,
+      "participants_visible_to_all": false,
       "hidden": false,
       "persistence_periodicity": 0,
       "server_password_set": true
@@ -3212,6 +3290,7 @@ Retrieves the current server configuration. Sensitive values are never returned 
 | `payload.config.unauthenticated_game_creation_allowed` | `boolean` | - | Indicates whether clients at `BASE` level without an authenticated user may create games. |
 | `payload.config.unauthenticated_player_join_allowed` | `boolean` | - | Indicates whether clients at `BASE` level without an authenticated user may join games as players. |
 | `payload.config.unauthenticated_observer_join_allowed` | `boolean` | - | Indicates whether clients at `BASE` level without an authenticated user may join games as observers. |
+| `payload.config.participants_visible_to_all` | `boolean` | - | Indicates whether every client may list the participants of a game (`GAME_PARTICIPANTS_LIST`). When `false` (default), only a server administrator, an administrator of a group holding the game and the creator of the game may. |
 | `payload.config.hidden` | `boolean` | - | Indicates whether the server is hidden on the network. |
 | `payload.config.persistence_periodicity` | `number` | - | Persistence save period in seconds (`0` if periodic saving is disabled). |
 | `payload.config.server_password_set` | `boolean` | - | Indicates whether a server password is set. |
@@ -3504,6 +3583,7 @@ Allows you to modify server configuration settings in real time.
 | `payload.unauthenticated_game_creation_allowed` | `boolean` | No | Allows or disallows game creation by a `BASE` session without an authenticated user. |
 | `payload.unauthenticated_player_join_allowed` | `boolean` | No | Allows or disallows joining a game as a player by a `BASE` session without an authenticated user. |
 | `payload.unauthenticated_observer_join_allowed` | `boolean` | No | Allows or disallows joining a game as an observer by a `BASE` session without an authenticated user. |
+| `payload.participants_visible_to_all` | `boolean` | No | Makes the participants of the games visible to every client (`true`), or only to the server administrators, the administrators of the group of each game and the creator of each game (`false`). |
 | `payload.server_password` | `string` | No | Sets the new general server password. |
 | `payload.hidden` | `boolean` | No | Defines whether the server is hidden on the network. |
 | `payload.persistence_periodicity` | `number` | No | Sets the persistence save period in seconds (`0` to disable periodic saving). |
@@ -3700,13 +3780,13 @@ This table groups together all the error codes defined in the protocol, classifi
 | `GAME_ALREADY_STARTED` | The game has already started (or no longer accepts players). | `GAME_JOIN_RESPONSE`, `GAME_CONTROL_RESPONSE` |
 | `GAME_FINISHED` | The game is already over. | `GAME_PLAYER_ORDER_RESPONSE` |
 | `GAME_FULL` | The maximum number of players or observers has been reached. | `GAME_JOIN_RESPONSE` |
-| `GAME_NOT_FOUND` | The specified part does not exist. | `GAME_JOIN_RESPONSE`, `GAME_LEAVE_RESPONSE`, `GAME_CONTROL_RESPONSE`, `GAME_PLAYER_ORDER_RESPONSE`, `GAME_ACTION_RESPONSE`, `GAME_NEXT_TURN_RESPONSE`, `GROUP_ADD_GAME_RESPONSE`, `GAME_KICK_RESPONSE` |
+| `GAME_NOT_FOUND` | The specified part does not exist. | `GAME_JOIN_RESPONSE`, `GAME_LEAVE_RESPONSE`, `GAME_CONTROL_RESPONSE`, `GAME_PLAYER_ORDER_RESPONSE`, `GAME_ACTION_RESPONSE`, `GAME_NEXT_TURN_RESPONSE`, `GROUP_ADD_GAME_RESPONSE`, `GAME_KICK_RESPONSE`, `GAME_PARTICIPANTS_LIST_RESPONSE` |
 | `GAME_NOT_STARTED` | The part is not in the state required for the action. | `GAME_CONTROL_RESPONSE` |
 | `GAME_NOT_TURN_BASED` | The game is not configured for turn-based play. | `GAME_PLAYER_ORDER_RESPONSE`, `GAME_NEXT_TURN_RESPONSE` |
 | `GAME_PAUSED` | The action is refused because the game is paused. | `GAME_ACTION_RESPONSE` |
 | `GROUP_NOT_FOUND` | The specified group does not exist. | `GAME_LIST_RESPONSE`, `GROUP_ADD_GAME_RESPONSE`, `GROUP_REMOVE_GAME_RESPONSE`, `GROUP_DELETE_RESPONSE`, `GROUP_GAME_LIST_ALL_RESPONSE` |
 | `GAME_NOT_FOUND_IN_GROUP` | The specified part is not present in this group. | `GROUP_REMOVE_GAME_RESPONSE` |
-| `INSUFFICIENT_PERMISSIONS` | Insufficient rights to perform the action. | `GROUP_GAME_LIST_ALL_RESPONSE`, `PLAYER_LIST_ALL_RESPONSE`, `SERVER_CONFIG_GET_RESPONSE`, `SERVER_CONFIG_SET_RESPONSE`, `SERVER_AUDIT_LOG_GET_RESPONSE`, `GAME_KICK_RESPONSE`, *several other responses* |
+| `INSUFFICIENT_PERMISSIONS` | Insufficient rights to perform the action. | `GROUP_GAME_LIST_ALL_RESPONSE`, `PLAYER_LIST_ALL_RESPONSE`, `SERVER_CONFIG_GET_RESPONSE`, `SERVER_CONFIG_SET_RESPONSE`, `SERVER_AUDIT_LOG_GET_RESPONSE`, `GAME_KICK_RESPONSE`, `GAME_PARTICIPANTS_LIST_RESPONSE`, *several other responses* |
 | `PERSISTENCE_ERROR` | An error occurred during a persistence operation. | `SERVER_PERSISTENCE_SAVE_RESPONSE`, `SERVER_PERSISTENCE_RELOAD_RESPONSE` |
 | `INVALID_ACTION` | The requested action is not recognized or refused by logic. | `GAME_CONTROL_RESPONSE`, `GAME_PLAYER_ORDER_RESPONSE`, `GAME_ACTION_RESPONSE` |
 | `INVALID_CREDENTIALS` | Incorrect username or password. | `AUTH_RESPONSE` |

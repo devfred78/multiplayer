@@ -269,6 +269,7 @@ class GameServer:
         "PLAYER_LIST_ALL": AccessLevel.ADMIN,
         "GAME_CREATE": AccessLevel.BASE,
         "GAME_LIST": AccessLevel.BASE,
+        "GAME_PARTICIPANTS_LIST": AccessLevel.BASE,
         "GAME_JOIN": AccessLevel.BASE,
         "GAME_LEAVE": AccessLevel.BASE,
         "GAME_CONTROL": AccessLevel.BASE,
@@ -312,6 +313,7 @@ class GameServer:
         "PLAYER_LIST_ALL": "PLAYER_LIST_ALL_RESPONSE",
         "GAME_CREATE": "GAME_CREATE_RESPONSE",
         "GAME_LIST": "GAME_LIST_RESPONSE",
+        "GAME_PARTICIPANTS_LIST": "GAME_PARTICIPANTS_LIST_RESPONSE",
         "GAME_JOIN": "GAME_JOIN_RESPONSE",
         "GAME_LEAVE": "GAME_LEAVE_RESPONSE",
         "GAME_CONTROL": "GAME_CONTROL_RESPONSE",
@@ -429,6 +431,7 @@ class GameServer:
         self.unauthenticated_game_creation_allowed: bool = True
         self.unauthenticated_player_join_allowed: bool = True
         self.unauthenticated_observer_join_allowed: bool = True
+        self.participants_visible_to_all: bool = False
         self.hidden: bool = False
 
         # Persistence configuration.
@@ -453,6 +456,7 @@ class GameServer:
         self._game_custom_state: Dict[str, Dict[str, Any]] = {}
         self._game_roles: Dict[str, Dict[str, str]] = {}
         self._game_creator_session: Dict[str, str] = {}
+        self._game_creator_user: Dict[str, str] = {}
         self._audit_log: List[Dict[str, Any]] = []
 
         # Runtime state.
@@ -738,6 +742,7 @@ class GameServer:
                 "unauthenticated_game_creation_allowed",
                 "unauthenticated_player_join_allowed",
                 "unauthenticated_observer_join_allowed",
+                "participants_visible_to_all",
                 "hidden",
             ):
                 if isinstance(config.get(field), bool):
@@ -807,6 +812,7 @@ class GameServer:
                 "unauthenticated_game_creation_allowed": self.unauthenticated_game_creation_allowed,
                 "unauthenticated_player_join_allowed": self.unauthenticated_player_join_allowed,
                 "unauthenticated_observer_join_allowed": self.unauthenticated_observer_join_allowed,
+                "participants_visible_to_all": self.participants_visible_to_all,
                 "hidden": self.hidden,
                 "persistence_periodicity": self.persistence_periodicity,
                 "server_hash": self._server_hash,
@@ -1781,6 +1787,8 @@ class GameServer:
         self._game_roles[game.ID] = {}
         self._game_custom_state[game.ID] = {}
         self._game_creator_session[game.ID] = session.session_id
+        if session.user is not None:
+            self._game_creator_user[game.ID] = session.user.username
         if group is not None:
             group.add_game(game)
         return "GAME_CREATE_RESPONSE", {
@@ -1822,6 +1830,71 @@ class GameServer:
         else:
             games = [self._game_summary(game) for game in self._games.values()]
         return "GAME_LIST_RESPONSE", {"success": True, "games": games}
+
+    def _handle_game_participants_list(
+        self, session: ClientSession, payload: Dict[str, Any]
+    ) -> Tuple[str, Dict[str, Any]]:
+        """Handles a ``GAME_PARTICIPANTS_LIST`` request.
+
+        The participants of a game are visible to every client when the
+        ``participants_visible_to_all`` setting is enabled. Otherwise, only a
+        server administrator, an administrator of a group holding the game,
+        and the creator of the game may read them.
+
+        Args:
+            session (ClientSession): The originating session.
+            payload (Dict[str, Any]): The request payload.
+
+        Returns:
+            Tuple[str, Dict[str, Any]]: The response type and payload.
+        """
+        game = self._games.get(payload.get("game_id"))
+        if game is None:
+            return "GAME_PARTICIPANTS_LIST_RESPONSE", {
+                "success": False,
+                "error_code": "GAME_NOT_FOUND",
+                "message": "Game not found.",
+            }
+        if not (
+            self.participants_visible_to_all
+            or self._can_control_game(session, game.ID)
+            or self._is_game_creator(session, game.ID)
+        ):
+            return "GAME_PARTICIPANTS_LIST_RESPONSE", {
+                "success": False,
+                "error_code": "INSUFFICIENT_PERMISSIONS",
+                "message": "The participants of this game are not visible.",
+            }
+        participants = []
+        for player_id, role in self._game_roles.get(game.ID, {}).items():
+            player = self._players.get(player_id)
+            if player is None:
+                continue
+            participants.append({"player_id": player.ID, "name": player.name, "role": role})
+        return "GAME_PARTICIPANTS_LIST_RESPONSE", {
+            "success": True,
+            "game_id": game.ID,
+            "participants": participants,
+        }
+
+    def _is_game_creator(self, session: ClientSession, game_id: str) -> bool:
+        """Checks whether a session created a given game.
+
+        A game is attributed to the session which created it and, when that
+        session was authenticated, to its user, so that the user is still
+        recognized as the creator from another session.
+
+        Args:
+            session (ClientSession): The originating session.
+            game_id (str): The game ID concerned.
+
+        Returns:
+            bool: ``True`` if the session or its user created the game.
+        """
+        if self._game_creator_session.get(game_id) == session.session_id:
+            return True
+        creator = self._game_creator_user.get(game_id)
+        return creator is not None and session.user is not None and session.user.username == creator
 
     async def _handle_game_join(
         self, session: ClientSession, payload: Dict[str, Any]
@@ -2788,6 +2861,7 @@ class GameServer:
                 "unauthenticated_game_creation_allowed": self.unauthenticated_game_creation_allowed,
                 "unauthenticated_player_join_allowed": self.unauthenticated_player_join_allowed,
                 "unauthenticated_observer_join_allowed": self.unauthenticated_observer_join_allowed,
+                "participants_visible_to_all": self.participants_visible_to_all,
                 "hidden": self.hidden,
                 "persistence_periodicity": self.persistence_periodicity,
                 "server_password_set": self._server_hash is not None,
@@ -2870,6 +2944,16 @@ class GameServer:
                 }
             self.unauthenticated_observer_join_allowed = value
             updated.append("unauthenticated_observer_join_allowed")
+        if "participants_visible_to_all" in payload:
+            value = payload["participants_visible_to_all"]
+            if not isinstance(value, bool):
+                return "SERVER_CONFIG_SET_RESPONSE", {
+                    "success": False,
+                    "error_code": "INVALID_DATA",
+                    "message": "participants_visible_to_all must be a boolean.",
+                }
+            self.participants_visible_to_all = value
+            updated.append("participants_visible_to_all")
         if "hidden" in payload:
             value = payload["hidden"]
             if not isinstance(value, bool):

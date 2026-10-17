@@ -474,6 +474,7 @@ Exemples :
 
 - créer une partie ;
 - lister les parties disponibles ;
+- lister les joueurs et les observateurs d'une partie ;
 - rejoindre une partie comme joueur ;
 - rejoindre une partie comme observateur ;
 - quitter une partie ;
@@ -1617,6 +1618,81 @@ du serveur n'ont pas besoin de le fournir.
 |---|---|
 | `GROUP_NOT_FOUND` | L'identifiant de groupe spécifié n'existe pas. |
 | `INSUFFICIENT_PERMISSIONS` | Le niveau d'accès du client ne permet pas de lister les parties. |
+
+---
+
+### Liste des participants d'une partie
+
+**Direction :** Client → Serveur  
+**Transport :** TCP  
+**Encodage :** JSON UTF-8  
+**Niveau d'accès minimal :** `BASE`
+
+Récupère les joueurs et les observateurs d'une partie. Lorsque le réglage
+serveur `participants_visible_to_all` est activé (voir `SERVER_CONFIG_SET`),
+tout client peut utiliser cette requête. Dans le cas contraire, elle est
+réservée à un administrateur du serveur (niveau `ADMIN`), à un administrateur
+d'un groupe contenant la partie (niveau `GROUP_ADMIN`) et au créateur de la
+partie, c'est-à-dire la session qui l'a créée ou, si cette session était
+authentifiée, le même utilisateur depuis n'importe quelle session.
+
+#### Exemple
+```json
+{
+  "type": "GAME_PARTICIPANTS_LIST",
+  "version": 2,
+  "payload": {
+    "game_id": "game_uuid"
+  }
+}
+```
+#### Réponse (`GAME_PARTICIPANTS_LIST_RESPONSE`)
+```json
+{
+  "type": "GAME_PARTICIPANTS_LIST_RESPONSE",
+  "version": 2,
+  "payload": {
+    "success": true,
+    "game_id": "game_uuid",
+    "participants": [
+      {
+        "player_id": "player_uuid",
+        "name": "Alice",
+        "role": "PLAYER"
+      }
+    ]
+  }
+}
+```
+#### Champs (`GAME_PARTICIPANTS_LIST`)
+
+| Champ | Type JSON | Obligatoire | Description |
+|---|---|---:|---|
+| `type` | `string` | Oui | `"GAME_PARTICIPANTS_LIST"` |
+| `version` | `number` | Oui | `2` |
+| `payload.game_id` | `string` | Oui | UUID de la partie dont les participants sont demandés. |
+
+#### Champs (`GAME_PARTICIPANTS_LIST_RESPONSE`)
+
+| Champ | Type JSON | Obligatoire | Description |
+|---|---|---:|---|
+| `type` | `string` | Oui | `"GAME_PARTICIPANTS_LIST_RESPONSE"` |
+| `version` | `number` | Oui | `2` |
+| `payload.success` | `boolean` | Oui | `true` si la requête a réussi. |
+| `payload.game_id` | `string` | Non | UUID de la partie (en cas de succès). |
+| `payload.participants` | `array` | Non | Joueurs et observateurs de la partie (en cas de succès). |
+| `payload.participants[].player_id` | `string` | - | UUID du joueur. |
+| `payload.participants[].name` | `string` | - | Nom du joueur. |
+| `payload.participants[].role` | `string` | - | Rôle du joueur dans la partie (`PLAYER` ou `OBSERVER`). |
+| `payload.error_code` | `string` | Non | Code d'erreur en cas d'échec (voir tableau ci-dessous). |
+| `payload.message` | `string` | Non | Message d'information ou d'erreur. |
+
+#### Codes d'erreur (`GAME_PARTICIPANTS_LIST_RESPONSE`)
+
+| Code | Description |
+|---|---|
+| `GAME_NOT_FOUND` | La partie spécifiée n'existe pas. |
+| `INSUFFICIENT_PERMISSIONS` | Les participants ne sont pas visibles par tous, et le client n'est ni administrateur du serveur, ni administrateur d'un groupe contenant la partie, ni créateur de la partie. |
 
 ---
 
@@ -3018,6 +3094,7 @@ Cette section décrit les messages réservés aux administrateurs pour la gestio
 | Comptes utilisateur | Supprimer un compte | `USER_DELETE` | `ADMIN` | Globale |
 | Comptes utilisateur | Lister tous les comptes | `USER_LIST_ALL` | `ADMIN` | Globale |
 | Joueurs | Lister tous les joueurs | `PLAYER_LIST_ALL` | `ADMIN` | Globale |
+| Parties | Lister les participants d'une partie | `GAME_PARTICIPANTS_LIST` | `ADMIN`, `GROUP_ADMIN` du groupe, `BASE` (créateur), ou `BASE` si `participants_visible_to_all` est activé | Par partie ou par groupe |
 | Parties | Exclure un joueur ou un observateur | `GAME_KICK` | `ADMIN` | Globale ou par groupe |
 | Groupes | Créer un groupe | `GROUP_CREATE` | `ADMIN` | Globale |
 | Groupes | Lister les groupes | `GROUP_LIST` | `BASE` ou supérieur | Globale |
@@ -3368,6 +3445,7 @@ Récupère la configuration courante du serveur. Les valeurs sensibles ne sont j
       "unauthenticated_game_creation_allowed": true,
       "unauthenticated_player_join_allowed": true,
       "unauthenticated_observer_join_allowed": true,
+      "participants_visible_to_all": false,
       "hidden": false,
       "persistence_periodicity": 0,
       "server_password_set": true
@@ -3387,6 +3465,7 @@ Récupère la configuration courante du serveur. Les valeurs sensibles ne sont j
 | `payload.config.unauthenticated_game_creation_allowed` | `boolean` | - | Indique si les clients de niveau `BASE` sans utilisateur authentifié peuvent créer des parties. |
 | `payload.config.unauthenticated_player_join_allowed` | `boolean` | - | Indique si les clients de niveau `BASE` sans utilisateur authentifié peuvent rejoindre des parties comme joueurs. |
 | `payload.config.unauthenticated_observer_join_allowed` | `boolean` | - | Indique si les clients de niveau `BASE` sans utilisateur authentifié peuvent rejoindre des parties comme observateurs. |
+| `payload.config.participants_visible_to_all` | `boolean` | - | Indique si tout client peut lister les participants d'une partie (`GAME_PARTICIPANTS_LIST`). À `false` (par défaut), seuls un administrateur du serveur, un administrateur d'un groupe contenant la partie et le créateur de la partie le peuvent. |
 | `payload.config.hidden` | `boolean` | - | Indique si le serveur est masqué sur le réseau. |
 | `payload.config.persistence_periodicity` | `number` | - | Période de sauvegarde de la persistance en secondes (`0` si la sauvegarde périodique est désactivée). |
 | `payload.config.server_password_set` | `boolean` | - | Indique si un mot de passe serveur est défini. |
@@ -3688,6 +3767,7 @@ Permet de modifier les paramètres de configuration du serveur en temps réel.
 | `payload.unauthenticated_game_creation_allowed` | `boolean` | Non | Autorise ou interdit la création de parties par une session `BASE` sans utilisateur authentifié. |
 | `payload.unauthenticated_player_join_allowed` | `boolean` | Non | Autorise ou interdit à une session `BASE` sans utilisateur authentifié de rejoindre une partie comme joueur. |
 | `payload.unauthenticated_observer_join_allowed` | `boolean` | Non | Autorise ou interdit à une session `BASE` sans utilisateur authentifié de rejoindre une partie comme observateur. |
+| `payload.participants_visible_to_all` | `boolean` | Non | Rend les participants des parties visibles par tous les clients (`true`), ou uniquement par les administrateurs du serveur, les administrateurs du groupe de chaque partie et le créateur de chaque partie (`false`). |
 | `payload.server_password` | `string` | Non | Définit le nouveau mot de passe général du serveur. |
 | `payload.hidden` | `boolean` | Non | Définit si le serveur est masqué sur le réseau. |
 | `payload.persistence_periodicity` | `number` | Non | Définit la période de sauvegarde de la persistance en secondes (`0` pour désactiver la sauvegarde périodique). |
@@ -3902,13 +3982,13 @@ Ce tableau regroupe l'ensemble des codes d'erreur définis dans le protocole, cl
 | `GAME_ALREADY_STARTED` | La partie a déjà commencé (ou n'accepte plus de joueurs). | `GAME_JOIN_RESPONSE`, `GAME_CONTROL_RESPONSE` |
 | `GAME_FINISHED` | La partie est déjà terminée. | `GAME_PLAYER_ORDER_RESPONSE` |
 | `GAME_FULL` | Le nombre maximum de joueurs ou d'observateurs est atteint. | `GAME_JOIN_RESPONSE` |
-| `GAME_NOT_FOUND` | La partie spécifiée n'existe pas. | `GAME_JOIN_RESPONSE`, `GAME_LEAVE_RESPONSE`, `GAME_CONTROL_RESPONSE`, `GAME_PLAYER_ORDER_RESPONSE`, `GAME_ACTION_RESPONSE`, `GAME_NEXT_TURN_RESPONSE`, `GROUP_ADD_GAME_RESPONSE`, `GAME_KICK_RESPONSE` |
+| `GAME_NOT_FOUND` | La partie spécifiée n'existe pas. | `GAME_JOIN_RESPONSE`, `GAME_LEAVE_RESPONSE`, `GAME_CONTROL_RESPONSE`, `GAME_PLAYER_ORDER_RESPONSE`, `GAME_ACTION_RESPONSE`, `GAME_NEXT_TURN_RESPONSE`, `GROUP_ADD_GAME_RESPONSE`, `GAME_KICK_RESPONSE`, `GAME_PARTICIPANTS_LIST_RESPONSE` |
 | `GAME_NOT_STARTED` | La partie n'est pas dans l'état requis pour l'action. | `GAME_CONTROL_RESPONSE` |
 | `GAME_NOT_TURN_BASED` | La partie n'est pas configurée pour le tour par tour. | `GAME_PLAYER_ORDER_RESPONSE`, `GAME_NEXT_TURN_RESPONSE` |
 | `GAME_PAUSED` | L'action est refusée car la partie est en pause. | `GAME_ACTION_RESPONSE` |
 | `GROUP_NOT_FOUND` | Le groupe spécifié n'existe pas. | `GAME_LIST_RESPONSE`, `GROUP_ADD_GAME_RESPONSE`, `GROUP_REMOVE_GAME_RESPONSE`, `GROUP_DELETE_RESPONSE`, `GROUP_GAME_LIST_ALL_RESPONSE` |
 | `GAME_NOT_FOUND_IN_GROUP` | La partie spécifiée n'est pas présente dans ce groupe. | `GROUP_REMOVE_GAME_RESPONSE` |
-| `INSUFFICIENT_PERMISSIONS` | Droits insuffisants pour effectuer l'action. | `GROUP_GAME_LIST_ALL_RESPONSE`, `PLAYER_LIST_ALL_RESPONSE`, `SERVER_CONFIG_GET_RESPONSE`, `SERVER_CONFIG_SET_RESPONSE`, `SERVER_AUDIT_LOG_GET_RESPONSE`, `GAME_KICK_RESPONSE`, *plusieurs autres réponses* |
+| `INSUFFICIENT_PERMISSIONS` | Droits insuffisants pour effectuer l'action. | `GROUP_GAME_LIST_ALL_RESPONSE`, `PLAYER_LIST_ALL_RESPONSE`, `SERVER_CONFIG_GET_RESPONSE`, `SERVER_CONFIG_SET_RESPONSE`, `SERVER_AUDIT_LOG_GET_RESPONSE`, `GAME_KICK_RESPONSE`, `GAME_PARTICIPANTS_LIST_RESPONSE`, *plusieurs autres réponses* |
 | `PERSISTENCE_ERROR` | Une erreur est survenue lors d'une opération de persistance. | `SERVER_PERSISTENCE_SAVE_RESPONSE`, `SERVER_PERSISTENCE_RELOAD_RESPONSE` |
 | `INVALID_ACTION` | L'action demandée n'est pas reconnue ou refusée par la logique. | `GAME_CONTROL_RESPONSE`, `GAME_PLAYER_ORDER_RESPONSE`, `GAME_ACTION_RESPONSE` |
 | `INVALID_CREDENTIALS` | Nom d'utilisateur ou mot de passe incorrect. | `AUTH_RESPONSE` |

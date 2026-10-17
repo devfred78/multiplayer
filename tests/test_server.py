@@ -642,3 +642,156 @@ def test_save_persistence_when_disabled():
     res = _dispatch(server, admin_session, "SERVER_PERSISTENCE_SAVE")
     assert res["payload"]["success"] is False
     assert res["payload"]["error_code"] == "PERSISTENCE_ERROR"
+
+
+def _make_named_session(server, session_id, level=AccessLevel.BASE):
+    writer = FakeWriter()
+    session = ClientSession(session_id, writer, ("127.0.0.1", 12345))
+    session.access_level = level
+    server._sessions[session.session_id] = session
+    return session
+
+
+def _game_with_participant(server):
+    creator = _make_named_session(server, "creator-session")
+    _dispatch(server, creator, "PLAYER_CREATE", {"name": "Creator", "is_default": True})
+    created = _dispatch(server, creator, "GAME_CREATE", {"name": "Visible game"})
+    game_id = created["payload"]["game_id"]
+    joiner = _make_named_session(server, "joiner-session")
+    _dispatch(server, joiner, "PLAYER_CREATE", {"name": "Bob", "is_default": True})
+    _dispatch(server, joiner, "GAME_JOIN", {"game_id": game_id, "role": "OBSERVER"})
+    return creator, game_id
+
+
+def test_participants_visibility_defaults_to_disabled():
+    server = GameServer()
+    admin = _make_named_session(server, "admin-session", AccessLevel.ADMIN)
+    config = _dispatch(server, admin, "SERVER_CONFIG_GET")
+    assert config["payload"]["config"]["participants_visible_to_all"] is False
+
+
+def test_participants_hidden_from_other_clients_by_default():
+    server = GameServer()
+    _, game_id = _game_with_participant(server)
+    other = _make_named_session(server, "other-session", AccessLevel.GROUP_ADMIN)
+
+    denied = _dispatch(server, other, "GAME_PARTICIPANTS_LIST", {"game_id": game_id})
+    assert denied["type"] == "GAME_PARTICIPANTS_LIST_RESPONSE"
+    assert denied["payload"]["success"] is False
+    assert denied["payload"]["error_code"] == "INSUFFICIENT_PERMISSIONS"
+
+
+def test_participants_visible_to_creator_and_admin():
+    server = GameServer()
+    creator, game_id = _game_with_participant(server)
+    admin = _make_named_session(server, "admin-session", AccessLevel.ADMIN)
+
+    for session in (creator, admin):
+        listed = _dispatch(server, session, "GAME_PARTICIPANTS_LIST", {"game_id": game_id})
+        assert listed["payload"]["success"] is True
+        assert listed["payload"]["game_id"] == game_id
+        assert [
+            (item["name"], item["role"]) for item in listed["payload"]["participants"]
+        ] == [("Bob", "OBSERVER")]
+
+
+def test_participants_visible_to_creator_user_from_another_session():
+    server = GameServer()
+    user = User("participants_creator", "secret")
+    server._users[user.username] = user
+    server._players[user.player.ID] = user.player
+    try:
+        first = _make_named_session(server, "first-session", AccessLevel.PLAYER)
+        first.user = user
+        created = _dispatch(server, first, "GAME_CREATE", {"name": "User game"})
+        game_id = created["payload"]["game_id"]
+
+        second = _make_named_session(server, "second-session", AccessLevel.PLAYER)
+        second.user = user
+        listed = _dispatch(server, second, "GAME_PARTICIPANTS_LIST", {"game_id": game_id})
+        assert listed["payload"]["success"] is True
+        assert listed["payload"]["participants"] == []
+    finally:
+        User._existing_usernames.discard("participants_creator")
+
+
+def test_participants_visible_to_all_when_enabled():
+    server = GameServer()
+    _, game_id = _game_with_participant(server)
+    admin = _make_named_session(server, "admin-session", AccessLevel.ADMIN)
+    updated = _dispatch(
+        server, admin, "SERVER_CONFIG_SET", {"participants_visible_to_all": True}
+    )
+    assert "participants_visible_to_all" in updated["payload"]["updated_fields"]
+    assert server.participants_visible_to_all is True
+
+    guest = _make_named_session(server, "guest-session")
+    listed = _dispatch(server, guest, "GAME_PARTICIPANTS_LIST", {"game_id": game_id})
+    assert listed["payload"]["success"] is True
+    assert [item["name"] for item in listed["payload"]["participants"]] == ["Bob"]
+
+
+def test_participants_visibility_rejects_invalid_value():
+    server = GameServer()
+    admin = _make_named_session(server, "admin-session", AccessLevel.ADMIN)
+    rejected = _dispatch(
+        server, admin, "SERVER_CONFIG_SET", {"participants_visible_to_all": "yes"}
+    )
+    assert rejected["payload"]["success"] is False
+    assert rejected["payload"]["error_code"] == "INVALID_DATA"
+    assert server.participants_visible_to_all is False
+
+
+def test_participants_list_unknown_game():
+    server = GameServer()
+    session = _make_named_session(server, "any-session", AccessLevel.ADMIN)
+    missing = _dispatch(server, session, "GAME_PARTICIPANTS_LIST", {"game_id": "unknown"})
+    assert missing["payload"]["error_code"] == "GAME_NOT_FOUND"
+
+
+def test_participants_visibility_persists_across_restart(tmp_path):
+    path = tmp_path / "server_participants_visibility.json"
+
+    async def exercise():
+        first = GameServer(port=0, persistence_mode=SaveFormat.JSON, persistence_path=path)
+        await first.start()
+        first.participants_visible_to_all = True
+        await first.stop()
+
+        second = GameServer(port=0, persistence_mode=SaveFormat.JSON, persistence_path=path)
+        await second.start()
+        try:
+            assert second.participants_visible_to_all is True
+        finally:
+            await second.stop()
+
+    asyncio.run(exercise())
+
+
+def test_participants_visible_to_an_administrator_of_the_group_of_the_game():
+    server = GameServer()
+    _, game_id = _game_with_participant(server)
+    group = GameGroup("Administered group")
+    other_group = GameGroup("Other group")
+    server._groups[group.ID] = group
+    server._groups[other_group.ID] = other_group
+    group.add_game(server._games[game_id])
+    group_admin = User("participants_group_admin", "secret")
+    other_admin = User("participants_other_group_admin", "secret")
+    try:
+        group_admin.groups_id.append(group.ID)
+        other_admin.groups_id.append(other_group.ID)
+
+        allowed = _make_named_session(server, "group-admin-session", AccessLevel.GROUP_ADMIN)
+        allowed.user = group_admin
+        listed = _dispatch(server, allowed, "GAME_PARTICIPANTS_LIST", {"game_id": game_id})
+        assert listed["payload"]["success"] is True
+        assert [item["name"] for item in listed["payload"]["participants"]] == ["Bob"]
+
+        denied = _make_named_session(server, "other-admin-session", AccessLevel.GROUP_ADMIN)
+        denied.user = other_admin
+        refused = _dispatch(server, denied, "GAME_PARTICIPANTS_LIST", {"game_id": game_id})
+        assert refused["payload"]["error_code"] == "INSUFFICIENT_PERMISSIONS"
+    finally:
+        User._existing_usernames.discard("participants_group_admin")
+        User._existing_usernames.discard("participants_other_group_admin")

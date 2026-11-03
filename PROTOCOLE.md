@@ -394,6 +394,8 @@ The current access level is retained until one of the following events:
 
 Server persistence does not remember the current access level of clients. When a client reconnects, it starts a new session at the `OPEN` level. When persistence is enabled, server configuration changes made through `SERVER_CONFIG_SET` are also saved and restored, including the server name, access policies, visibility, and server password hash.
 
+The participation of a player in a game depends on the kind of player. A guest player, created by `PLAYER_CREATE`, only exists for its session: it leaves its games when the connection closes. The player of a user account stays in its games when the connection closes, even after a `USER_LOGOUT`: the user finds them again by authenticating from any later session, and that session then receives the notifications of these games. It leaves a game through `GAME_LEAVE`, when it is kicked, or when its account is deleted. When persistence is enabled, the players and the observers of the games are saved with their role and restored at startup, as well as the user account which created each game, which therefore keeps the right to control it. Only the players of user accounts are restored, the guest players being bound to sessions that no longer exist.
+
 ### Query access control
 
 Each request defines a minimum access level.

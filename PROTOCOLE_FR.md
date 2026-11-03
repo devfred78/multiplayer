@@ -395,6 +395,8 @@ Le niveau d’accès courant est conservé jusqu’à l’un des événements su
 
 La persistance du serveur ne mémorise pas le niveau d’accès courant des clients. Lorsqu’un client se reconnecte, il commence une nouvelle session au niveau `OPEN`. Lorsque la persistance est activée, les changements de configuration effectués via `SERVER_CONFIG_SET` sont également sauvegardés et restaurés, notamment le nom du serveur, les règles d’accès, la visibilité et le hash du mot de passe serveur.
 
+La participation d’un joueur à une partie dépend de sa nature. Un joueur invité, créé par `PLAYER_CREATE`, n’existe que pour sa session : il quitte ses parties à la fermeture de la connexion. Le joueur d’un compte utilisateur reste dans ses parties à la fermeture de la connexion, même après un `USER_LOGOUT` : l’utilisateur les retrouve en s’authentifiant depuis n’importe quelle session ultérieure, qui reçoit alors les notifications de ces parties. Il quitte une partie par `GAME_LEAVE`, lorsqu’il en est exclu, ou lorsque son compte est supprimé. Lorsque la persistance est activée, les joueurs et les observateurs des parties sont sauvegardés avec leur rôle et restaurés au démarrage, de même que le compte utilisateur ayant créé chaque partie, qui conserve donc le droit de la contrôler. Seuls les joueurs des comptes utilisateurs sont restaurés, les joueurs invités étant liés à des sessions qui n’existent plus.
+
 ### Contrôle d’accès aux requêtes
 
 Chaque requête définit un niveau d’accès minimal.

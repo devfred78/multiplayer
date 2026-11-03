@@ -765,8 +765,47 @@ class GameServer:
             for user in self._save.load(User):
                 self._users[user.username] = user
                 self._players[user.player.ID] = user.player
+            self._restore_game_participants()
+            creators = config.get("game_creators")
+            if isinstance(creators, dict):
+                self._game_creator_user = {
+                    game_id: username
+                    for game_id, username in creators.items()
+                    if game_id in self._games and username in self._users
+                }
         except MultiplayerError:
             logger.exception("Failed to load persistent data.")
+
+    def _restore_game_participants(self) -> None:
+        """Rebuilds the participants of the games restored from the save file.
+
+        A save file stores a copy of every player and observer of a game, so
+        each copy is replaced by the player of the same ID known by the
+        server, keeping the order of the players, which gives the turns. Only
+        the players of a user account are kept: a guest player belonged to a
+        session that no longer exists. The role of each kept participant is
+        recorded, so that it can be listed, leave the game or be kicked.
+        """
+        persistent_ids = self._persistent_player_ids()
+        for game in self._games.values():
+            roles: Dict[str, str] = {}
+            players: List[Player] = []
+            observers: List[Player] = []
+            for copies, kept, role in (
+                (game.players, players, "PLAYER"),
+                (game.observers, observers, "OBSERVER"),
+            ):
+                for copy in copies:
+                    player = self._players.get(copy.ID)
+                    if player is None or player.ID not in persistent_ids or player.ID in roles:
+                        continue
+                    kept.append(player)
+                    roles[player.ID] = role
+            # The restored lists are replaced in place, as the save layer does:
+            # joining again would check the passwords and the capacities.
+            game._players = players
+            game._observers = observers
+            self._game_roles[game.ID] = roles
 
     def _share_group_games(self, group: GameGroup) -> None:
         """Makes a restored group hold the games known by the server.
@@ -816,6 +855,11 @@ class GameServer:
                 "hidden": self.hidden,
                 "persistence_periodicity": self.persistence_periodicity,
                 "server_hash": self._server_hash,
+                "game_creators": {
+                    game_id: username
+                    for game_id, username in self._game_creator_user.items()
+                    if game_id in self._games
+                },
             })
             self._save.flush()
         except MultiplayerError:
@@ -1094,7 +1138,12 @@ class GameServer:
             pass
 
     def _remove_session_players_from_game(self, session: ClientSession, game_id: str) -> None:
-        """Removes every session player from a game on disconnection.
+        """Removes the guest players of a session from a game on disconnection.
+
+        A guest player only exists for the session that created it, so it
+        leaves its games with the connection. The player of a user account
+        stays in its games: the user finds them again from any later session,
+        including after a restart of a server with persistence enabled.
 
         Args:
             session (ClientSession): The disconnecting session.
@@ -1104,8 +1153,9 @@ class GameServer:
         if game is None:
             return
         roles = self._game_roles.get(game_id, {})
+        persistent_ids = self._persistent_player_ids()
         for player_id in list(session.players):
-            if player_id not in roles:
+            if player_id not in roles or player_id in persistent_ids:
                 continue
             try:
                 if roles[player_id] == "OBSERVER":
@@ -1116,6 +1166,33 @@ class GameServer:
                 pass
             roles.pop(player_id, None)
         session.joined_games.discard(game_id)
+
+    def _persistent_player_ids(self) -> Set[str]:
+        """Returns the IDs of the players linked to a user account.
+
+        Returns:
+            Set[str]: The IDs of the persistent players.
+        """
+        return {user.player.ID for user in self._users.values()}
+
+    def _remove_player_from_games(self, player_id: str) -> None:
+        """Removes a player from every game it takes part in.
+
+        Args:
+            player_id (str): The ID of the player to remove.
+        """
+        for game_id, roles in self._game_roles.items():
+            role = roles.pop(player_id, None)
+            game = self._games.get(game_id)
+            if role is None or game is None:
+                continue
+            try:
+                if role == "OBSERVER":
+                    game.remove_observer(player_id)
+                else:
+                    game.remove_player(player_id)
+            except PlayerNotFoundInGameError:
+                pass
 
     # ------------------------------------------------------------------ #
     # Broadcasting and notifications
@@ -1265,6 +1342,13 @@ class GameServer:
         session.access_level = _ROLE_TO_ACCESS.get(user.role, AccessLevel.PLAYER)
         session.players[user.player.ID] = user.player
         self._players[user.player.ID] = user.player
+        # The player of the account stays in its games between connections:
+        # the session takes them back, to be notified of their updates.
+        session.joined_games.update(
+            game_id
+            for game_id, roles in self._game_roles.items()
+            if user.player.ID in roles
+        )
         return "AUTH_RESPONSE", {
             "success": True,
             "access_level": session.access_level.name,
@@ -1596,6 +1680,12 @@ class GameServer:
             }
         self._users.pop(username, None)
         self._players.pop(user.player.ID, None)
+        # The player of an account outlives its connections in its games, so
+        # it must leave them with the account.
+        self._remove_player_from_games(user.player.ID)
+        for game_id, creator in list(self._game_creator_user.items()):
+            if creator == username:
+                self._game_creator_user.pop(game_id, None)
         User._existing_usernames.discard(username)
         self._audit("USER_DELETE", session, username)
         return "USER_DELETE_RESPONSE", {
@@ -2107,10 +2197,10 @@ class GameServer:
             game_id (str): The game ID concerned.
 
         Returns:
-            bool: ``True`` if the session created the game or has sufficient
-            administrative rights.
+            bool: ``True`` if the session or its user created the game, or if
+            the session has sufficient administrative rights.
         """
-        if self._game_creator_session.get(game_id) == session.session_id:
+        if self._is_game_creator(session, game_id):
             return True
         if session.access_level >= AccessLevel.ADMIN:
             return True

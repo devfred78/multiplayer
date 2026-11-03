@@ -795,3 +795,152 @@ def test_participants_visible_to_an_administrator_of_the_group_of_the_game():
     finally:
         User._existing_usernames.discard("participants_group_admin")
         User._existing_usernames.discard("participants_other_group_admin")
+
+
+def _register_user(server, username, password="secret"):
+    user = User(username, password)
+    server._users[user.username] = user
+    server._players[user.player.ID] = user.player
+    return user
+
+
+def _login(server, session_id, username, password="secret"):
+    session = _make_named_session(server, session_id)
+    response = _dispatch(
+        server, session, "USER_LOGIN", {"username": username, "password": password}
+    )
+    assert response["payload"]["success"] is True
+    return session
+
+
+def _game_with_account_and_guest(server, username):
+    """Creates a game joined by a user account as player and a guest as observer."""
+    user = _register_user(server, username)
+    account = _login(server, "account-session", username)
+    created = _dispatch(server, account, "GAME_CREATE", {"name": "Kept game", "max_players": 2})
+    game_id = created["payload"]["game_id"]
+    joined = _dispatch(server, account, "GAME_JOIN", {"game_id": game_id, "role": "PLAYER"})
+    assert joined["payload"]["success"] is True
+    guest = _make_named_session(server, "guest-session")
+    _dispatch(server, guest, "PLAYER_CREATE", {"name": "Guest", "is_default": True})
+    watched = _dispatch(server, guest, "GAME_JOIN", {"game_id": game_id, "role": "OBSERVER"})
+    assert watched["payload"]["success"] is True
+    return user, account, guest, game_id
+
+
+def test_disconnection_only_removes_the_guest_players_from_their_games():
+    server = GameServer()
+    try:
+        user, account, guest, game_id = _game_with_account_and_guest(server, "kept_player")
+
+        for session in (account, guest):
+            server._close_session(session)
+            server._sessions.pop(session.session_id, None)
+
+        game = server._games[game_id]
+        assert server._game_roles[game_id] == {user.player.ID: "PLAYER"}
+        assert [player.ID for player in game.players] == [user.player.ID]
+        assert game.observers == ()
+    finally:
+        User._existing_usernames.discard("kept_player")
+
+
+def test_a_logged_out_account_player_stays_in_its_games_on_disconnection():
+    server = GameServer()
+    try:
+        user, account, _, game_id = _game_with_account_and_guest(server, "logged_out_player")
+        _dispatch(server, account, "USER_LOGOUT")
+
+        server._close_session(account)
+
+        assert server._game_roles[game_id].get(user.player.ID) == "PLAYER"
+    finally:
+        User._existing_usernames.discard("logged_out_player")
+
+
+def test_login_takes_back_the_games_of_the_account():
+    server = GameServer()
+    try:
+        user, account, _, game_id = _game_with_account_and_guest(server, "returning_player")
+        server._close_session(account)
+        server._sessions.pop(account.session_id, None)
+
+        returning = _login(server, "returning-session", "returning_player")
+
+        assert game_id in returning.joined_games
+        left = _dispatch(
+            server, returning, "GAME_LEAVE", {"game_id": game_id, "player_id": user.player.ID}
+        )
+        assert left["payload"]["success"] is True
+        assert user.player.ID not in server._game_roles[game_id]
+        assert game_id not in returning.joined_games
+    finally:
+        User._existing_usernames.discard("returning_player")
+
+
+def test_deleting_an_account_removes_its_player_from_its_games():
+    server = GameServer()
+    try:
+        user, account, _, game_id = _game_with_account_and_guest(server, "deleted_player")
+        server._close_session(account)
+        server._sessions.pop(account.session_id, None)
+        admin = _make_named_session(server, "admin-session", AccessLevel.ADMIN)
+
+        deleted = _dispatch(server, admin, "USER_DELETE", {"username": "deleted_player"})
+
+        assert deleted["payload"]["success"] is True
+        assert user.player.ID not in server._game_roles[game_id]
+        assert server._games[game_id].players == ()
+        assert game_id not in server._game_creator_user
+    finally:
+        User._existing_usernames.discard("deleted_player")
+
+
+def test_the_creator_user_controls_its_game_from_another_session():
+    server = GameServer()
+    try:
+        _, account, _, game_id = _game_with_account_and_guest(server, "controlling_creator")
+        server._close_session(account)
+        server._sessions.pop(account.session_id, None)
+
+        returning = _login(server, "returning-session", "controlling_creator")
+        started = _dispatch(
+            server, returning, "GAME_CONTROL", {"game_id": game_id, "action": "START"}
+        )
+
+        assert started["payload"]["success"] is True
+    finally:
+        User._existing_usernames.discard("controlling_creator")
+
+
+@pytest.mark.parametrize("save_format", [SaveFormat.JSON, SaveFormat.SQLITE])
+def test_the_participants_of_the_accounts_survive_a_restart(tmp_path, save_format):
+    path = tmp_path / f"server_participants.{save_format.value}"
+    first = GameServer(persistence_mode=save_format, persistence_path=path)
+    try:
+        user, _, _, game_id = _game_with_account_and_guest(first, "restored_player")
+        # Same order as ``stop``: the connections are closed, then the data saved.
+        for session in list(first._sessions.values()):
+            first._close_session(session)
+        first._sessions.clear()
+        first._save_persistence()
+
+        second = GameServer(persistence_mode=save_format, persistence_path=path)
+        second._load_persistence()
+
+        game = second._games[game_id]
+        assert second._game_roles[game_id] == {user.player.ID: "PLAYER"}
+        assert [player.ID for player in game.players] == [user.player.ID]
+        assert game.players[0] is second._players[user.player.ID]
+        assert game.observers == ()
+        assert second._game_creator_user[game_id] == "restored_player"
+
+        returning = _login(second, "returning-session", "restored_player")
+        assert game_id in returning.joined_games
+        listed = _dispatch(second, returning, "GAME_PARTICIPANTS_LIST", {"game_id": game_id})
+        assert listed["payload"]["success"] is True
+        assert [
+            (item["player_id"], item["role"]) for item in listed["payload"]["participants"]
+        ] == [(user.player.ID, "PLAYER")]
+    finally:
+        User._existing_usernames.discard("restored_player")

@@ -50,9 +50,9 @@ Represents a user account with authentication and role management.
 | `username` | `str` | The account username. | No | - |
 | `hash` | `str` | Hashed password. | No | Automatically generated using `bcrypt`. |
 | `email` | `str` | Email address. | Yes | - |
-| `role` | `PlayerRole` | User's permission level. | Yes | Defaults to `PlayerRole.PLAYER`. |
+| `role` | `UserRole` | User's permission level. | Yes | Defaults to `UserRole.PLAYER`. |
 | `groups_id` | `list[str]` | IDs of groups where the user is admin. | No (but mutable) | Initialized as an empty list; the list itself does not validate group IDs. |
-| `player` | `Player` | Associated `Player` instance. | No (but mutable) | Created with `name=username`. Exists for the user's lifetime. |
+| `players_id` | `list[str]` | IDs of the active `Player` objects (associated with an unfinished game, as player or observer) created during a session in which the user was logged in. | No (but mutable) | Initialized as an empty list. Library users are responsible for removing IDs of players only associated with finished games; when persistence is enabled, the list is cleaned up before each `User` save. |
 
 **Methods:**
 
@@ -97,7 +97,7 @@ Manages a single game session, players, and state transitions.
 
 | Method | Description | Parameters | Raises |
 |--------|-------------|------------|--------|
-| `change_password` | Changes the player password. | `new_password (str)` | - |
+| `change_password` | Changes the game password. | `new_password (str)` | - |
 | `join_game_as_player` | Adds a player to the game. | `player (Player\|str)`, `password (str\|None)` | `PlayerNotFoundError`, `PasswordError`, `GameIsFullError` |
 | `remove_player` | Removes a player. | `player (Player\|str)` | `PlayerNotFoundInGameError` |
 | `join_game_as_observer` | Adds an observer. | `player (Player\|str)`, `password (str\|None)` | `PlayerNotFoundError`, `PasswordError`, `GameIsFullError` |
@@ -142,11 +142,11 @@ Organizes multiple games into a group for parallel management.
 
 ## Enumerations
 
-### PlayerRole
-`multiplayer.PlayerRole`
-- `PLAYER`: Standard player.
+### UserRole
+`multiplayer.UserRole`
+- `PLAYER`: Standard user.
 - `GROUP_ADMIN`: Admin for specific groups (includes `PLAYER` permissions).
-- `SERVER_ADMIN`: Global administrator (includes `GROUP_ADMIN` permissions).
+- `SERVER_ADMIN`: Global administrator (includes `GROUP_ADMIN` permissions for all groups on the server).
 
 ### GameState
 `multiplayer.GameState`
@@ -194,7 +194,7 @@ Handles saving and restoring `Player`, `User`, `Game` and `GameGroup` instances 
 
 | Method | Description | Parameters | Raises |
 |--------|-------------|------------|--------|
-| `save` | Saves or updates an instance in the in-memory buffer (replaces if same class and ID). | `obj (Player\|User\|Game\|GameGroup)` | `SaveError` |
+| `save` | Saves or updates an instance in the in-memory buffer (replaces if same class and ID). Before saving a `User`, cleans its `players_id` list of players no longer associated with any unfinished game. | `obj (Player\|User\|Game\|GameGroup)` | `SaveError` |
 | `load` | Returns the list of all stored instances of a given class. | `target (str\|type)` | `SaveError` |
 | `reset` | Clears the buffer and rewrites the file with an empty valid structure. | - | `SaveError` |
 | `flush` | Persists the in-memory buffer to the save file. | - | `SaveError` |
@@ -228,7 +228,7 @@ Manages the server side of the multiplayer protocol. It handles client connectio
 | `persistence_mode` | `SaveFormat \| None` | Persistence storage format. | No | `None` |
 | `persistence_path` | `Path \| None` | Path to the persistence file. | No | `None` |
 | `persistence_periodicity` | `int` | Seconds between cyclic persistence saves (0 to disable). | No | `0` |
-| `garbage_collection_periodicity` | `int` | Seconds between orphan player cleanups. | No | `900` |
+| `garbage_collection_periodicity` | `int` | Seconds between cleanups of players only associated with finished games (players with no game are kept). | No | `900` |
 
 **Attributes & Properties:**
 
@@ -271,7 +271,7 @@ Client side for connecting to and communicating with a `GameServer`.
 | `use_tls` | `bool` | Whether TLS is enabled. | Yes |
 | `tls_ca_path` | `Path \| None` | TLS validation certificate path, or `None` to use the system trust store. | No |
 | `is_connected` | `bool` | Whether the client is currently connected. | No |
-| `session_player` | `Player \| None` | The default player associated with the current session. | No |
+| `session_user` | `User \| None` | The user associated with the current session. | No |
 
 **Methods:**
 
@@ -335,6 +335,7 @@ All exceptions inherit from `multiplayer.exceptions.MultiplayerError`.
 | `MultiplayerError` | Base class for all multiplayer exceptions. |
 | `UserAlreadyExistsError` | Raised when a username is already taken. |
 | `GroupNotFoundError` | Raised when a group ID does not exist. Returns the faulty ID in the message. |
+| `UserNotFoundError` | Raised when a user account (or its ID) does not exist. Returns the faulty ID if provided. |
 | `PlayerNotFoundError` | Raised when a player ID does not exist. Returns the faulty ID if provided. |
 | `PlayerNotFoundInGameError` | Raised when trying to remove a player who is not in the game. |
 | `PasswordError` | Raised when an incorrect password is provided. |

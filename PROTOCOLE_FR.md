@@ -24,7 +24,7 @@ Les termes suivants sont utilisés dans la suite de cette section.
 
 Un **utilisateur** (ou compte utilisateur) est une entité persistante sur le serveur, définie par un identifiant unique, un nom d'utilisateur et un mot de passe. L'utilisateur permet, après authentification, d'accéder au serveur avec un certain niveau de droits (PLAYER, GROUP_ADMIN, ADMIN).
 
-Tout utilisateur possède un objet **Joueur** qui lui est propre et qui est récupéré automatiquement lors de l'authentification. Lorsque ce joueur est rattaché à une session, il devient le joueur par défaut actif de la session tant que l'utilisateur reste authentifié.
+Un utilisateur ne possède pas d'objet **Joueur** qui lui serait propre. Le serveur conserve en revanche, pour chaque utilisateur, la liste des identifiants de ses joueurs actifs (`players_id`), c'est-à-dire des objets **Joueur** créés lors d'une session où il était authentifié et associés à une partie non terminée (ou à aucune partie, s'ils sont en attente d'affectation). Ces joueurs sont automatiquement rattachés à la session lors de l'authentification.
 
 #### Joueur
 
@@ -33,14 +33,15 @@ Un **joueur** est l'entité qui participe effectivement à une partie de jeu ou 
 Un client peut posséder plusieurs objets **Joueur** au cours d'une même session (par exemple pour permettre à plusieurs participants de jouer sur le même ordinateur). Cependant, un seul joueur est considéré à un instant donné comme le **joueur par défaut actif** de la session.
 
 Dans cette version du protocole, un client doit obligatoirement disposer d'un objet **Joueur** dans sa session pour rejoindre une partie :
-- Pour un utilisateur authentifié, le joueur associé à son compte est automatiquement ajouté à la session et devient le joueur par défaut actif.
-- Pour un client non authentifié (niveau `BASE`), un joueur doit être créé explicitement via une requête dédiée. Le dernier joueur créé avec l'option "par défaut" devient le joueur de référence pour les actions suivantes.
+- Un joueur est créé explicitement via une requête dédiée (`PLAYER_CREATE`), que le client soit authentifié ou non. Le dernier joueur créé avec l'option "par défaut" devient le joueur de référence pour les actions suivantes.
+- Si le client est authentifié, l'identifiant du joueur créé est automatiquement ajouté à la liste `players_id` de l'utilisateur.
+- Lors de l'authentification, les joueurs actifs de l'utilisateur (liste `players_id`) sont rattachés à la session.
 
 Règle de résolution du joueur de référence :
 - si une requête accepte un `player_id` mais qu'aucun identifiant n'est fourni, le serveur utilise le joueur par défaut actif de la session ;
 - si aucun joueur par défaut actif n'est disponible, la requête échoue avec `PLAYER_NOT_FOUND` ;
-- l'authentification utilisateur rend prioritaire le joueur associé au compte, sans supprimer les autres joueurs de la session ;
-- la déconnexion utilisateur retire cette priorité ; si un joueur de session avait déjà été désigné comme joueur par défaut actif, il redevient le joueur de référence, sinon la session reste sans joueur par défaut actif.
+- l'authentification utilisateur rattache les joueurs actifs de l'utilisateur sans supprimer les autres joueurs de la session et sans modifier le joueur par défaut actif ; si la session n'a pas encore de joueur par défaut actif, le premier joueur rattaché le devient ;
+- la déconnexion utilisateur détache de la session les joueurs figurant dans la liste `players_id` de l'utilisateur (ils restent dans cette liste et seront de nouveau rattachés lors d'une prochaine authentification) ; si le joueur par défaut actif en faisait partie, la session reste sans joueur par défaut actif jusqu'à la création ou la désignation explicite d'un nouveau joueur.
 
 #### Client
 
@@ -758,16 +759,16 @@ Si `password_required` vaut `false`, le client peut directement envoyer des requ
 
 ---
 
-### Création d'un joueur (Session non-authentifiée)
+### Création d'un joueur
 
 **Direction :** Client → Serveur  
 **Transport :** TCP  
 **Encodage :** JSON UTF-8  
 **Niveau d'accès minimal :** `BASE`
 
-Cette requête permet à un client connecté (niveau `BASE`) de se créer un objet **Joueur** pour la durée de sa session, sans avoir besoin de s'authentifier avec un compte utilisateur. Cela est indispensable pour pouvoir rejoindre ou observer une partie en tant que simple visiteur.
+Cette requête permet à un client connecté (niveau `BASE` ou supérieur) de se créer un objet **Joueur**. Cela est indispensable pour pouvoir rejoindre ou observer une partie. Un client non authentifié peut ainsi participer en tant que simple visiteur, le joueur étant alors créé pour la durée de sa session. Si le client est authentifié, l'identifiant du joueur créé est automatiquement ajouté à la liste `players_id` de l'utilisateur, ce qui permet de le retrouver lors d'une prochaine authentification tant qu'il reste actif.
 
-Un client peut créer plusieurs joueurs au cours de la session (par exemple pour gérer plusieurs participants sur la même machine). L'un d'entre eux peut être désigné comme joueur "par défaut" de la session. Si un joueur par défaut existe déjà, le nouveau joueur créé avec l'option `is_default` à `true` prend ce rôle, mais le joueur précédent continue d'exister. Si la session est authentifiée, le joueur associé au compte reste prioritaire sur les joueurs créés via `PLAYER_CREATE` jusqu'à la déconnexion.
+Un client peut créer plusieurs joueurs au cours de la session (par exemple pour gérer plusieurs participants sur la même machine). L'un d'entre eux peut être désigné comme joueur "par défaut" de la session. Si un joueur par défaut existe déjà, le nouveau joueur créé avec l'option `is_default` à `true` prend ce rôle, mais le joueur précédent continue d'exister.
 
 #### Exemple
 
@@ -833,7 +834,7 @@ Un client peut créer plusieurs joueurs au cours de la session (par exemple pour
 **Encodage :** JSON UTF-8  
 **Niveau d'accès minimal :** `BASE`
 
-Cette requête permet au client de récupérer la liste de tous les objets **Joueur** associés à sa session actuelle. Cela inclut les joueurs créés via la requête `PLAYER_CREATE` ainsi que le joueur associé au compte utilisateur si le client est authentifié.
+Cette requête permet au client de récupérer la liste de tous les objets **Joueur** associés à sa session actuelle. Cela inclut les joueurs créés via la requête `PLAYER_CREATE` ainsi que, si le client est authentifié, les joueurs actifs de l'utilisateur rattachés à la session lors de l'authentification.
 
 La réponse précise pour chaque joueur son identifiant unique, son nom et s'il s'agit du joueur par défaut de la session.
 
@@ -899,7 +900,7 @@ La réponse précise pour chaque joueur son identifiant unique, son nom et s'il 
 **Encodage :** JSON UTF-8  
 **Niveau d'accès minimal :** `BASE`
 
-Cette requête permet au client de modifier le nom d'un objet **Joueur** associé à sa session (joueur créé via `PLAYER_CREATE` ou joueur associé au compte utilisateur).
+Cette requête permet au client de modifier le nom d'un objet **Joueur** associé à sa session (joueur créé via `PLAYER_CREATE` ou joueur actif de l'utilisateur rattaché lors de l'authentification).
 
 #### Exemple
 
@@ -965,7 +966,7 @@ Cette requête permet au client de modifier le nom d'un objet **Joueur** associ�
 
 Cette requête permet à un client de s'authentifier avec un compte utilisateur pour obtenir le niveau d'accès `PLAYER`, `GROUP_ADMIN` ou `ADMIN` selon le rôle associé au compte. 
 
-En cas de succès, l'objet **Joueur** associé au compte utilisateur est récupéré et devient le joueur par défaut actif de la session. Les éventuels joueurs créés précédemment au cours de la session ne sont pas supprimés, mais ils cessent d'être prioritaires tant que la session reste authentifiée.
+En cas de succès, les objets **Joueur** actifs de l'utilisateur (liste `players_id`) sont rattachés à la session. Les éventuels joueurs créés précédemment au cours de la session ne sont pas supprimés, et le joueur par défaut actif de la session est conservé ; si la session n'en a pas encore, le premier joueur rattaché le devient.
 
 #### Exemple
 
@@ -1010,8 +1011,12 @@ Message envoyé par le serveur en réponse à une requête `SERVER_AUTH` ou `USE
     "access_level": "PLAYER",
     "username": "player_one",
     "role": "PLAYER",
-    "player_id": "uuid_du_joueur_associe",
-    "player_name": "player_one",
+    "players": [
+      {
+        "player_id": "uuid_joueur_actif_1",
+        "name": "player_one"
+      }
+    ],
     "message": "Authentication successful"
   }
 }
@@ -1042,8 +1047,9 @@ Message envoyé par le serveur en réponse à une requête `SERVER_AUTH` ou `USE
 | `payload.access_level` | `string` | Oui | Nouveau niveau d'accès accordé au client. |
 | `payload.username` | `string` | Non | Nom de l'utilisateur authentifié (en cas de succès `USER_LOGIN`). |
 | `payload.role` | `string` | Non | Rôle de l'utilisateur (en cas de succès `USER_LOGIN`). |
-| `payload.player_id` | `string` | Non | UUID de l'objet Joueur associé au compte (en cas de succès `USER_LOGIN`). |
-| `payload.player_name` | `string` | Non | Nom de l'objet Joueur associé au compte (en cas de succès `USER_LOGIN`). |
+| `payload.players` | `array` | Non | Liste des joueurs actifs de l'utilisateur rattachés à la session (en cas de succès `USER_LOGIN` ; liste vide si l'utilisateur n'a aucun joueur actif). |
+| `payload.players[].player_id` | `string` | - | UUID du joueur. |
+| `payload.players[].name` | `string` | - | Nom du joueur. |
 | `payload.error_code` | `string` | Non | Code d'erreur en cas d'échec (voir tableau ci-dessous). |
 | `payload.message` | `string` | Oui | Message d'information ou d'erreur. |
 
@@ -1068,7 +1074,7 @@ Message envoyé par le serveur en réponse à une requête `SERVER_AUTH` ou `USE
 
 Cette requête permet au client de clore proprement sa session authentifiée et de revenir au niveau d'accès `BASE` (ou `OPEN` si aucun mot de passe serveur n'est requis), sans nécessairement fermer la connexion TCP.
 
-La déconnexion ne supprime pas les joueurs créés pendant la session. Si un joueur de session avait déjà été désigné comme joueur par défaut actif avant l'authentification, il redevient le joueur de référence après la déconnexion ; sinon, la session reste sans joueur par défaut actif jusqu'à la création ou la désignation explicite d'un nouveau joueur.
+La déconnexion ne supprime aucun joueur. Les joueurs figurant dans la liste `players_id` de l'utilisateur (y compris ceux créés pendant la session authentifiée) sont détachés de la session ; ils restent dans cette liste et seront de nouveau rattachés lors d'une prochaine authentification tant qu'ils restent actifs. Les autres joueurs de la session restent rattachés. Si le joueur par défaut actif faisait partie des joueurs détachés, la session reste sans joueur par défaut actif jusqu'à la création ou la désignation explicite d'un nouveau joueur.
 
 #### Exemple
 
@@ -1221,7 +1227,6 @@ Cette requête permet de modifier les informations d'un compte utilisateur exist
     "username": "new_player",
     "password": "new_secret_password",
     "email": "new_email@example.com",
-    "player_name": "New Player Name",
     "managed_groups": ["group_uuid_1"],
     "attributes": {
       "avatar": "mage"
@@ -1239,7 +1244,6 @@ Cette requête permet de modifier les informations d'un compte utilisateur exist
 | `payload.username` | `string` | Oui | Nom de l'utilisateur à modifier. |
 | `payload.password` | `string` | Non | Nouveau mot de passe. |
 | `payload.email` | `string` | Non | Nouvelle adresse email. |
-| `payload.player_name` | `string` | Non | Nouveau nom pour le joueur associé au compte. |
 | `payload.role` | `string` | Non | Nouveau rôle (requiert `ADMIN`). |
 | `payload.managed_groups` | `array` | Non | Liste des UUIDs de groupes gérés (requiert `ADMIN`). |
 | `payload.attributes` | `object` | Non | Nouveaux attributs (écrase ou fusionne selon l'implémentation). |
@@ -3538,7 +3542,7 @@ Récupère la liste de tous les joueurs (objets `Player`) présents sur le serve
 | `payload.players[].player_id` | `string` | - | UUID du joueur. |
 | `payload.players[].name` | `string` | - | Nom du joueur. |
 | `payload.players[].connected` | `boolean` | - | `true` si le joueur est actuellement rattaché à une session active. |
-| `payload.players[].is_persistent` | `boolean` | - | `true` si le joueur est lié à un compte utilisateur persistant. |
+| `payload.players[].is_persistent` | `boolean` | - | `true` si l'identifiant du joueur figure dans la liste `players_id` d'un compte utilisateur persistant. |
 | `payload.players[].games` | `array` | - | Liste des parties auxquelles ce joueur est associé, sous forme de résumé. |
 | `payload.players[].games[].game_id` | `string` | - | UUID de la partie. |
 | `payload.players[].games[].name` | `string` | - | Nom de la partie. |

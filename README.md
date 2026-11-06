@@ -37,7 +37,7 @@ from multiplayer import ParameterFamily
 # Create a player with attributes
 player = Player("Alice", score=(ParameterFamily.DYNAMIC, 0), team=(ParameterFamily.STATIC, "Red"))
 
-# Create a user account associated with its own player profile
+# Create a user account (credentials and permissions, distinct from players)
 user = User(username="alice_92", password="secret_password", email="alice@example.com")
 ```
 

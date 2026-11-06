@@ -71,12 +71,12 @@ Ainsi, les fichiers sources sont dans le répertoire `src/multiplayer`, les test
 Ce fichier contient les imports nécessaires pour le fonctionnement du package de multiplayer. De manière générale, on y indique tous les éléments constants (constantes, énumérations) que les modules de multiplayer utilisent.
 On y trouve en particulier les éléments suivants:
 
-#### `PlayerRole` (Enum)
-Une énumération pour le rôle d'un compte de joueur.
+#### `UserRole` (Enum)
+Une énumération pour le rôle d'un compte utilisateur.
 
-*   `PlayerRole.PLAYER` : Un joueur standard qui peut rejoindre et participer à des parties.
-*   `PlayerRole.GROUP_ADMIN` : Un joueur qui peut gérer les parties au sein des groupes qui lui sont assignés. Ce rôle inclut toutes les permissions d'un `PLAYER`.
-*   `PlayerRole.SERVER_ADMIN` : Un joueur avec un accès administratif complet au serveur. Ce rôle englobe le rôle de `GROUP_ADMIN`, lui-même pouvant également jouer le rôle de `PLAYER`.
+*   `UserRole.PLAYER` : Un utilisateur standard qui peut rejoindre et participer à des parties.
+*   `UserRole.GROUP_ADMIN` : Un utilisateur qui peut gérer les parties au sein des groupes qui lui sont assignés. Ce rôle inclut toutes les permissions d'un `PLAYER`.
+*   `UserRole.SERVER_ADMIN` : Un utilisateur avec un accès administratif complet au serveur. Ce rôle englobe le rôle de `GROUP_ADMIN` (pour tous les groupes du serveur), lui-même pouvant également jouer le rôle de `PLAYER`.
 
 #### `GameState` (Enum)
 Une énumération représentant le statut actuel d'une partie.
@@ -115,6 +115,9 @@ Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler 
 #### Classe `GroupNotFoundError`
 Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative d'utilisation d'un groupe (ou d'un ID de groupe) qui n'existe pas. Cette exception retourne dans son message l'ID erroné.
 
+#### Classe `UserNotFoundError`
+Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative d'utilisation d'un compte utilisateur (ou de son ID) qui n'existe pas. Cette exception retourne dans son message l'ID erroné (si fourni).
+
 #### Classe `PlayerNotFoundError`
 Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative d'utilisation d'un joueur (ou d'un ID de joueur) qui n'existe pas. Cette exception retourne dans son message l'ID erroné (si fourni).
 
@@ -142,7 +145,7 @@ Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler 
 #### Classe `GameNotPausedError`:
 Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative de reprise d'une partie qui n'est pas en pause.
 
-#### Classe `GameNotByTurnError`:
+#### Classe `GameNotTurnBasedError`:
 Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative d'action spécifique au tour par tour d'une partie qui n'est pas gérée au tour par tour.
 
 #### Classe `GameNotFoundError`:
@@ -157,7 +160,7 @@ Ce fichier contient la logique principale de gestion des parties. Il définit le
 On y trouve en particulier les classes suivantes:
 
 #### Classe `Player`
-Cette classe représente un joueur dans le contexte du jeu. C'est l'entité qui participe effectivement aux parties. Alors qu'un compte `User` gère l'accès et les permissions, l'objet `Player` porte les attributs liés au jeu (nom, score, état, etc.). Un client peut posséder plusieurs objets `Player` pendant sa session (par exemple pour gérer plusieurs participants sur le même ordinateur). L'un d'entre eux est désigné comme joueur par défaut. Tout utilisateur authentifié possède un objet `Player` qui lui est propre, qu'il retrouve à chaque connexion et qui devient alors son joueur par défaut. Un client non authentifié peut également disposer d'un ou plusieurs objets `Player` créés pour la durée de sa session.
+Cette classe représente un joueur dans le contexte du jeu. C'est l'entité qui participe effectivement aux parties. Alors qu'un compte `User` gère l'accès et les permissions, l'objet `Player` porte les attributs liés au jeu (nom, score, état, etc.). Typiquement, un objet `Player` est créé juste avant une partie, et est détruit après la fin de celle-ci. Ce comportement reste cependant un choix d'implémentation, la bibliothèque `multiplayer` ne gérant pas la création ni la destruction des objets `Player` à l'instantiation et la fin d'un objet `Game` (la destruction peut néanmoins être gérée dans le cadre de la fonction de nettoyage automatique de la classe `GameServer`, voir le paragraphe associé).
 
 Elle s'instantie avec les paramètres suivants:
 
@@ -176,7 +179,7 @@ Elle présente les attributs suivants:
 | `dynamic_state` | dict | Attributs personnalisés du joueur, dont la vocation est de stocker des informations qui peuvent être modifiées souvent pendant la partie. | Oui        | S'initialise automatiquement avec les paramètres spécifiés comme appartenant à la famille `ParameterFamily.DYNAMIC`, mais peut être complété par la suite par tout autre paramètre au choix de l'utilisateur. Par exemple, si `Player` est instantié avec `Player(name="Mon nom", color=(ParameterFamily.STATIC, "white"), score=(ParameterFamily.DYNAMIC, 0))`, alors `dynamic_state` est égal à `{"score":0}`.    |
 
 #### Classe `User`
-Cette classe représente un compte utilisateur. Celui-ci permet d'accéder à diverses capacités selon son niveau d'accès (authentification) et de conserver un objet `Player` qui lui est associé. Un utilisateur est une entité distincte du joueur : l'utilisateur gère les identifiants et les droits, tandis que le joueur gère la présence dans le jeu.
+Cette classe représente un compte utilisateur. Celui-ci permet d'accéder à diverses capacités selon son niveau d'accès (authentification). Un utilisateur est une entité distincte du joueur : l'utilisateur gère les identifiants et les droits, tandis que le joueur gère la présence dans le jeu.
 
 Elle s'instantie avec les paramètres suivants:
 
@@ -197,9 +200,9 @@ La classe présente les attributs suivants:
 | `username`  | str          | Le nom d'utilisateur du compte.  | Non  | -|
 | `hash`      | str          | Le hash du mot de passe du compte.| Non  | Le hash est automatiquement généré à partir de `password` avec `bcrypt`.|
 | `email`     | str          | L'adresse e-mail du compte. | Oui  | -|
-| `role`      | `PlayerRole` | Le rôle du compte (ie: son niveau de permission).  | Oui  | - |
-| `groups_id` | List[str]    | Les identifiants des groupes pour lesquels le compte est administrateur. Uniquement utile si `role == PlayerRole.GROUP_ADMIN`. Une exception `GroupNotFoundError` est levée si un des identifiants ne correspond pas à un groupe existant. Dans ce cas la valeur de `groups_id` n'est pas mise à jour. | Non (mais mutable) | Initialisé avec une liste vide, cet attribut peut être complété et modifié grace aux méthodes de `list` telles que `append`, `extend`, `pop`, ... Comme il s'agit d'un attribut en lecture seule, la ré-affectation est interdite. |
-| `player`    | `Player`     | Le joueur associé au compte. L'objet `Player` est instantié avec le paramètre `name` égal à l'attribut `username`. Ses attributs peuvent ensuite être modifiés (dont `name`, soit directement via l'objet `Player`, soit via une requête de mise à jour du compte `User`). Lors d'une authentification, ce joueur est automatiquement ajouté à la session du client et devient son joueur par défaut. | Non (mais mutable) | L'objet `Player` instantié est conservé pendant toute la durée de vie de l'instance de `User` qui le contient, et n'est supprimé qu'à la suppression de l'instance de `User`. |
+| `role`      | `UserRole` | Le rôle du compte (ie: son niveau de permission).  | Oui  | - |
+| `groups_id` | List[str]    | Les identifiants des groupes pour lesquels le compte est administrateur. Uniquement utile si `role == UserRole.GROUP_ADMIN`. Une exception `GroupNotFoundError` est levée si un des identifiants ne correspond pas à un groupe existant. Dans ce cas la valeur de `groups_id` n'est pas mise à jour. | Non (mais mutable) | Initialisé avec une liste vide, cet attribut peut être complété et modifié grace aux méthodes de `list` telles que `append`, `extend`, `pop`, ... Comme il s'agit d'un attribut en lecture seule, la ré-affectation est interdite. |
+| `players_id`    | List[str]     | Les identifiants des objets `Player` actifs (c'est-à-dire associés à une partie non terminée, soit en tant que joueur, soit en tant qu'observateur) créés lors d'une session où l'utilisateur s'est connecté. | Non (mais mutable) | Il est de la responsabilité de l'usager de la bibliothèque `multiplayer` de vérifier régulièrement cette liste, et en supprimer les identifiants des objets `Player` qui ne sont plus associés qu'à des parties terminées. Néanmoins, lorsque la fonction de persistance est activée, la sauvegarde des objets `User` effectue une vérification et un nettoyage de cette liste avant sauvegarde. Ainsi, lors de la restauration, cette liste devrait normalement être propre et cohérente avec les objets `Player` effectivement associés à des parties non terminés, ou associés à aucune partie (cas d'un objet `Player` en attente d'affectation d'une partie). |
 
 La classe `User` présente les méthodes suivantes:
 
@@ -243,7 +246,7 @@ La classe `Game` présente les méthodes suivantes:
 
 - `change_password`: permet de changer le mot de passe de la partie. Le paramètre `hash` de l'instance courante est mis à jour avec le nouveau mot de passe via `bcrypt`
     - Paramètres:
-      - `new_password` (str): le nouveau mot de passe à utiliser pour le compte utilisateur. Obligatoire.
+      - `new_password` (str): le nouveau mot de passe à utiliser pour la partie. Obligatoire.
     - Valeur de retour:
       - Aucune.
 - `join_game_as_player`: permet de rejoindre une partie en tant que joueur.
@@ -475,6 +478,7 @@ La classe `Save` présente les méthodes suivantes:
 
 - `save`: permet de sauvegarder ou de mettre à jour une instance individuelle dans le tampon en mémoire.
   - Description: L'objet est sérialisé et stocké dans le tampon, indexé par sa classe et son ID. Si un objet de même classe et de même ID existe déjà, il est remplacé. La modification n'est persistée dans le fichier qu'à l'appel de `flush`.
+  - Précision d'implémentation: avant la sauvegarde d'un objet `User`, une vérification est effectuée pour nettoyer la liste des identifiants des objets `Player` qui ne sont plus associés à aucune partie non terminée.
   - Paramètres:
     - `obj` (`Player`|`User`|`Game`|`GameGroup`): l'instance à sauvegarder. Obligatoire.
   - Exceptions émises:
@@ -508,7 +512,7 @@ La classe `Save` présente les méthodes suivantes:
 Ce fichier contient la logique de gestion des serveurs multijoueur.
 
 #### Classe GameServer
-La classe `GameServer` est responsable de la gestion des connexions et des communications avec les clients dans un environnement multijoueur. Elle assure la coordination des actions et la diffusion des informations aux joueurs connectés.
+La classe `GameServer` est responsable de la gestion des connexions et des communications avec les clients dans un environnement multijoueur. Elle assure la coordination des actions et la diffusion des informations aux clients connectés.
 
 ##### Paramètres
 
@@ -532,7 +536,7 @@ La classe `GameServer` s'instancie avec les paramètres suivants:
 | `persistence_mode` | `SaveFormat\|None` | Le mode de persistance des données du serveur | Non | `None` |
 | `persistence_path` | `Path\|None` | Le chemin vers le fichier de persistance des données du serveur | Non | `None` |
 | `persistence_periodicity` | `int` | La durée en secondes entre chaque sauvegarde cyclique de la persistance (0 pour désactiver la sauvegarde périodique) | Non | 0 |
-| `garbage_collection_periodicity` | `int` | La durée en secondes entre chaque effacement des objets "Player" orphelins (associés à une session inexistante) | Non | 900 |
+| `garbage_collection_periodicity` | `int` | La durée en secondes entre chaque effacement des objets "Player" qui ne sont associés qu'à des parties terminées | Non | 900 |
 
 Informations complémentaires:
 - l’adresse `host` désigne l’adresse IP ou le nom réseau sur lequel le serveur va écouter les connexions entrantes. Si l'on ne souhaite pas que le serveur soit accessible sur le réseau (cas d'un serveur local utilisé uniquement sur la même machine que les clients), alors il faut définir `127.0.0.1` ou `localhost`. Si l'on souhaite au contraire que le serveur soit accessible depuis le réseau sur **toutes** les interfaces réseau du serveur, alors il faut définir `0.0.0.0` (c'est la valeur par défaut). Enfin, si l'on souhaite que le serveur ne soit accessible que depuis une interface réseau spécifique, alors il faut indiquer l'adresse IP de cette interface (utile pour limiter volontairement l'exposition du serveur).
@@ -556,7 +560,7 @@ Informations complémentaires:
 - **Persistance**: La persistance permet de sauvegarder les données du serveur sur le disque dur, et de les restaurer lors du redémarrage du serveur. Par défaut, la persistance est désactivée (paramètre `persistence_mode=None`). Lorsque la persistance est activée, les données du serveur sont sauvegardées dans un fichier défini par le paramètre `persistence_path`. Le fichier est sauvegardé périodiquement si `persistence_periodicity > 0`, à chaque fois que le serveur est arrêté, et restauré lors du redémarrage du serveur. Il peut être également sauvegardé ou rechargé à la demande (voir les commandes de niveau **administrateur** dans le [Protocole d'échanges entre le client et le serveur](PROTOCOLE_FR.md)). Il est possible d'activer 2 modes de persistance :
   - `persistence_mode=SaveFormat.JSON` : permet de sauvegarder les données du serveur dans un fichier JSON. Par défaut (si `persistence_path=None`), le fichier est défini par `Path("data/server_data.json")`. Le fichier (ainsi que les répertoires y accédant) est créé automatiquement s'il n'existe pas déjà.
   - `persistence_mode=SaveFormat.SQLITE` : permet de sauvegarder les données du serveur dans une base de données SQLITE. Par défaut (si `persistence_path=None`), le fichier est défini par `Path("data/server_data.db")`. La base de données (ainsi que les répertoires y accédant) est créée automatiquement si elle n'existe pas déjà.
-- **Nettoyage automatique** : Le serveur effectue périodiquement un nettoyage des objets `Player` orphelins. Un joueur est considéré comme orphelin s'il est associé à une session client qui n'existe plus (déconnexion) ET qu'il n'est associé à aucun `User`. La fréquence de ce nettoyage est définie par le paramètre `garbage_collection_periodicity` (en secondes).
+- **Nettoyage automatique** : Le serveur effectue périodiquement un nettoyage des objets `Player` qui ne sont associés qu'à des parties terminées. Les objets `Player` associés à aucune partie (cas des objets nouvellement créés en attente d'affectation de partie) ne sont, eux, pas concernés par ce nettoyage. La fréquence de ce nettoyage est définie par le paramètre `garbage_collection_periodicity` (en secondes).
 
 La classe `GameServer` présente les méthodes suivantes:
 - `start`: Lance le serveur en mode asynchrone.
@@ -604,7 +608,7 @@ La classe présente les attributs suivants:
 | `port` | int | Le numéro de port TCP du serveur | Oui | - |
 | `tls_ca_path` | `Path\|None` | Le chemin vers le certificat de validation TLS. Si `None`, utilise les certificats du système. | Non | - |
 | `is_connected` | bool | Indique si le client est actuellement connecté au serveur | Non | - |
-| `session_player` | `Player\|None` | Le joueur par défaut associé à la session actuelle | Non | Mis à jour automatiquement lors de l'authentification ou de la création d'un joueur. |
+| `session_user` | `User\|None` | L'utilisateur associé à la session actuelle | Non | Mis à jour automatiquement lors de l'authentification de l'utilisateur. |
 
 ##### Méthodes
 
@@ -628,14 +632,14 @@ La classe `GameClient` présente les méthodes suivantes:
   - Paramètres: Aucun.
   - Valeur de retour: Aucun.
 - `login`: S'authentifie auprès du serveur.
-  - Description: Envoie une requête d'authentification avec les identifiants fournis. En cas de succès, le client récupère les informations de l'utilisateur et son joueur associé.
+  - Description: Envoie une requête d'authentification avec les identifiants fournis. En cas de succès, le client récupère les informations de l'utilisateur.
   - Paramètres:
     - `username` (str): Le nom d'utilisateur. Obligatoire.
     - `password` (str): Le mot de passe. Obligatoire.
   - Valeur de retour: L'instance `User` correspondant à l'utilisateur authentifié.
   - Exceptions émises:
     - `PasswordError`: si le mot de passe est incorrect.
-    - `PlayerNotFoundError`: si l'utilisateur n'existe pas.
+    - `UserNotFoundError`: si l'utilisateur n'existe pas.
 - `send_request`: Envoie une requête au serveur et attend sa réponse.
   - Description: Méthode de bas niveau permettant d'envoyer n'importe quelle commande supportée par le protocole et de recevoir la réponse correspondante.
   - Paramètres:
@@ -651,7 +655,7 @@ La classe `GameClient` présente les méthodes suivantes:
     - `callback` (callable): La fonction à appeler, acceptant le dictionnaire de notification en argument.
   - Valeur de retour: Aucun.
 - `save_persistence`: Demande une sauvegarde de persistance immédiate au serveur.
-  - Description: Envoie une requête `SERVER_PERSISTENCE_SAVE` au serveur pour déclencher une sauvegarde immédiate. Requiert le niveau d'accès administrateur (`ADMIN`).
+  - Description: Envoie une requête `SERVER_PERSISTENCE_SAVE` au serveur pour déclencher une sauvegarde immédiate. Requiert le niveau d'accès administrateur `ADMIN` du protocole, c'est-à-dire un compte utilisateur de rôle `UserRole.SERVER_ADMIN`.
   - Paramètres: Aucun.
   - Valeur de retour: Un dictionnaire contenant les données de la réponse du serveur.
   - Exceptions émises:

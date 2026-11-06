@@ -24,7 +24,7 @@ The following terms are used throughout this section.
 
 A **user** (or user account) is a persistent entity on the server, defined by a unique identifier, a username and a password. The user allows, after authentication, access to the server with a certain level of rights (PLAYER, GROUP_ADMIN, ADMIN).
 
-Every user has their own **Player** object which is automatically retrieved during authentication. When this player is attached to a session, he becomes the active default player of the session as long as the user remains authenticated.
+A user does not own a **Player** object of their own. Instead, for each user, the server keeps the list of identifiers of their active players (`players_id`), i.e. the **Player** objects created during a session in which the user was authenticated and associated with an unfinished game (or with no game, if they are waiting to be assigned to one). These players are automatically attached to the session upon authentication.
 
 #### Player
 
@@ -33,14 +33,15 @@ A **player** is the entity that actually participates in or observes a game. Whi
 A client can have several **Player** objects during the same session (for example to allow several participants to play on the same computer). However, only one player is considered the **active default player** of the session at any given time.
 
 In this version of the protocol, a client must have a **Player** object in its session to join a game:
-- For an authenticated user, the player associated with their account is automatically added to the session and becomes the active default player.
-- For an unauthenticated client (`BASE` level), a player must be explicitly created via a dedicated request. The last player created with the "default" option becomes the reference player for subsequent actions.
+- A player is explicitly created via a dedicated request (`PLAYER_CREATE`), whether the client is authenticated or not. The last player created with the "default" option becomes the reference player for subsequent actions.
+- If the client is authenticated, the identifier of the created player is automatically added to the user's `players_id` list.
+- Upon authentication, the user's active players (`players_id` list) are attached to the session.
 
 Reference player resolution rule:
 - if a request accepts a `player_id` but no identifier is provided, the server uses the active default player of the session;
 - if no active default player is available, the request fails with `PLAYER_NOT_FOUND`;
-- user authentication gives priority to the player associated with the account, without removing other players from the session;
-- user disconnection removes this priority; if a session player had already been designated as the active default player, he becomes the reference player again, otherwise the session remains without an active default player.
+- user authentication attaches the user's active players without removing the other players of the session and without changing the active default player; if the session does not have an active default player yet, the first attached player becomes it;
+- user logout detaches from the session the players listed in the user's `players_id` list (they remain in this list and will be attached again at the next authentication); if the active default player was one of them, the session remains without an active default player until a new player is created or explicitly designated.
 
 #### Customer
 
@@ -750,16 +751,16 @@ If `password_required` is `false`, the client can directly send requests authori
 
 ---
 
-### Creation of a player (Unauthenticated session)
+### Creation of a player
 
 **Direction:** Client → Server  
 **Transport:** TCP  
 **Encoding:** JSON UTF-8  
 **Minimum access level:** `BASE`
 
-This request allows a connected client (`BASE` level) to create a **Player** object for the duration of its session, without needing to authenticate with a user account. This is essential to be able to join or observe a game as a simple visitor.
+This request allows a connected client (`BASE` level or higher) to create a **Player** object. This is essential to be able to join or observe a game. An unauthenticated client can thus take part as a simple visitor, the player then being created for the duration of its session. If the client is authenticated, the identifier of the created player is automatically added to the user's `players_id` list, so that it can be retrieved at a later authentication as long as it remains active.
 
-A client can create several players during the session (for example to manage several participants on the same machine). One of them can be designated as the "default" player for the session. If a default player already exists, the new player created with the `is_default` option set to `true` takes that role, but the previous player continues to exist. If the session is authenticated, the player associated with the account remains priority over the players created via `PLAYER_CREATE` until disconnection.
+A client can create several players during the session (for example to manage several participants on the same machine). One of them can be designated as the "default" player for the session. If a default player already exists, the new player created with the `is_default` option set to `true` takes that role, but the previous player continues to exist.
 
 #### Example
 ```json
@@ -821,7 +822,7 @@ A client can create several players during the session (for example to manage se
 **Encoding:** JSON UTF-8  
 **Minimum access level:** `BASE`
 
-This query allows the client to retrieve the list of all **Player** objects associated with its current session. This includes players created via the `PLAYER_CREATE` request as well as the player associated with the user account if the client is authenticated.
+This query allows the client to retrieve the list of all **Player** objects associated with its current session. This includes players created via the `PLAYER_CREATE` request as well as, if the client is authenticated, the user's active players attached to the session upon authentication.
 
 The response specifies for each player their unique identifier, their name and whether they are the default player for the session.
 
@@ -883,7 +884,7 @@ The response specifies for each player their unique identifier, their name and w
 **Encoding:** JSON UTF-8  
 **Minimum access level:** `BASE`
 
-This request allows the client to modify the name of a **Player** object associated with its session (player created via `PLAYER_CREATE` or player associated with the user account).
+This request allows the client to modify the name of a **Player** object associated with its session (player created via `PLAYER_CREATE` or active player of the user attached upon authentication).
 
 #### Example
 ```json
@@ -945,7 +946,7 @@ This request allows the client to modify the name of a **Player** object associa
 
 This request allows a client to authenticate with a user account to obtain the `PLAYER`, `GROUP_ADMIN` or `ADMIN` access level depending on the role associated with the account. 
 
-If successful, the **Player** object associated with the user account is retrieved and becomes the active default player of the session. Any players previously created during the session are not deleted, but they cease to have priority as long as the session remains authenticated.
+If successful, the user's active **Player** objects (`players_id` list) are attached to the session. Any players previously created during the session are not deleted, and the active default player of the session is kept; if the session does not have one yet, the first attached player becomes it.
 
 #### Example
 ```json
@@ -987,8 +988,12 @@ Message sent by the server in response to a `SERVER_AUTH` or `USER_LOGIN` reques
     "access_level": "PLAYER",
     "username": "player_one",
     "role": "PLAYER",
-    "player_id": "uuid_du_joueur_associe",
-    "player_name": "player_one",
+    "players": [
+      {
+        "player_id": "uuid_of_active_player_1",
+        "name": "player_one"
+      }
+    ],
     "message": "Authentication successful"
   }
 }
@@ -1016,8 +1021,9 @@ Message sent by the server in response to a `SERVER_AUTH` or `USER_LOGIN` reques
 | `payload.access_level` | `string` | Yes | New level of access granted to the customer. |
 | `payload.username` | `string` | No | Name of the authenticated user (if successful `USER_LOGIN`). |
 | `payload.role` | `string` | No | User role (if successful `USER_LOGIN`). |
-| `payload.player_id` | `string` | No | UUID of the Player object associated with the account (if `USER_LOGIN` is successful). |
-| `payload.player_name` | `string` | No | Name of the Player object associated with the account (if successful `USER_LOGIN`). |
+| `payload.players` | `array` | No | List of the user's active players attached to the session (if `USER_LOGIN` is successful; empty list if the user has no active player). |
+| `payload.players[].player_id` | `string` | - | Player UUID. |
+| `payload.players[].name` | `string` | - | Player name. |
 | `payload.error_code` | `string` | No | Error code in case of failure (see table below). |
 | `payload.message` | `string` | Yes | Information or error message. |
 
@@ -1042,7 +1048,7 @@ Message sent by the server in response to a `SERVER_AUTH` or `USER_LOGIN` reques
 
 This request allows the client to properly close its authenticated session and return to the `BASE` access level (or `OPEN` if no server password is required), without necessarily closing the TCP connection.
 
-Disconnecting does not delete players created during the session. If a session player had already been designated as the active default player before authentication, he reverts to the reference player after disconnection; otherwise, the session remains without an active default player until a new player is created or explicitly designated.
+Logging out does not delete any player. The players listed in the user's `players_id` list (including those created during the authenticated session) are detached from the session; they remain in this list and will be attached again at the next authentication as long as they remain active. The other players of the session remain attached. If the active default player was one of the detached players, the session remains without an active default player until a new player is created or explicitly designated.
 
 #### Example
 ```json
@@ -1186,7 +1192,6 @@ This request allows you to modify the information of an existing user account.
     "username": "new_player",
     "password": "new_secret_password",
     "email": "new_email@example.com",
-    "player_name": "New Player Name",
     "managed_groups": ["group_uuid_1"],
     "attributes": {
       "avatar": "mage"
@@ -1203,7 +1208,6 @@ This request allows you to modify the information of an existing user account.
 | `payload.username` | `string` | Yes | Name of the user to modify. |
 | `payload.password` | `string` | No | New Password. |
 | `payload.email` | `string` | No | New email address. |
-| `payload.player_name` | `string` | No | New name for the player associated with the account. |
 | `payload.role` | `string` | No | New role (requires `ADMIN`). |
 | `payload.managed_groups` | `array` | No | List of managed group UUIDs (requires `ADMIN`). |
 | `payload.attributes` | `object` | No | New attributes (overwrites or merges depending on implementation). |
@@ -3359,7 +3363,7 @@ Retrieves the list of all players (`Player` objects) present on the server, whet
 | `payload.players[].player_id` | `string` | - | Player UUID. |
 | `payload.players[].name` | `string` | - | Player name. |
 | `payload.players[].connected` | `boolean` | - | `true` if the player is currently attached to an active session. |
-| `payload.players[].is_persistent` | `boolean` | - | `true` if the player is linked to a persistent user account. |
+| `payload.players[].is_persistent` | `boolean` | - | `true` if the player's identifier is listed in the `players_id` list of a persistent user account. |
 | `payload.players[].games` | `array` | - | List of games this player is associated with, in summary form. |
 | `payload.players[].games[].game_id` | `string` | - | UUID of the game. |
 | `payload.players[].games[].name` | `string` | - | Name of the game. |

@@ -1039,7 +1039,7 @@ def test_logout_detaches_the_players_of_the_user():
         User._existing_usernames.discard("detached_user")
 
 
-def test_user_update_ignores_the_former_player_name_field():
+def test_user_update_ignores_the_former_player_fields():
     server = GameServer()
     try:
         _register_user(server, "renamed_user")
@@ -1048,12 +1048,35 @@ def test_user_update_ignores_the_former_player_name_field():
             server,
             admin,
             "USER_UPDATE",
-            {"username": "renamed_user", "email": "new@example.com", "player_name": "Ignored"},
+            {
+                "username": "renamed_user",
+                "email": "new@example.com",
+                "player_name": "Ignored",
+                "attributes": {"avatar": "mage"},
+            },
         )
         assert updated["payload"]["success"] is True
         assert server._users["renamed_user"].email == "new@example.com"
+        assert server._players == {}
     finally:
         User._existing_usernames.discard("renamed_user")
+
+
+def test_user_create_ignores_attributes_and_creates_no_player():
+    server = GameServer()
+    try:
+        admin = _make_named_session(server, "admin-session", AccessLevel.ADMIN)
+        created = _dispatch(
+            server,
+            admin,
+            "USER_CREATE",
+            {"username": "created_user", "password": "secret", "attributes": {"avatar": "warrior"}},
+        )
+        assert created["payload"]["success"] is True
+        assert server._users["created_user"].players_id == []
+        assert server._players == {}
+    finally:
+        User._existing_usernames.discard("created_user")
 
 
 def test_garbage_collection_removes_the_players_only_in_finished_games():
@@ -1086,6 +1109,34 @@ def test_garbage_collection_removes_the_players_only_in_finished_games():
         assert finished_id in [player.ID for player in server._games[over].players]
     finally:
         User._existing_usernames.discard("collected_user")
+
+
+def test_garbage_collection_removes_the_unreachable_players_without_game():
+    server = GameServer()
+    try:
+        user = _register_user(server, "unreachable_user")
+        account = _login(server, "account-session", "unreachable_user")
+        owned = _dispatch(server, account, "PLAYER_CREATE", {"name": "Owned"})
+        owned_id = owned["payload"]["player_id"]
+        guest_session = _make_named_session(server, "guest-session")
+        closed = _dispatch(server, guest_session, "PLAYER_CREATE", {"name": "Closed"})
+        closed_id = closed["payload"]["player_id"]
+        open_session = _make_named_session(server, "open-session")
+        waiting = _dispatch(server, open_session, "PLAYER_CREATE", {"name": "Waiting"})
+        waiting_id = waiting["payload"]["player_id"]
+        for session in (account, guest_session):
+            server._close_session(session)
+            server._sessions.pop(session.session_id, None)
+
+        server._collect_finished_players()
+
+        # The guest of the closed session can no longer be reached.
+        assert closed_id not in server._players
+        # The player of the account and the one of the open session are kept.
+        assert {owned_id, waiting_id} <= set(server._players)
+        assert user.players_id == [owned_id]
+    finally:
+        User._existing_usernames.discard("unreachable_user")
 
 
 def test_player_list_all_reports_the_players_of_the_accounts_as_persistent():

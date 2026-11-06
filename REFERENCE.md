@@ -228,7 +228,7 @@ Manages the server side of the multiplayer protocol. It handles client connectio
 | `persistence_mode` | `SaveFormat \| None` | Persistence storage format. | No | `None` |
 | `persistence_path` | `Path \| None` | Path to the persistence file. | No | `None` |
 | `persistence_periodicity` | `int` | Seconds between cyclic persistence saves (0 to disable). | No | `0` |
-| `garbage_collection_periodicity` | `int` | Seconds between cleanups of players only associated with finished games (players with no game are kept). | No | `900` |
+| `garbage_collection_periodicity` | `int` | Seconds between cleanups of players only associated with finished games or with no game and no longer reachable (players with no game are kept while attached to an open session or listed in a user's `players_id`). | No | `900` |
 
 **Attributes & Properties:**
 

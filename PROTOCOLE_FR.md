@@ -1109,7 +1109,7 @@ Ces messages concernent les comptes utilisateurs.
 
 Cette requête permet de créer un nouveau compte utilisateur sur le serveur.
 
-En cas de succès, la création d'un compte utilisateur génère automatiquement un objet `Player` sur le serveur, dont le nom correspond au `username` du compte créé.
+La création d'un compte utilisateur ne génère aucun objet **Joueur** : les joueurs sont créés séparément via la requête `PLAYER_CREATE`, qui accepte également les attributs personnalisés liés au jeu (champ `attributes`). Les joueurs créés alors que l'utilisateur est authentifié sont ajoutés à la liste `players_id` de son compte.
 
 #### Règles de création
 
@@ -1127,11 +1127,7 @@ L'autorisation de création dépend du niveau d'accès du client :
     "username": "new_player",
     "password": "secret_password",
     "email": "player@example.com",
-    "role": "PLAYER",
-    "attributes": {
-      "avatar": "warrior",
-      "region": "FR"
-    }
+    "role": "PLAYER"
   }
 }
 ```
@@ -1146,7 +1142,6 @@ L'autorisation de création dépend du niveau d'accès du client :
 | `payload.password` | `string` | Oui | Mot de passe du compte. |
 | `payload.email` | `string` | Non | Adresse email de l'utilisateur. |
 | `payload.role` | `string` | Non | Rôle souhaité (`PLAYER`, `GROUP_ADMIN`, `ADMIN`). Par défaut `"PLAYER"`. Soumis aux règles de création ci-dessus. |
-| `payload.attributes` | `object` | Non | Attributs personnalisés de l'utilisateur. |
 
 ---
 
@@ -1215,7 +1210,7 @@ Message envoyé par le serveur en réponse à une requête `USER_CREATE`.
 **Encodage :** JSON UTF-8  
 **Niveau d'accès minimal :** `PLAYER` (pour son propre compte) ou `ADMIN`
 
-Cette requête permet de modifier les informations d'un compte utilisateur existant.
+Cette requête permet de modifier les informations d'un compte utilisateur existant. Les attributs liés au jeu ne font pas partie du compte : ils sont portés par les joueurs (voir `PLAYER_CREATE`).
 
 #### Exemple
 
@@ -1227,10 +1222,7 @@ Cette requête permet de modifier les informations d'un compte utilisateur exist
     "username": "new_player",
     "password": "new_secret_password",
     "email": "new_email@example.com",
-    "managed_groups": ["group_uuid_1"],
-    "attributes": {
-      "avatar": "mage"
-    }
+    "managed_groups": ["group_uuid_1"]
   }
 }
 ```
@@ -1246,7 +1238,6 @@ Cette requête permet de modifier les informations d'un compte utilisateur exist
 | `payload.email` | `string` | Non | Nouvelle adresse email. |
 | `payload.role` | `string` | Non | Nouveau rôle (requiert `ADMIN`). |
 | `payload.managed_groups` | `array` | Non | Liste des UUIDs de groupes gérés (requiert `ADMIN`). |
-| `payload.attributes` | `object` | Non | Nouveaux attributs (écrase ou fusionne selon l'implémentation). |
 
 ---
 

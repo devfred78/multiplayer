@@ -397,7 +397,8 @@ class GameServer:
             persistence_periodicity (int): Seconds between cyclic persistence
                 saves (0 to disable periodic saving).
             garbage_collection_periodicity (int): Seconds between each
-                deletion of the players only associated with finished games.
+                deletion of the players only associated with finished games,
+                or associated with no game and no longer reachable.
 
         Raises:
             ValueError: If the network or TLS configuration is inconsistent.
@@ -1268,7 +1269,7 @@ class GameServer:
         await self._broadcast(set(self._sessions), message)
 
     async def _garbage_collection_loop(self) -> None:
-        """Periodically removes the players only associated with finished games."""
+        """Periodically removes the players that are no longer needed."""
         while self._running:
             try:
                 await asyncio.sleep(self.garbage_collection_periodicity)
@@ -1287,13 +1288,20 @@ class GameServer:
                 self._save_persistence()
 
     def _collect_finished_players(self) -> None:
-        """Removes the players that are only associated with finished games.
+        """Removes the players that are no longer needed.
 
-        A player associated with no game (for instance a newly created player
-        waiting to be assigned to a game) is kept. A removed player is also
-        detached from the sessions and from the ``players_id`` list of the
-        user accounts. The finished games keep their participants, so that
-        their results remain available.
+        Two kinds of players are removed:
+
+        * the players only associated with finished games;
+        * the players associated with no game that are no longer reachable,
+          i.e. attached to no open session and listed by no user account (for
+          instance the player of a guest whose session has been closed).
+
+        A player associated with no game but still reachable (for instance a
+        newly created player waiting to be assigned to a game) is kept. A
+        removed player is also detached from the sessions and from the
+        ``players_id`` list of the user accounts. The finished games keep their
+        participants, so that their results remain available.
         """
         states: Dict[str, List[GameState]] = {}
         for game_id, roles in self._game_roles.items():
@@ -1307,7 +1315,16 @@ class GameServer:
             for player_id, player_states in states.items()
             if all(state == GameState.FINISHED for state in player_states)
         }
+        reachable = self._persistent_player_ids()
+        for session in self._sessions.values():
+            reachable.update(session.players)
+        unreachable = {
+            player_id
+            for player_id in self._players
+            if player_id not in states and player_id not in reachable
+        }
         finished.intersection_update(self._players)
+        finished.update(unreachable)
         if not finished:
             return
         for player_id in finished:

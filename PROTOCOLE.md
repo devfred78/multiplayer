@@ -1081,7 +1081,7 @@ These messages concern user accounts.
 
 This request allows you to create a new user account on the server.
 
-If successful, creating a user account automatically generates a `Player` object on the server, whose name corresponds to the `username` of the created account.
+Creating a user account does not generate any **Player** object: players are created separately via the `PLAYER_CREATE` request, which also accepts the game-related custom attributes (`attributes` field). The players created while the user is authenticated are added to the `players_id` list of their account.
 
 #### Creation rules
 
@@ -1098,11 +1098,7 @@ Creation permission depends on the client's access level:
     "username": "new_player",
     "password": "secret_password",
     "email": "player@example.com",
-    "role": "PLAYER",
-    "attributes": {
-      "avatar": "warrior",
-      "region": "FR"
-    }
+    "role": "PLAYER"
   }
 }
 ```
@@ -1116,7 +1112,6 @@ Creation permission depends on the client's access level:
 | `payload.password` | `string` | Yes | Account password. |
 | `payload.email` | `string` | No | User email address. |
 | `payload.role` | `string` | No | Desired role (`PLAYER`, `GROUP_ADMIN`, `ADMIN`). Defaults to `"PLAYER"`. Subject to the creation rules above. |
-| `payload.attributes` | `object` | No | User custom attributes. |
 
 ---
 
@@ -1181,7 +1176,7 @@ Message sent by the server in response to a `USER_CREATE` request.
 **Encoding:** JSON UTF-8  
 **Minimum access level:** `PLAYER` (for own account) or `ADMIN`
 
-This request allows you to modify the information of an existing user account.
+This request allows you to modify the information of an existing user account. Game-related attributes are not part of the account: they are carried by the players (see `PLAYER_CREATE`).
 
 #### Example
 ```json
@@ -1192,10 +1187,7 @@ This request allows you to modify the information of an existing user account.
     "username": "new_player",
     "password": "new_secret_password",
     "email": "new_email@example.com",
-    "managed_groups": ["group_uuid_1"],
-    "attributes": {
-      "avatar": "mage"
-    }
+    "managed_groups": ["group_uuid_1"]
   }
 }
 ```
@@ -1210,7 +1202,6 @@ This request allows you to modify the information of an existing user account.
 | `payload.email` | `string` | No | New email address. |
 | `payload.role` | `string` | No | New role (requires `ADMIN`). |
 | `payload.managed_groups` | `array` | No | List of managed group UUIDs (requires `ADMIN`). |
-| `payload.attributes` | `object` | No | New attributes (overwrites or merges depending on implementation). |
 
 ---
 

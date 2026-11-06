@@ -22,8 +22,8 @@ import uuid
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
-from . import PlayerRole
-from .exceptions import MultiplayerError, PasswordError, PlayerNotFoundError
+from . import UserRole
+from .exceptions import MultiplayerError, PasswordError, UserNotFoundError
 from .game import Player, User
 
 try:
@@ -45,8 +45,8 @@ DEFAULT_PORT = 65432
 DEFAULT_MULTICAST_GROUP = "239.255.0.1"
 DEFAULT_MULTICAST_PORT = 65434
 
-# Mapping from the role name advertised by the server to the PlayerRole enum.
-_ROLE_BY_NAME: Dict[str, PlayerRole] = {role.name: role for role in PlayerRole}
+# Mapping from the role name advertised by the server to the UserRole enum.
+_ROLE_BY_NAME: Dict[str, UserRole] = {role.name: role for role in UserRole}
 
 # Message types that are sent spontaneously by the server (notifications).
 NOTIFICATION_TYPES = frozenset(
@@ -81,13 +81,14 @@ def _build_user_from_payload(payload: Dict[str, Any]) -> User:
     user._username = payload.get("username", "")
     user._hash = ""
     user.email = ""
-    user.role = _ROLE_BY_NAME.get(payload.get("role", ""), PlayerRole.PLAYER)
+    user.role = _ROLE_BY_NAME.get(payload.get("role", ""), UserRole.PLAYER)
     user._groups_id = []
-    player = Player(name=payload.get("player_name", user._username))
-    player_id = payload.get("player_id")
-    if isinstance(player_id, str):
-        player._id = player_id
-    user._player = player
+    players = payload.get("players")
+    user._players_id = [
+        player["player_id"]
+        for player in (players if isinstance(players, list) else [])
+        if isinstance(player, dict) and isinstance(player.get("player_id"), str)
+    ]
     return user
 
 
@@ -104,8 +105,8 @@ class GameClient:
         port (int): The TCP port of the server.
         use_tls (bool): Whether the TCP connection is secured with TLS.
         is_connected (bool): Whether the client is currently connected.
-        session_player (Player | None): The default player of the current
-            session, updated on authentication or player creation.
+        session_user (User | None): The user associated with the current
+            session, updated when the user authenticates.
     """
 
     def __init__(
@@ -148,7 +149,7 @@ class GameClient:
         self.__receiver_thread: Optional[threading.Thread] = None
         self.__running: bool = False
         self.__is_connected: bool = False
-        self.__session_player: Optional[Player] = None
+        self.__session_user: Optional[User] = None
 
     # ------------------------------------------------------------------ #
     # Read-only properties
@@ -173,14 +174,14 @@ class GameClient:
         return self.__is_connected
 
     @property
-    def session_player(self) -> Optional[Player]:
-        """The default player associated with the current session.
+    def session_user(self) -> Optional[User]:
+        """The user associated with the current session.
 
         Returns:
-            Player | None: The active default player, or ``None`` if none has
-            been created or authenticated yet.
+            User | None: The authenticated user, or ``None`` if no user has
+            authenticated during the current connection.
         """
-        return self.__session_player
+        return self.__session_user
 
     # ------------------------------------------------------------------ #
     # Serialization and framing
@@ -391,6 +392,7 @@ class GameClient:
         """
         self.__running = False
         self.__is_connected = False
+        self.__session_user = None
         sock = self.__socket
         self.__socket = None
         if sock is not None:
@@ -594,7 +596,8 @@ class GameClient:
         """Authenticates against the server.
 
         Sends a ``USER_LOGIN`` request with the supplied credentials. On success
-        the associated player becomes the default player of the session.
+        the user becomes the user of the session, and the server attaches its
+        active players (listed in ``User.players_id``) to the session.
 
         Args:
             username (str): The user name.
@@ -605,7 +608,7 @@ class GameClient:
 
         Raises:
             PasswordError: If the password is incorrect.
-            PlayerNotFoundError: If the user does not exist.
+            UserNotFoundError: If the user does not exist.
             ConnectionError: If the client is not connected.
         """
         payload = self._exchange(
@@ -615,7 +618,7 @@ class GameClient:
             self._raise_login_error(payload)
 
         user = _build_user_from_payload(payload)
-        self.__session_player = user.player
+        self.__session_user = user
         return user
 
     @staticmethod
@@ -627,15 +630,17 @@ class GameClient:
 
         Raises:
             PasswordError: If the credentials are invalid.
-            PlayerNotFoundError: If the user cannot be found.
+            UserNotFoundError: If the user cannot be found.
             MultiplayerError: For any other server-reported error.
         """
         error_code = payload.get("error_code")
         message = payload.get("message") or error_code or "Authentication failed."
         if error_code in ("INVALID_CREDENTIALS", "INVALID_PASSWORD"):
             raise PasswordError(message)
-        if error_code in ("PLAYER_NOT_FOUND", "USER_NOT_FOUND"):
-            raise PlayerNotFoundError(message)
+        if error_code == "USER_NOT_FOUND":
+            exc = UserNotFoundError()
+            exc.args = (message,)
+            raise exc
         raise MultiplayerError(message)
 
     def create_player(self, name: str, is_default: bool = True) -> Player:
@@ -643,7 +648,9 @@ class GameClient:
 
         Sends a ``PLAYER_CREATE`` request and, on success, mirrors the created
         player locally. When ``is_default`` is set, the new player becomes the
-        session default player.
+        session default player on the server. When a user is authenticated, the
+        server adds the new player to its ``players_id`` list, and so does the
+        local mirror held by :attr:`session_user`.
 
         Args:
             name (str): The name of the player to create.
@@ -662,8 +669,8 @@ class GameClient:
         player_id = payload.get("player_id")
         if isinstance(player_id, str):
             player._id = player_id
-        if is_default:
-            self.__session_player = player
+        if self.__session_user is not None:
+            self.__session_user.players_id.append(player.ID)
         return player
 
     def save_persistence(self) -> Dict[str, Any]:

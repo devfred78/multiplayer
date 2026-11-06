@@ -1,7 +1,7 @@
 import pytest
 import bcrypt
 from multiplayer.game import Player, User, Game, GameGroup
-from multiplayer import PlayerRole, GameState, ParameterFamily
+from multiplayer import UserRole, GameState, ParameterFamily
 from multiplayer.exceptions import (
     UserAlreadyExistsError, PasswordError, GameIsFullError, 
     GameAlreadyStartedError, GameIsFinishedError
@@ -18,9 +18,18 @@ def test_user_creation():
     u = User("bob", "password123", "bob@example.com")
     assert u.username == "bob"
     assert u.email == "bob@example.com"
-    assert u.role == PlayerRole.PLAYER
+    assert u.role == UserRole.PLAYER
     assert bcrypt.checkpw("password123".encode(), u.hash.encode())
-    assert u.player.name == "bob"
+    assert u.players_id == []
+
+def test_user_players_id_is_mutable_but_read_only():
+    u = User("carol", "password123")
+    u.players_id.append("player-1")
+    u.players_id.extend(["player-2", "player-3"])
+    u.players_id.pop()
+    assert u.players_id == ["player-1", "player-2"]
+    with pytest.raises(AttributeError):
+        u.players_id = []
 
 def test_user_duplicate():
     User("duplicate", "pass")

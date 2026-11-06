@@ -75,7 +75,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--garbage-collection-periodicity",
         type=int,
         default=DEFAULT_GC_PERIODICITY,
-        help=f"orphan player cleanup period in seconds (default: {DEFAULT_GC_PERIODICITY})",
+        help=f"cleanup period in seconds of players only associated with finished games (default: {DEFAULT_GC_PERIODICITY})",
     )
     return parser
 

@@ -15,7 +15,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Dict, List, Union
 
-from . import SaveFormat, PlayerRole, GameState
+from . import SaveFormat, UserRole, GameState
 from .exceptions import SaveError
 from .game import Player, User, Game, GameGroup
 
@@ -85,7 +85,7 @@ def _user_to_dict(user: User) -> Dict[str, Any]:
         "email": user.email,
         "role": user.role.value,
         "groups_id": list(user.groups_id),
-        "player": _player_to_dict(user.player),
+        "players_id": list(user.players_id),
     }
 
 
@@ -103,9 +103,15 @@ def _user_from_dict(data: Dict[str, Any]) -> User:
     user._username = data["username"]
     user._hash = data["hash"]
     user.email = data.get("email", "")
-    user.role = PlayerRole(data["role"])
+    user.role = UserRole(data["role"])
     user._groups_id = list(data.get("groups_id", []))
-    user._player = _player_from_dict(data["player"])
+    if "players_id" in data:
+        user._players_id = list(data["players_id"])
+    elif isinstance(data.get("player"), dict) and "id" in data["player"]:
+        # Older save files embedded the single player owned by the account.
+        user._players_id = [data["player"]["id"]]
+    else:
+        user._players_id = []
     User._existing_usernames.add(user._username)
     return user
 
@@ -356,12 +362,58 @@ class Save:
         Args:
             obj (Player | User | Game | GameGroup): The instance to save.
 
+        Before a ``User`` is saved, its ``players_id`` list is cleaned of the
+        players that are no longer associated with any unfinished game (see
+        :meth:`_clean_user_players`).
+
         Raises:
             SaveError: If the object is not an instance of a supported class.
         """
         name = self._resolve_class_name(type(obj))
+        if isinstance(obj, User):
+            self._clean_user_players(obj)
         serializer = _SERIALIZERS[name][0]
         self._data[name][obj.ID] = serializer(obj)
+
+    def _player_game_states(self) -> Dict[str, List[str]]:
+        """Collects the states of the buffered games of each participant.
+
+        Both the games saved on their own and the games saved inside a group
+        are considered.
+
+        Returns:
+            Dict[str, List[str]]: The serialized game states, indexed by the ID
+            of the players and observers taking part in them.
+        """
+        games: Dict[str, Dict[str, Any]] = dict(self._data["Game"])
+        for group in self._data["GameGroup"].values():
+            for game in group.get("games", []):
+                games.setdefault(game["id"], game)
+        states: Dict[str, List[str]] = {}
+        for game in games.values():
+            for participant in game.get("players", []) + game.get("observers", []):
+                states.setdefault(participant["id"], []).append(game["game_state"])
+        return states
+
+    def _clean_user_players(self, user: User) -> None:
+        """Removes the inactive players from the ``players_id`` list of a user.
+
+        A player is inactive when every game of the buffer it takes part in is
+        finished. A player taking part in no buffered game is kept, as it may
+        be waiting to be assigned to a game. The games must therefore be saved
+        before the users for the cleanup to be effective.
+
+        Args:
+            user (User): The user whose list is cleaned in place.
+        """
+        states = self._player_game_states()
+        finished = GameState.FINISHED.value
+        user.players_id[:] = [
+            player_id
+            for player_id in user.players_id
+            if player_id not in states
+            or any(state != finished for state in states[player_id])
+        ]
 
     def load(self, target: Union[str, type]) -> List[Union[Player, User, Game, GameGroup]]:
         """Loads all stored instances of a given class.

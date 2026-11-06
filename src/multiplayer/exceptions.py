@@ -18,6 +18,13 @@ class GroupNotFoundError(MultiplayerError):
         self.group_id = group_id
         super().__init__(f"Group not found: {group_id}")
 
+class UserNotFoundError(MultiplayerError):
+    """Raised when a user account (or its ID) is not found."""
+    def __init__(self, user_id: str | None = None):
+        self.user_id = user_id
+        msg = f"User not found: {user_id}" if user_id else "User not found"
+        super().__init__(msg)
+
 class PlayerNotFoundError(MultiplayerError):
     """Raised when a player ID is not found."""
     def __init__(self, player_id: str | None = None):

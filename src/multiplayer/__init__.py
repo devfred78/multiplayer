@@ -1,8 +1,8 @@
 """Multiplayer package initialization."""
 from enum import Enum
 
-class PlayerRole(Enum):
-    """Enumeration for player account roles."""
+class UserRole(Enum):
+    """Enumeration for user account roles."""
     PLAYER = "player"
     GROUP_ADMIN = "group_admin"
     SERVER_ADMIN = "server_admin"

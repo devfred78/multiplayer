@@ -3,7 +3,7 @@ import uuid
 
 import pytest
 
-from multiplayer import PlayerRole, GameState, ParameterFamily, SaveFormat
+from multiplayer import UserRole, GameState, ParameterFamily, SaveFormat
 from multiplayer.game import Player, User, Game, GameGroup
 from multiplayer.save import Save
 from multiplayer.exceptions import SaveError
@@ -50,7 +50,8 @@ def test_save_and_load_user(tmp_path, save_format):
     file_path = tmp_path / "save.dat"
     save = Save(file_path, save_format)
     user = User(_unique_username(), "secret", "a@b.com")
-    user.role = PlayerRole.GROUP_ADMIN
+    user.role = UserRole.GROUP_ADMIN
+    user.players_id.extend(["player-1", "player-2"])
     save.save(user)
     save.flush()
 
@@ -62,8 +63,63 @@ def test_save_and_load_user(tmp_path, save_format):
     assert restored.username == user.username
     assert restored.hash == user.hash
     assert restored.email == "a@b.com"
-    assert restored.role == PlayerRole.GROUP_ADMIN
-    assert restored.player.name == user.player.name
+    assert restored.role == UserRole.GROUP_ADMIN
+    assert restored.players_id == ["player-1", "player-2"]
+
+
+def test_save_user_cleans_inactive_players(tmp_path, save_format):
+    file_path = tmp_path / "save.dat"
+    save = Save(file_path, save_format)
+    waiting, active, finished, mixed, grouped = (
+        Player(name) for name in ("Waiting", "Active", "Finished", "Mixed", "Grouped")
+    )
+    running = Game("Running")
+    running.join_game_as_player(active)
+    running.join_game_as_observer(mixed)
+    over = Game("Over")
+    over.join_game_as_player(finished)
+    over.join_game_as_player(mixed)
+    over.start()
+    over.stop()
+    group = GameGroup("Group")
+    in_group = Game("In group")
+    in_group.join_game_as_player(grouped)
+    group.add_game(in_group)
+    save.save(running)
+    save.save(over)
+    save.save(group)
+
+    user = User(_unique_username(), "secret")
+    user.players_id.extend(p.ID for p in (waiting, active, finished, mixed, grouped))
+    save.save(user)
+
+    expected = [waiting.ID, active.ID, mixed.ID, grouped.ID]
+    assert user.players_id == expected
+    save.flush()
+    assert Save(file_path, save_format).load(User)[0].players_id == expected
+
+
+def test_load_user_from_older_save_file(tmp_path):
+    file_path = tmp_path / "save.json"
+    username = _unique_username()
+    content = {
+        "Player": {},
+        "User": {
+            "user-1": {
+                "id": "user-1",
+                "username": username,
+                "hash": "hash",
+                "email": "",
+                "role": "player",
+                "groups_id": [],
+                "player": {"id": "player-1", "name": username},
+            }
+        },
+        "Game": {},
+        "GameGroup": {},
+    }
+    file_path.write_text(json.dumps(content), encoding="utf-8")
+    assert Save(file_path, SaveFormat.JSON).load(User)[0].players_id == ["player-1"]
 
 
 def test_save_and_load_game_with_players(tmp_path, save_format):

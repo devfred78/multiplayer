@@ -2,7 +2,7 @@
 import uuid
 from typing import List, Tuple, Dict, Any
 import bcrypt
-from . import PlayerRole, GameState, ParameterFamily
+from . import UserRole, GameState, ParameterFamily
 from .exceptions import (
     UserAlreadyExistsError,
     PlayerNotFoundError,
@@ -67,12 +67,14 @@ class Player:
 class User:
     """Represents a user account.
 
-    A User account allows maintaining a player profile, managing group permissions,
-    and providing authentication. Each user is associated with a single Player instance.
+    A User account provides authentication and manages permissions (role and
+    administered groups). It is distinct from the players: it only keeps the
+    IDs of the active players created during the sessions in which the user
+    was logged in.
 
     Attributes:
         email (str): The email address of the account.
-        role (PlayerRole): The role/permission level of the account.
+        role (UserRole): The role/permission level of the account.
     """
     _existing_usernames: set[str] = set()
 
@@ -94,9 +96,9 @@ class User:
         self._username: str = username
         self._hash: str = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
         self.email: str = email
-        self.role: PlayerRole = PlayerRole.PLAYER
+        self.role: UserRole = UserRole.PLAYER
         self._groups_id: List[str] = []
-        self._player: Player = Player(name=username)
+        self._players_id: List[str] = []
         
         User._existing_usernames.add(username)
 
@@ -139,15 +141,18 @@ class User:
         return self._groups_id
 
     @property
-    def player(self) -> Player:
-        """The player profile associated with this user.
+    def players_id(self) -> List[str]:
+        """The IDs of the active players created while the user was logged in.
 
-        The player name defaults to the username but can be modified independently.
+        A player is active when it is associated with an unfinished game (as a
+        player or as an observer), or with no game yet. The list is mutable but
+        cannot be reassigned. Keeping it clean is the responsibility of the
+        library user; the save layer cleans it before saving the account.
 
         Returns:
-            Player: The associated player instance.
+            List[str]: A mutable list of player UUID strings.
         """
-        return self._player
+        return self._players_id
 
     def change_password(self, new_password: str) -> None:
         """Updates the account password.

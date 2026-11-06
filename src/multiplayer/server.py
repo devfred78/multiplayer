@@ -27,7 +27,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 import bcrypt
 
-from . import GameState, PlayerRole, SaveFormat
+from . import GameState, UserRole, SaveFormat
 from .exceptions import (
     GameAlreadyStartedError,
     GameIsFinishedError,
@@ -88,10 +88,10 @@ class AccessLevel(IntEnum):
 
 
 # Mapping between a user role and the access level granted on authentication.
-_ROLE_TO_ACCESS: Dict[PlayerRole, AccessLevel] = {
-    PlayerRole.PLAYER: AccessLevel.PLAYER,
-    PlayerRole.GROUP_ADMIN: AccessLevel.GROUP_ADMIN,
-    PlayerRole.SERVER_ADMIN: AccessLevel.ADMIN,
+_ROLE_TO_ACCESS: Dict[UserRole, AccessLevel] = {
+    UserRole.PLAYER: AccessLevel.PLAYER,
+    UserRole.GROUP_ADMIN: AccessLevel.GROUP_ADMIN,
+    UserRole.SERVER_ADMIN: AccessLevel.ADMIN,
 }
 
 
@@ -150,7 +150,7 @@ class ClientSession:
         self.user: Optional[User] = None
         self.players: Dict[str, Player] = {}
         self._writer: "asyncio.StreamWriter" = writer
-        self._guest_default_player_id: Optional[str] = None
+        self._default_player_id: Optional[str] = None
         self.subscribed_groups: Set[str] = set()
         self.authorized_groups: Set[str] = set()
         self.joined_games: Set[str] = set()
@@ -164,28 +164,43 @@ class ClientSession:
         """
         return self._writer
 
-    def set_default_player(self, player_id: str) -> None:
-        """Designates a session (guest) player as the default one.
+    def set_default_player(self, player_id: Optional[str]) -> None:
+        """Designates a session player as the default one.
 
         Args:
-            player_id (str): The ID of the player to use as default.
+            player_id (str | None): The ID of the player to use as default, or
+                ``None`` to leave the session without a default player.
         """
-        self._guest_default_player_id = player_id
+        self._default_player_id = player_id
 
     def resolve_default_player_id(self) -> Optional[str]:
         """Resolves the active default player for the session.
 
-        An authenticated user takes priority over guest players. When the
-        client is not authenticated, the last guest player marked as default is
-        used.
+        The default player is the last session player designated as such. It
+        is only valid while it remains attached to the session.
 
         Returns:
             str | None: The ID of the active default player, or ``None`` if the
             session has no default player.
         """
-        if self.user is not None:
-            return self.user.player.ID
-        return self._guest_default_player_id
+        if self._default_player_id in self.players:
+            return self._default_player_id
+        return None
+
+    def detach_players(self, player_ids: Set[str]) -> None:
+        """Detaches players from the session.
+
+        The players are not deleted: they are only no longer reachable from
+        this session. If the default player is detached, the session is left
+        without a default player.
+
+        Args:
+            player_ids (Set[str]): The IDs of the players to detach.
+        """
+        for player_id in player_ids:
+            self.players.pop(player_id, None)
+        if self._default_player_id in player_ids:
+            self._default_player_id = None
 
 
 class _DiscoveryProtocol(asyncio.DatagramProtocol):
@@ -381,8 +396,8 @@ class GameServer:
             persistence_path (Path | None): Path to the persistence file.
             persistence_periodicity (int): Seconds between cyclic persistence
                 saves (0 to disable periodic saving).
-            garbage_collection_periodicity (int): Seconds between orphan player
-                garbage collections.
+            garbage_collection_periodicity (int): Seconds between each
+                deletion of the players only associated with finished games.
 
         Raises:
             ValueError: If the network or TLS configuration is inconsistent.
@@ -706,7 +721,7 @@ class GameServer:
         that a restored administrator prevents the bootstrap account from
         being created.
         """
-        if any(user.role == PlayerRole.SERVER_ADMIN for user in self._users.values()):
+        if any(user.role == UserRole.SERVER_ADMIN for user in self._users.values()):
             return
 
         admin = self._users.get("admin")
@@ -722,9 +737,8 @@ class GameServer:
         else:
             admin.change_password("admin")
 
-        admin.role = PlayerRole.SERVER_ADMIN
+        admin.role = UserRole.SERVER_ADMIN
         self._users[admin.username] = admin
-        self._players[admin.player.ID] = admin.player
 
     def _load_persistence(self) -> None:
         """Loads persistent data into memory when persistence is enabled."""
@@ -764,7 +778,6 @@ class GameServer:
                 self._players[player.ID] = player
             for user in self._save.load(User):
                 self._users[user.username] = user
-                self._players[user.player.ID] = user.player
             self._restore_game_participants()
             creators = config.get("game_creators")
             if isinstance(creators, dict):
@@ -1141,9 +1154,10 @@ class GameServer:
         """Removes the guest players of a session from a game on disconnection.
 
         A guest player only exists for the session that created it, so it
-        leaves its games with the connection. The player of a user account
-        stays in its games: the user finds them again from any later session,
-        including after a restart of a server with persistence enabled.
+        leaves its games with the connection. A player listed in the
+        ``players_id`` of a user account stays in its games: the user finds
+        them again from any later session, including after a restart of a
+        server with persistence enabled.
 
         Args:
             session (ClientSession): The disconnecting session.
@@ -1168,12 +1182,16 @@ class GameServer:
         session.joined_games.discard(game_id)
 
     def _persistent_player_ids(self) -> Set[str]:
-        """Returns the IDs of the players linked to a user account.
+        """Returns the IDs of the players listed by a user account.
 
         Returns:
             Set[str]: The IDs of the persistent players.
         """
-        return {user.player.ID for user in self._users.values()}
+        return {
+            player_id
+            for user in self._users.values()
+            for player_id in user.players_id
+        }
 
     def _remove_player_from_games(self, player_id: str) -> None:
         """Removes a player from every game it takes part in.
@@ -1250,13 +1268,13 @@ class GameServer:
         await self._broadcast(set(self._sessions), message)
 
     async def _garbage_collection_loop(self) -> None:
-        """Periodically removes orphan players from the server registry."""
+        """Periodically removes the players only associated with finished games."""
         while self._running:
             try:
                 await asyncio.sleep(self.garbage_collection_periodicity)
             except asyncio.CancelledError:
                 break
-            self._collect_orphan_players()
+            self._collect_finished_players()
 
     async def _persistence_loop(self) -> None:
         """Periodically saves server data when persistence is enabled."""
@@ -1268,16 +1286,36 @@ class GameServer:
             if self._running and self.persistence_mode is not None:
                 self._save_persistence()
 
-    def _collect_orphan_players(self) -> None:
-        """Removes players that are neither linked to a user nor to a session."""
-        linked_to_user = {user.player.ID for user in self._users.values()}
-        linked_to_session: Set[str] = set()
-        for session in self._sessions.values():
-            linked_to_session.update(session.players)
-        for player_id in list(self._players):
-            if player_id in linked_to_user or player_id in linked_to_session:
+    def _collect_finished_players(self) -> None:
+        """Removes the players that are only associated with finished games.
+
+        A player associated with no game (for instance a newly created player
+        waiting to be assigned to a game) is kept. A removed player is also
+        detached from the sessions and from the ``players_id`` list of the
+        user accounts. The finished games keep their participants, so that
+        their results remain available.
+        """
+        states: Dict[str, List[GameState]] = {}
+        for game_id, roles in self._game_roles.items():
+            game = self._games.get(game_id)
+            if game is None:
                 continue
+            for player_id in roles:
+                states.setdefault(player_id, []).append(game.game_state)
+        finished = {
+            player_id
+            for player_id, player_states in states.items()
+            if all(state == GameState.FINISHED for state in player_states)
+        }
+        finished.intersection_update(self._players)
+        if not finished:
+            return
+        for player_id in finished:
             self._players.pop(player_id, None)
+        for session in self._sessions.values():
+            session.detach_players(finished)
+        for user in self._users.values():
+            user.players_id[:] = [pid for pid in user.players_id if pid not in finished]
 
     # ------------------------------------------------------------------ #
     # Connection and access handlers
@@ -1340,22 +1378,32 @@ class GameServer:
             }
         session.user = user
         session.access_level = _ROLE_TO_ACCESS.get(user.role, AccessLevel.PLAYER)
-        session.players[user.player.ID] = user.player
-        self._players[user.player.ID] = user.player
-        # The player of the account stays in its games between connections:
-        # the session takes them back, to be notified of their updates.
+        attached = [
+            self._players[player_id]
+            for player_id in user.players_id
+            if player_id in self._players
+        ]
+        for player in attached:
+            session.players[player.ID] = player
+        if attached and session.resolve_default_player_id() is None:
+            session.set_default_player(attached[0].ID)
+        # The active players of the account stay in their games between
+        # connections: the session takes them back, to be notified of their
+        # updates.
+        attached_ids = {player.ID for player in attached}
         session.joined_games.update(
             game_id
             for game_id, roles in self._game_roles.items()
-            if user.player.ID in roles
+            if attached_ids.intersection(roles)
         )
         return "AUTH_RESPONSE", {
             "success": True,
             "access_level": session.access_level.name,
             "username": user.username,
             "role": user.role.name,
-            "player_id": user.player.ID,
-            "player_name": user.player.name,
+            "players": [
+                {"player_id": player.ID, "name": player.name} for player in attached
+            ],
             "message": "Authentication successful",
         }
 
@@ -1371,6 +1419,16 @@ class GameServer:
         Returns:
             Tuple[str, Dict[str, Any]]: The response type and payload.
         """
+        if session.user is not None:
+            # The players of the account are detached from the session, but
+            # stay in their games: they will be attached again at the next
+            # authentication of the user.
+            detached = set(session.user.players_id).intersection(session.players)
+            session.detach_players(detached)
+            for game_id in list(session.joined_games):
+                roles = self._game_roles.get(game_id, {})
+                if not any(player_id in roles for player_id in session.players):
+                    session.joined_games.discard(game_id)
         session.user = None
         session.access_level = (
             AccessLevel.OPEN if self.password_required else AccessLevel.BASE
@@ -1411,6 +1469,10 @@ class GameServer:
             player.dynamic_state.update(attributes)
         session.players[player.ID] = player
         self._players[player.ID] = player
+        if session.user is not None:
+            # The player is kept by the account to be found again at its next
+            # authentication, as long as it remains active.
+            session.user.players_id.append(player.ID)
         if is_default or session.resolve_default_player_id() is None:
             session.set_default_player(player.ID)
         return "PLAYER_CREATE_RESPONSE", {
@@ -1484,7 +1546,7 @@ class GameServer:
         Returns:
             Tuple[str, Dict[str, Any]]: The response type and payload.
         """
-        persistent_ids = {user.player.ID for user in self._users.values()}
+        persistent_ids = self._persistent_player_ids()
         connected_ids: Set[str] = set()
         for client in self._sessions.values():
             connected_ids.update(client.players)
@@ -1546,7 +1608,7 @@ class GameServer:
                 "message": "Invalid username or password.",
             }
         try:
-            role = PlayerRole[role_name] if isinstance(role_name, str) else PlayerRole.PLAYER
+            role = UserRole[role_name] if isinstance(role_name, str) else UserRole.PLAYER
         except KeyError:
             return "USER_CREATE_RESPONSE", {
                 "success": False,
@@ -1555,7 +1617,7 @@ class GameServer:
             }
         is_admin = session.access_level >= AccessLevel.ADMIN
         if not is_admin:
-            if role != PlayerRole.PLAYER:
+            if role != UserRole.PLAYER:
                 return "USER_CREATE_RESPONSE", {
                     "success": False,
                     "error_code": "INSUFFICIENT_PERMISSIONS",
@@ -1576,11 +1638,7 @@ class GameServer:
                 "message": "Username already taken",
             }
         user.role = role
-        attributes = payload.get("attributes")
-        if isinstance(attributes, dict):
-            user.player.dynamic_state.update(attributes)
         self._users[user.username] = user
-        self._players[user.player.ID] = user.player
         self._audit("USER_CREATE", session, username)
         return "USER_CREATE_RESPONSE", {
             "success": True,
@@ -1627,11 +1685,9 @@ class GameServer:
             user.change_password(new_password)
         if isinstance(payload.get("email"), str):
             user.email = payload["email"]
-        if isinstance(payload.get("player_name"), str):
-            user.player.name = payload["player_name"]
         if is_admin and isinstance(payload.get("role"), str):
             try:
-                user.role = PlayerRole[payload["role"]]
+                user.role = UserRole[payload["role"]]
             except KeyError:
                 return "USER_UPDATE_RESPONSE", {
                     "success": False,
@@ -1643,8 +1699,6 @@ class GameServer:
             user.groups_id.extend(
                 gid for gid in payload["managed_groups"] if gid in self._groups
             )
-        if isinstance(payload.get("attributes"), dict):
-            user.player.dynamic_state.update(payload["attributes"])
         self._audit("USER_UPDATE", session, username)
         return "USER_UPDATE_RESPONSE", {
             "success": True,
@@ -1679,10 +1733,14 @@ class GameServer:
                 "message": "Cannot delete your own account.",
             }
         self._users.pop(username, None)
-        self._players.pop(user.player.ID, None)
-        # The player of an account outlives its connections in its games, so
-        # it must leave them with the account.
-        self._remove_player_from_games(user.player.ID)
+        # The players of an account outlive its connections in their games, so
+        # they must leave them with the account.
+        account_players = set(user.players_id)
+        for player_id in account_players:
+            self._players.pop(player_id, None)
+            self._remove_player_from_games(player_id)
+        for client in self._sessions.values():
+            client.detach_players(account_players)
         for game_id, creator in list(self._game_creator_user.items()):
             if creator == username:
                 self._game_creator_user.pop(game_id, None)

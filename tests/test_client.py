@@ -10,8 +10,8 @@ from multiplayer.client import (
     PROTOCOL_VERSION,
     _build_user_from_payload,
 )
-from multiplayer import PlayerRole
-from multiplayer.exceptions import MultiplayerError, PasswordError, PlayerNotFoundError
+from multiplayer import UserRole
+from multiplayer.exceptions import MultiplayerError, PasswordError, UserNotFoundError
 from multiplayer.game import User
 from multiplayer.server import GameServer
 
@@ -71,7 +71,7 @@ def test_client_instantiation_defaults():
     assert client.use_tls is False
     assert client.tls_ca_path is None
     assert client.is_connected is False
-    assert client.session_player is None
+    assert client.session_user is None
 
 
 def test_invalid_port_raises():
@@ -91,20 +91,26 @@ def test_build_user_from_payload():
     payload = {
         "username": "alice",
         "role": "SERVER_ADMIN",
-        "player_id": "player-123",
-        "player_name": "Alice",
+        "players": [
+            {"player_id": "player-123", "name": "Alice"},
+            {"player_id": "player-456", "name": "Bob"},
+        ],
     }
     user = _build_user_from_payload(payload)
     assert user.username == "alice"
-    assert user.role == PlayerRole.SERVER_ADMIN
-    assert user.player.ID == "player-123"
-    assert user.player.name == "Alice"
+    assert user.role == UserRole.SERVER_ADMIN
+    assert user.players_id == ["player-123", "player-456"]
+
+
+def test_build_user_from_payload_without_players():
+    user = _build_user_from_payload({"username": "bob", "role": "PLAYER"})
+    assert user.players_id == []
 
 
 def test_raise_login_error_mapping():
     with pytest.raises(PasswordError):
         GameClient._raise_login_error({"error_code": "INVALID_CREDENTIALS"})
-    with pytest.raises(PlayerNotFoundError):
+    with pytest.raises(UserNotFoundError):
         GameClient._raise_login_error({"error_code": "USER_NOT_FOUND"})
     with pytest.raises(MultiplayerError):
         GameClient._raise_login_error({"error_code": "SOMETHING_ELSE"})
@@ -157,14 +163,17 @@ def test_context_manager(server):
     assert client.is_connected is False
 
 
-def test_create_player_updates_session_player(server):
+def test_create_player_as_guest(server):
     client = GameClient(host="127.0.0.1", port=server.port)
     client.connect()
     try:
         player = client.create_player("Guest", is_default=True)
         assert player.ID
-        assert client.session_player is not None
-        assert client.session_player.ID == player.ID
+        assert client.session_user is None
+        listed = client.send_request("PLAYER_LIST")
+        assert [(p["player_id"], p["is_default"]) for p in listed["players"]] == [
+            (player.ID, True)
+        ]
     finally:
         client.disconnect()
 
@@ -202,18 +211,28 @@ def test_login_success_and_failure(server):
     username = "client_login_user"
     user = User(username=username, password="secret")
     server.server._users[username] = user
-    server.server._players[user.player.ID] = user.player
 
     client = GameClient(host="127.0.0.1", port=server.port)
     client.connect()
     try:
         authenticated = client.login(username, "secret")
         assert authenticated.username == username
-        assert authenticated.role == PlayerRole.PLAYER
-        assert client.session_player is not None
-        assert client.session_player.ID == user.player.ID
+        assert authenticated.role == UserRole.PLAYER
+        assert authenticated.players_id == []
+        assert client.session_user is authenticated
+        player = client.create_player("Alice", is_default=True)
+        assert client.session_user.players_id == [player.ID]
+        assert user.players_id == [player.ID]
     finally:
         client.disconnect()
+    assert client.session_user is None
+
+    returning = GameClient(host="127.0.0.1", port=server.port)
+    returning.connect()
+    try:
+        assert returning.login(username, "secret").players_id == [player.ID]
+    finally:
+        returning.disconnect()
 
     other = GameClient(host="127.0.0.1", port=server.port)
     other.connect()

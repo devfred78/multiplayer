@@ -1031,6 +1031,25 @@ def test_the_participants_of_the_accounts_survive_a_restart(tmp_path, save_forma
         User._existing_usernames.discard("restored_player")
 
 
+@pytest.mark.parametrize("save_format", [SaveFormat.JSON, SaveFormat.SQLITE])
+def test_only_the_players_of_the_accounts_are_persisted(tmp_path, save_format):
+    path = tmp_path / f"server_guests.{save_format.value}"
+    first = GameServer(persistence_mode=save_format, persistence_path=path)
+    try:
+        user, _, _, game_id = _game_with_account_and_guest(first, "saved_account")
+        guest_ids = set(first._players) - set(user.players_id)
+        assert guest_ids
+        first._save_persistence()
+
+        second = GameServer(persistence_mode=save_format, persistence_path=path)
+        second._load_persistence()
+
+        assert set(second._players) == set(user.players_id)
+        assert game_id in second._games
+    finally:
+        User._existing_usernames.discard("saved_account")
+
+
 def test_player_created_by_an_authenticated_user_is_kept_by_the_account():
     server = GameServer()
     try:

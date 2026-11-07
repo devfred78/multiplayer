@@ -843,7 +843,10 @@ class GameServer:
         """Persists the in-memory domain objects when persistence is enabled.
 
         The save buffer is cleared first so that objects deleted from the
-        server are also removed from the save file.
+        server are also removed from the save file. Only the players of a user
+        account are saved: a guest player belongs to a session, which does not
+        survive a restart, so it could never be used again. The games keep
+        their own copy of their participants, guests included.
         """
         if self.persistence_mode is None or self.persistence_path is None:
             return
@@ -855,10 +858,14 @@ class GameServer:
                 self._save.save(game)
             for group in self._groups.values():
                 self._save.save(group)
-            for player in self._players.values():
-                self._save.save(player)
+            # The users are saved before the players: saving a user cleans its
+            # list of players, which then gives the players worth persisting.
             for user in self._users.values():
                 self._save.save(user)
+            persistent_ids = self._persistent_player_ids()
+            for player in self._players.values():
+                if player.ID in persistent_ids:
+                    self._save.save(player)
             self._save.save_server_config({
                 "name": self.name,
                 "user_registration_enabled": self.user_registration_enabled,

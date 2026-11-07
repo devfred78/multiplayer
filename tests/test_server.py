@@ -140,6 +140,53 @@ def test_player_create_and_list():
     assert players[0]["is_default"] is True
 
 
+def test_player_update_renames_a_player():
+    server = GameServer()
+    session, _ = _make_session(server)
+    created = _dispatch(server, session, "PLAYER_CREATE", {"name": "Guest"})
+    player_id = created["payload"]["player_id"]
+
+    updated = _dispatch(server, session, "PLAYER_UPDATE", {"player_id": player_id, "name": "Alice"})
+
+    assert updated["payload"]["success"] is True
+    assert server._players[player_id].name == "Alice"
+    missing = _dispatch(server, session, "PLAYER_UPDATE", {"player_id": player_id})
+    assert missing["payload"]["error_code"] == "INVALID_NAME"
+
+
+def test_player_update_resets_the_state_of_a_player_out_of_any_game():
+    server = GameServer()
+    session, _ = _make_session(server)
+    created = _dispatch(
+        server, session, "PLAYER_CREATE", {"name": "Guest", "attributes": {"score": 12}}
+    )
+    player_id = created["payload"]["player_id"]
+    player = server._players[player_id]
+    player.static_state["colour"] = "white"
+    game_id = _dispatch(server, session, "GAME_CREATE", {"name": "Game"})["payload"]["game_id"]
+    _dispatch(
+        server, session, "GAME_JOIN",
+        {"game_id": game_id, "player_id": player_id, "role": "OBSERVER"},
+    )
+
+    refused = _dispatch(
+        server, session, "PLAYER_UPDATE", {"player_id": player_id, "reset_state": True}
+    )
+
+    assert refused["payload"]["error_code"] == "ALREADY_IN_GAME"
+    assert player.dynamic_state == {"score": 12}
+
+    _dispatch(server, session, "GAME_LEAVE", {"game_id": game_id, "player_id": player_id})
+    reset = _dispatch(
+        server, session, "PLAYER_UPDATE", {"player_id": player_id, "reset_state": True}
+    )
+
+    assert reset["payload"]["success"] is True
+    assert player.static_state == {}
+    assert player.dynamic_state == {}
+    assert player.name == "Guest"
+
+
 def test_server_auth_required_then_granted():
     server = GameServer(password="secret")
     session, _ = _make_session(server, level=AccessLevel.OPEN)

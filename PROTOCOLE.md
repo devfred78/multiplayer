@@ -886,7 +886,9 @@ The response specifies for each player their unique identifier, their name and w
 **Encoding:** JSON UTF-8  
 **Minimum access level:** `BASE`
 
-This request allows the client to modify the name of a **Player** object associated with its session (player created via `PLAYER_CREATE` or active player of the user attached upon authentication).
+This request allows the client to modify the name of a **Player** object associated with its session (player created via `PLAYER_CREATE` or active player of the user attached upon authentication), and/or to empty its custom attributes (`static_state` and `dynamic_state`).
+
+Since a **Player** object can only take part in a single game, a client may reuse a player that left its game to join another game. Resetting its attributes beforehand (`reset_state`) prevents the attributes of the former game from disturbing the new one. The reset is refused while the player takes part in a game (including a finished game).
 
 #### Example
 ```json
@@ -895,7 +897,8 @@ This request allows the client to modify the name of a **Player** object associa
   "version": 2,
   "payload": {
     "player_id": "uuid_du_joueur",
-    "name": "NouveauNom"
+    "name": "NouveauNom",
+    "reset_state": true
   }
 }
 ```
@@ -918,7 +921,8 @@ This request allows the client to modify the name of a **Player** object associa
 | `type` | `string` | Yes | `"PLAYER_UPDATE"` |
 | `version` | `number` | Yes | `2` |
 | `payload.player_id` | `string` | Yes | UUID of the player to modify. |
-| `payload.name` | `string` | Yes | New name for the player. |
+| `payload.name` | `string` | No | New name for the player. Mandatory unless `reset_state` is `true`. |
+| `payload.reset_state` | `boolean` | No | `true` to empty the custom attributes (`static_state` and `dynamic_state`) of the player. Defaults to `false`. |
 
 #### Fields (`PLAYER_UPDATE_RESPONSE`)
 
@@ -934,7 +938,8 @@ This request allows the client to modify the name of a **Player** object associa
 | Code | Description |
 |---|---|
 | `PLAYER_NOT_FOUND` | The specified player does not exist in this session. |
-| `INVALID_NAME` | The new name is invalid or already in use. |
+| `INVALID_NAME` | The new name is invalid or already in use, or no name is provided without `reset_state`. |
+| `ALREADY_IN_GAME` | `reset_state` is requested while the player takes part in a game. |
 | `INSUFFICIENT_PERMISSIONS` | The client does not have the rights to modify this player. |
 
 ---
@@ -3787,7 +3792,7 @@ This table groups together all the error codes defined in the protocol, classifi
 |---|---|---|
 | `ACCOUNT_DISABLED` | The user account has been disabled by an administrator. | `AUTH_RESPONSE` |
 | `ALREADY_AUTHENTICATED` | The client is already authenticated with a user account. | `AUTH_RESPONSE` |
-| `ALREADY_IN_GAME` | The player is already taking part in this game or in another game (a **Player** object can only take part in a single game). | `GAME_JOIN_RESPONSE` |
+| `ALREADY_IN_GAME` | The player is already taking part in this game or in another game (a **Player** object can only take part in a single game), or its state cannot be reset while it takes part in a game. | `GAME_JOIN_RESPONSE`, `PLAYER_UPDATE_RESPONSE` |
 | `ALREADY_SUBSCRIBED` | The customer is already subscribed to this group. | `GROUP_SUBSCRIBE_RESPONSE` |
 | `CANNOT_DELETE_SELF` | An administrator cannot delete their own account via this request. | `USER_DELETE_RESPONSE` |
 | `GAME_ALREADY_STARTED` | The game has already started (or no longer accepts players). | `GAME_JOIN_RESPONSE`, `GAME_CONTROL_RESPONSE` |

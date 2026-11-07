@@ -303,3 +303,22 @@ def test_client_save_persistence(tmp_path):
     finally:
         runner.stop()
         User._existing_usernames.discard("admin")
+
+
+def test_client_update_player_resets_its_state(server):
+    client = GameClient(host="127.0.0.1", port=server.port)
+    client.connect()
+    try:
+        player = client.create_player("Guest")
+        stored = server.server._players[player.ID]
+        stored.dynamic_state["score"] = 3
+
+        response = client.update_player(player.ID, name="Alice", reset_state=True)
+
+        assert response["success"] is True
+        assert stored.name == "Alice"
+        assert stored.dynamic_state == {}
+        with pytest.raises(ValueError):
+            client.update_player(player.ID)
+    finally:
+        client.disconnect()

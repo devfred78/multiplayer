@@ -284,6 +284,7 @@ Client side for connecting to and communicating with a `GameServer`.
 | `disconnect` | Closes the connection. | - |
 | `login` | Authenticates a user and retrieves the account info. | `username (str)`, `password (str)` |
 | `create_player` | Creates a new player for the session. | `name (str)`, `is_default (bool = True)` |
+| `update_player` | Renames a player of the session and/or empties its `static_state` and `dynamic_state` (refused while the player takes part in a game). | `player_id (str)`, `name (str\|None = None)`, `reset_state (bool = False)` |
 | `send_request` | Sends a protocol request and returns its response payload. | `command (str)`, `timeout (float = 10.0)`, `**kwargs` |
 | `on_notification` | Registers a callback to handle server notifications. | `notification_type (str\|None)`, `callback (Callable[[dict], None])` |
 | `save_persistence` | Requests an immediate persistence save from the server (admin only). | - |

@@ -673,6 +673,43 @@ class GameClient:
             self.__session_user.players_id.append(player.ID)
         return player
 
+    def update_player(
+        self,
+        player_id: str,
+        name: Optional[str] = None,
+        reset_state: bool = False,
+    ) -> Dict[str, Any]:
+        """Updates a player of the session on the server.
+
+        Sends a ``PLAYER_UPDATE`` request renaming the player, emptying its
+        ``static_state`` and ``dynamic_state`` attributes, or both. Resetting
+        the attributes lets a player that left its game be reused for another
+        game; the server refuses it while the player takes part in a game.
+
+        Args:
+            player_id (str): The ID of the player to update.
+            name (str | None): The new name of the player, or ``None`` to keep
+                the current one. Defaults to ``None``.
+            reset_state (bool): Whether to empty the custom attributes of the
+                player. Defaults to ``False``.
+
+        Returns:
+            Dict[str, Any]: The response payload from the server.
+
+        Raises:
+            ValueError: If neither a name nor a reset is requested.
+            MultiplayerError: If the server rejects the update.
+            ConnectionError: If the client is not connected.
+        """
+        if name is None and not reset_state:
+            raise ValueError("A new name or a state reset is required to update a player.")
+        arguments: Dict[str, Any] = {"player_id": player_id}
+        if name is not None:
+            arguments["name"] = name
+        if reset_state:
+            arguments["reset_state"] = True
+        return self.send_request("PLAYER_UPDATE", **arguments)
+
     def save_persistence(self) -> Dict[str, Any]:
         """Requests an immediate persistence save on the server.
 

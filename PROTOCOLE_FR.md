@@ -902,7 +902,9 @@ La réponse précise pour chaque joueur son identifiant unique, son nom et s'il 
 **Encodage :** JSON UTF-8  
 **Niveau d'accès minimal :** `BASE`
 
-Cette requête permet au client de modifier le nom d'un objet **Joueur** associé à sa session (joueur créé via `PLAYER_CREATE` ou joueur actif de l'utilisateur rattaché lors de l'authentification).
+Cette requête permet au client de modifier le nom d'un objet **Joueur** associé à sa session (joueur créé via `PLAYER_CREATE` ou joueur actif de l'utilisateur rattaché lors de l'authentification), et/ou de vider ses attributs personnalisés (`static_state` et `dynamic_state`).
+
+Un objet **Joueur** ne pouvant participer qu'à une seule partie, un client peut réutiliser un joueur ayant quitté sa partie pour en rejoindre une autre. La remise à zéro préalable de ses attributs (`reset_state`) évite que les attributs de l'ancienne partie ne perturbent la nouvelle. La remise à zéro est refusée tant que le joueur participe à une partie (y compris une partie terminée).
 
 #### Exemple
 
@@ -912,7 +914,8 @@ Cette requête permet au client de modifier le nom d'un objet **Joueur** associ�
   "version": 2,
   "payload": {
     "player_id": "uuid_du_joueur",
-    "name": "NouveauNom"
+    "name": "NouveauNom",
+    "reset_state": true
   }
 }
 ```
@@ -938,7 +941,8 @@ Cette requête permet au client de modifier le nom d'un objet **Joueur** associ�
 | `type` | `string` | Oui | `"PLAYER_UPDATE"` |
 | `version` | `number` | Oui | `2` |
 | `payload.player_id` | `string` | Oui | UUID du joueur à modifier. |
-| `payload.name` | `string` | Oui | Nouveau nom pour le joueur. |
+| `payload.name` | `string` | Non | Nouveau nom pour le joueur. Obligatoire sauf si `reset_state` vaut `true`. |
+| `payload.reset_state` | `boolean` | Non | `true` pour vider les attributs personnalisés (`static_state` et `dynamic_state`) du joueur. Vaut `false` par défaut. |
 
 #### Champs (`PLAYER_UPDATE_RESPONSE`)
 
@@ -954,7 +958,8 @@ Cette requête permet au client de modifier le nom d'un objet **Joueur** associ�
 | Code | Description |
 |---|---|
 | `PLAYER_NOT_FOUND` | Le joueur spécifié n'existe pas dans cette session. |
-| `INVALID_NAME` | Le nouveau nom est invalide ou déjà utilisé. |
+| `INVALID_NAME` | Le nouveau nom est invalide ou déjà utilisé, ou aucun nom n'est fourni sans `reset_state`. |
+| `ALREADY_IN_GAME` | `reset_state` est demandé alors que le joueur participe à une partie. |
 | `INSUFFICIENT_PERMISSIONS` | Le client n'a pas les droits pour modifier ce joueur. |
 
 ---
@@ -3989,7 +3994,7 @@ Ce tableau regroupe l'ensemble des codes d'erreur définis dans le protocole, cl
 |---|---|---|
 | `ACCOUNT_DISABLED` | Le compte utilisateur a été désactivé par un administrateur. | `AUTH_RESPONSE` |
 | `ALREADY_AUTHENTICATED` | Le client est déjà authentifié avec un compte utilisateur. | `AUTH_RESPONSE` |
-| `ALREADY_IN_GAME` | Le joueur participe déjà à cette partie ou à une autre partie (un objet **Joueur** ne peut participer qu'à une seule partie). | `GAME_JOIN_RESPONSE` |
+| `ALREADY_IN_GAME` | Le joueur participe déjà à cette partie ou à une autre partie (un objet **Joueur** ne peut participer qu'à une seule partie), ou son état ne peut être remis à zéro tant qu'il participe à une partie. | `GAME_JOIN_RESPONSE`, `PLAYER_UPDATE_RESPONSE` |
 | `ALREADY_SUBSCRIBED` | Le client est déjà abonné à ce groupe. | `GROUP_SUBSCRIBE_RESPONSE` |
 | `CANNOT_DELETE_SELF` | Un administrateur ne peut pas supprimer son propre compte via cette requête. | `USER_DELETE_RESPONSE` |
 | `GAME_ALREADY_STARTED` | La partie a déjà commencé (ou n'accepte plus de joueurs). | `GAME_JOIN_RESPONSE`, `GAME_CONTROL_RESPONSE` |

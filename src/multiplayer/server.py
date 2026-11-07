@@ -1528,7 +1528,14 @@ class GameServer:
     def _handle_player_update(
         self, session: ClientSession, payload: Dict[str, Any]
     ) -> Tuple[str, Dict[str, Any]]:
-        """Handles a ``PLAYER_UPDATE`` request (rename a session player).
+        """Handles a ``PLAYER_UPDATE`` request (update a session player).
+
+        The request renames the player, empties its ``static_state`` and
+        ``dynamic_state`` attributes (``reset_state``), or both. A player
+        taking part in a game cannot be reset, since its attributes belong to
+        that game: resetting it lets a client reuse a player that left its
+        game for another game, without carrying attributes that could disturb
+        it.
 
         Args:
             session (ClientSession): The originating session.
@@ -1539,6 +1546,7 @@ class GameServer:
         """
         player_id = payload.get("player_id")
         name = payload.get("name")
+        reset_state = payload.get("reset_state") is True
         player = session.players.get(player_id) if isinstance(player_id, str) else None
         if player is None:
             return "PLAYER_UPDATE_RESPONSE", {
@@ -1546,13 +1554,25 @@ class GameServer:
                 "error_code": "PLAYER_NOT_FOUND",
                 "message": "Player not found in this session.",
             }
-        if not isinstance(name, str) or not name.strip():
+        if (name is not None or not reset_state) and (
+            not isinstance(name, str) or not name.strip()
+        ):
             return "PLAYER_UPDATE_RESPONSE", {
                 "success": False,
                 "error_code": "INVALID_NAME",
                 "message": "Invalid player name.",
             }
-        player.name = name
+        if reset_state and any(player.ID in roles for roles in self._game_roles.values()):
+            return "PLAYER_UPDATE_RESPONSE", {
+                "success": False,
+                "error_code": "ALREADY_IN_GAME",
+                "message": "Player takes part in a game: its state cannot be reset.",
+            }
+        if name is not None:
+            player.name = name
+        if reset_state:
+            player.static_state.clear()
+            player.dynamic_state.clear()
         return "PLAYER_UPDATE_RESPONSE", {
             "success": True,
             "player_id": player.ID,

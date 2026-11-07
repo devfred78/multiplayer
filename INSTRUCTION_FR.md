@@ -184,6 +184,8 @@ Elle présente les attributs suivants:
 #### Classe `User`
 Cette classe représente un compte utilisateur. Celui-ci permet d'accéder à diverses capacités selon son niveau d'accès (authentification). Un utilisateur est une entité distincte du joueur : l'utilisateur gère les identifiants et les droits, tandis que le joueur gère la présence dans le jeu.
 
+Un utilisateur peut participer à plusieurs parties simultanément, en tant que joueur comme en tant qu'observateur. Chaque participation nécessite la création d'un objet `Player` distinct, chacun rattaché au compte utilisateur au travers de l'attribut `players_id`. Un même objet `Player` ne peut en effet participer qu'à une seule partie.
+
 Elle s'instantie avec les paramètres suivants:
 
 | Nom        | Type | Description                     | Obligatoire | Valeur par défaut  |

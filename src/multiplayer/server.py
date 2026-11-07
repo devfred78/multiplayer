@@ -2134,6 +2134,14 @@ class GameServer:
                 "error_code": "ALREADY_IN_GAME",
                 "message": "Already in this game.",
             }
+        # A player object takes part in a single game: a user taking part in
+        # several games needs a distinct player for each participation.
+        if any(player.ID in other_roles for other_roles in self._game_roles.values()):
+            return "GAME_JOIN_RESPONSE", {
+                "success": False,
+                "error_code": "ALREADY_IN_GAME",
+                "message": "Player already takes part in another game.",
+            }
         password = payload.get("password")
         try:
             if role == "PLAYER":

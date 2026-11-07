@@ -32,6 +32,8 @@ Un **joueur** est l'entité qui participe effectivement à une partie de jeu ou 
 
 Un client peut posséder plusieurs objets **Joueur** au cours d'une même session (par exemple pour permettre à plusieurs participants de jouer sur le même ordinateur). Cependant, un seul joueur est considéré à un instant donné comme le **joueur par défaut actif** de la session.
 
+Un objet **Joueur** ne peut participer qu'à une seule partie, en tant que joueur ou en tant qu'observateur. Un utilisateur peut néanmoins participer à plusieurs parties simultanément, en tant que joueur comme en tant qu'observateur : chaque participation nécessite la création d'un objet **Joueur** distinct, chacun rattaché au compte utilisateur au travers de la liste `players_id`.
+
 Dans cette version du protocole, un client doit obligatoirement disposer d'un objet **Joueur** dans sa session pour rejoindre une partie :
 - Un joueur est créé explicitement via une requête dédiée (`PLAYER_CREATE`), que le client soit authentifié ou non. Le dernier joueur créé avec l'option "par défaut" devient le joueur de référence pour les actions suivantes.
 - Si le client est authentifié, l'identifiant du joueur créé est automatiquement ajouté à la liste `players_id` de l'utilisateur.
@@ -1708,6 +1710,8 @@ Permet à l'utilisateur de rejoindre une partie, soit pour y jouer, soit pour l'
 
 Si l'identifiant du joueur (`player_id`) n'est pas précisé dans la requête, le serveur utilise automatiquement le **joueur par défaut** associé à la session. Si aucun joueur par défaut n'est défini, une erreur `PLAYER_NOT_FOUND` est retournée.
 
+Un joueur ne peut participer qu'à une seule partie : si le joueur désigné participe déjà à une partie (y compris une partie terminée), la requête échoue avec `ALREADY_IN_GAME`. Pour participer à une autre partie, le client doit créer un nouvel objet **Joueur** (`PLAYER_CREATE`).
+
 #### Exemple
 
 ```json
@@ -1763,7 +1767,7 @@ Si l'identifiant du joueur (`player_id`) n'est pas précisé dans la requête, l
 | `INVALID_GROUP_PASSWORD` | Le mot de passe du groupe est absent ou incorrect. |
 | `AUTHENTICATION_REQUIRED` | Un utilisateur authentifié est requis pour rejoindre une partie comme joueur. |
 | `GAME_FULL` | Le nombre maximum de joueurs (pour `PLAYER`) ou d'observateurs (pour `OBSERVER`) est atteint. |
-| `ALREADY_IN_GAME` | L'utilisateur participe déjà à cette partie ou à une autre partie incompatible. |
+| `ALREADY_IN_GAME` | Le joueur participe déjà à cette partie ou à une autre partie (un objet **Joueur** ne peut participer qu'à une seule partie). |
 | `GAME_ALREADY_STARTED` | La partie a déjà commencé et n'accepte plus de nouveaux joueurs (n'affecte pas les observateurs). |
 | `INSUFFICIENT_PERMISSIONS` | Le niveau d'accès de l'utilisateur est insuffisant pour le rôle demandé (ex: `BASE` demandant `PLAYER`). |
 | `PLAYER_NOT_FOUND` | L'identifiant du joueur est manquant et aucun joueur par défaut n'est défini pour la session, ou l'identifiant spécifié n'a pas été trouvé sur le serveur. |
@@ -3985,7 +3989,7 @@ Ce tableau regroupe l'ensemble des codes d'erreur définis dans le protocole, cl
 |---|---|---|
 | `ACCOUNT_DISABLED` | Le compte utilisateur a été désactivé par un administrateur. | `AUTH_RESPONSE` |
 | `ALREADY_AUTHENTICATED` | Le client est déjà authentifié avec un compte utilisateur. | `AUTH_RESPONSE` |
-| `ALREADY_IN_GAME` | L'utilisateur participe déjà à cette partie ou à une autre partie incompatible. | `GAME_JOIN_RESPONSE` |
+| `ALREADY_IN_GAME` | Le joueur participe déjà à cette partie ou à une autre partie (un objet **Joueur** ne peut participer qu'à une seule partie). | `GAME_JOIN_RESPONSE` |
 | `ALREADY_SUBSCRIBED` | Le client est déjà abonné à ce groupe. | `GROUP_SUBSCRIBE_RESPONSE` |
 | `CANNOT_DELETE_SELF` | Un administrateur ne peut pas supprimer son propre compte via cette requête. | `USER_DELETE_RESPONSE` |
 | `GAME_ALREADY_STARTED` | La partie a déjà commencé (ou n'accepte plus de joueurs). | `GAME_JOIN_RESPONSE`, `GAME_CONTROL_RESPONSE` |

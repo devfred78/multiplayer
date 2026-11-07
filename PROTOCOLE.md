@@ -32,6 +32,8 @@ A **player** is the entity that actually participates in or observes a game. Whi
 
 A client can have several **Player** objects during the same session (for example to allow several participants to play on the same computer). However, only one player is considered the **active default player** of the session at any given time.
 
+A **Player** object can only take part in a single game, either as a player or as an observer. A user can nevertheless take part in several games simultaneously, as a player as well as an observer: each participation requires the creation of a distinct **Player** object, each one attached to the user account through the `players_id` list.
+
 In this version of the protocol, a client must have a **Player** object in its session to join a game:
 - A player is explicitly created via a dedicated request (`PLAYER_CREATE`), whether the client is authenticated or not. The last player created with the "default" option becomes the reference player for subsequent actions.
 - If the client is authenticated, the identifier of the created player is automatically added to the user's `players_id` list.
@@ -1649,6 +1651,8 @@ Allows the user to join a game, either to play it or to observe it.
 
 If the player identifier (`player_id`) is not specified in the request, the server automatically uses the **default player** associated with the session. If no default player is defined, a `PLAYER_NOT_FOUND` error is returned.
 
+A player can only take part in a single game: if the designated player already takes part in a game (including a finished game), the request fails with `ALREADY_IN_GAME`. To take part in another game, the client must create a new **Player** object (`PLAYER_CREATE`).
+
 #### Example
 ```json
 {
@@ -1700,7 +1704,7 @@ If the player identifier (`player_id`) is not specified in the request, the serv
 | `INVALID_GROUP_PASSWORD` | The group password is missing or incorrect. |
 | `AUTHENTICATION_REQUIRED` | An authenticated user is required to join as a player. |
 | `GAME_FULL` | The maximum number of players (for `PLAYER`) or observers (for `OBSERVER`) is reached. |
-| `ALREADY_IN_GAME` | The user is already participating in this game or another incompatible game. |
+| `ALREADY_IN_GAME` | The player is already taking part in this game or in another game (a **Player** object can only take part in a single game). |
 | `GAME_ALREADY_STARTED` | The game has already started and is no longer accepting new players (does not affect observers). |
 | `INSUFFICIENT_PERMISSIONS` | The user's access level is insufficient for the requested role (eg: `BASE` requesting `PLAYER`). |
 | `PLAYER_NOT_FOUND` | The player ID is missing and no default player is set for the session, or the specified ID was not found on the server. |
@@ -3783,7 +3787,7 @@ This table groups together all the error codes defined in the protocol, classifi
 |---|---|---|
 | `ACCOUNT_DISABLED` | The user account has been disabled by an administrator. | `AUTH_RESPONSE` |
 | `ALREADY_AUTHENTICATED` | The client is already authenticated with a user account. | `AUTH_RESPONSE` |
-| `ALREADY_IN_GAME` | The user is already participating in this game or another incompatible game. | `GAME_JOIN_RESPONSE` |
+| `ALREADY_IN_GAME` | The player is already taking part in this game or in another game (a **Player** object can only take part in a single game). | `GAME_JOIN_RESPONSE` |
 | `ALREADY_SUBSCRIBED` | The customer is already subscribed to this group. | `GROUP_SUBSCRIBE_RESPONSE` |
 | `CANNOT_DELETE_SELF` | An administrator cannot delete their own account via this request. | `USER_DELETE_RESPONSE` |
 | `GAME_ALREADY_STARTED` | The game has already started (or no longer accepts players). | `GAME_JOIN_RESPONSE`, `GAME_CONTROL_RESPONSE` |

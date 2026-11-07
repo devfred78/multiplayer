@@ -217,6 +217,57 @@ def test_game_create_join_and_control():
     assert state["payload"]["state"]["status"] == "IN_PROGRESS"
 
 
+@pytest.mark.parametrize(
+    "first_role, second_role",
+    [("PLAYER", "PLAYER"), ("PLAYER", "OBSERVER"), ("OBSERVER", "PLAYER"), ("OBSERVER", "OBSERVER")],
+)
+def test_player_cannot_join_a_second_game(first_role, second_role):
+    server = GameServer()
+    session, _ = _make_session(server)
+    _dispatch(server, session, "PLAYER_CREATE", {"name": "Alice", "is_default": True})
+    first = _dispatch(server, session, "GAME_CREATE", {"name": "First"})["payload"]["game_id"]
+    second = _dispatch(server, session, "GAME_CREATE", {"name": "Second"})["payload"]["game_id"]
+
+    joined = _dispatch(server, session, "GAME_JOIN", {"game_id": first, "role": first_role})
+    assert joined["payload"]["success"] is True
+
+    refused = _dispatch(server, session, "GAME_JOIN", {"game_id": second, "role": second_role})
+    assert refused["payload"]["success"] is False
+    assert refused["payload"]["error_code"] == "ALREADY_IN_GAME"
+    assert server._game_roles[second] == {}
+    assert server._games[second].players == ()
+    assert server._games[second].observers == ()
+
+
+def test_user_joins_several_games_with_distinct_players():
+    user = _register_user(server := GameServer(), "multi_game_user")
+    try:
+        session = _login(server, "multi-game-session", "multi_game_user")
+        games = [
+            _dispatch(server, session, "GAME_CREATE", {"name": name})["payload"]["game_id"]
+            for name in ("Played", "Watched")
+        ]
+        player_ids = []
+        for game_id, role in zip(games, ("PLAYER", "OBSERVER")):
+            created = _dispatch(server, session, "PLAYER_CREATE", {"name": role.title()})
+            player_id = created["payload"]["player_id"]
+            player_ids.append(player_id)
+            joined = _dispatch(
+                server,
+                session,
+                "GAME_JOIN",
+                {"game_id": game_id, "player_id": player_id, "role": role},
+            )
+            assert joined["payload"]["success"] is True
+
+        assert user.players_id == player_ids
+        assert server._game_roles[games[0]] == {player_ids[0]: "PLAYER"}
+        assert server._game_roles[games[1]] == {player_ids[1]: "OBSERVER"}
+        assert session.joined_games == set(games)
+    finally:
+        User._existing_usernames.discard("multi_game_user")
+
+
 def test_game_control_start_requires_min_players():
     server = GameServer()
     session, _ = _make_session(server)
@@ -1137,7 +1188,6 @@ def test_garbage_collection_removes_the_players_only_in_finished_games():
         over = _dispatch(server, session, "GAME_CREATE", {"name": "Over"})["payload"]["game_id"]
         running = _dispatch(server, session, "GAME_CREATE", {"name": "Running"})["payload"]["game_id"]
         _dispatch(server, session, "GAME_JOIN", {"game_id": over, "role": "PLAYER", "player_id": finished_id})
-        _dispatch(server, session, "GAME_JOIN", {"game_id": over, "role": "PLAYER", "player_id": active_id})
         _dispatch(server, session, "GAME_JOIN", {"game_id": running, "role": "OBSERVER", "player_id": active_id})
         server._games[over].start()
         server._games[over].stop()

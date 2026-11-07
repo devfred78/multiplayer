@@ -182,6 +182,8 @@ It has the following attributes:
 #### Class `User`
 This class represents a user account. It grants access to various capabilities depending on its access level (authentication). A user is an entity distinct from the player: the user manages credentials and rights, while the player manages presence in the game.
 
+A user can take part in several games simultaneously, as a player as well as an observer. Each participation requires the creation of a distinct `Player` object, each one attached to the user account through the `players_id` attribute. Indeed, a given `Player` object can only take part in a single game.
+
 It is instantiated with the following parameters:
 
 | Name | Type | Description | Mandatory | Default |

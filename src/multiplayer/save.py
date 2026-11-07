@@ -128,6 +128,7 @@ def _game_to_dict(game: Game) -> Dict[str, Any]:
     return {
         "id": game.ID,
         "name": game.name,
+        "min_players": game._min_players,
         "max_players": game._max_players,
         "max_observers": game._max_observers,
         "hash": game.hash,
@@ -153,6 +154,7 @@ def _game_from_dict(data: Dict[str, Any]) -> Game:
     game = Game.__new__(Game)
     game._id = data["id"]
     game.name = data.get("name")
+    game._min_players = data.get("min_players", 0)
     game._max_players = data.get("max_players")
     game._max_observers = data.get("max_observers")
     game._hash = data.get("hash")

@@ -61,7 +61,7 @@ Represents a user account with authentication and role management.
 ---
 
 ### Game
-`multiplayer.game.Game(name, max_players, max_observers, password, observer_password, turn_based, **kwargs)`
+`multiplayer.game.Game(name, max_players, max_observers, password, observer_password, turn_based, min_players, **kwargs)`
 
 Manages a single game session, players, and state transitions.
 
@@ -75,6 +75,7 @@ Manages a single game session, players, and state transitions.
 | `password` | `str \| None` | Password for players. `None` for public. | No | `None` |
 | `observer_password` | `str \| None` | Password for observers. If `None`, uses `password`. | No | `None` |
 | `turn_based` | `bool` | Whether the game is turn-based. | No | `False` |
+| `min_players` | `int` | Min players required to start the game. `0` (or `<= 0`) allows starting without players. Capped at `max_players` when greater. | No | `0` |
 | `**kwargs` | variable | Optional custom parameters (tuple of family and value). | No | - |
 
 **Attributes & Properties:**
@@ -86,6 +87,7 @@ Manages a single game session, players, and state transitions.
 | `hash` | `str \| None` | Hashed player password. | No | Generated via `bcrypt`. |
 | `observer_hash` | `str \| None` | Hashed observer password. | No | Generated via `bcrypt`. |
 | `turn_based` | `bool` | Turn-based flag. | No | - |
+| `min_players` | `int` | Effective min players required to start the game. | No | Initialized from the `min_players` parameter, capped at `max_players` when greater. |
 | `players` | `tuple[Player]` | Read-only tuple of players in turn order. | No | Backed by internal list `_players`. |
 | `observers` | `tuple[Player]` | Read-only tuple of observers. | No | Backed by internal list `_observers`. |
 | `current_player` | `Player \| None` | The player whose turn it is. | No | Only relevant for turn-based games. |
@@ -102,7 +104,7 @@ Manages a single game session, players, and state transitions.
 | `remove_player` | Removes a player. | `player (Player\|str)` | `PlayerNotFoundInGameError` |
 | `join_game_as_observer` | Adds an observer. | `player (Player\|str)`, `password (str\|None)` | `PlayerNotFoundError`, `PasswordError`, `GameIsFullError` |
 | `remove_observer` | Removes an observer. | `player (Player\|str)` | `PlayerNotFoundInGameError` |
-| `start` | Sets state to `IN_PROGRESS`. | - | `GameAlreadyStartedError`, `GameIsFinishedError` |
+| `start` | Sets state to `IN_PROGRESS`. | - | `GameAlreadyStartedError`, `GameIsFinishedError`, `NotEnoughPlayersError` |
 | `pause` | Sets state to `PAUSING`. | - | `GameNotStartedError` |
 | `resume` | Sets state back to `IN_PROGRESS`. | - | `GameNotPausedError` |
 | `stop` | Sets state to `FINISHED`. | - | `GameNotStartedError` |
@@ -341,6 +343,7 @@ All exceptions inherit from `multiplayer.exceptions.MultiplayerError`.
 | `PasswordError` | Raised when an incorrect password is provided. |
 | `GameIsFullError` | Raised when a game has reached its player or observer limit. |
 | `GameAlreadyStartedError` | Raised when trying to start a game that is already active or paused. |
+| `NotEnoughPlayersError` | Raised when trying to start a game with fewer players than `min_players`. |
 | `GameIsFinishedError` | Raised when attempting to modify a finished game. |
 | `GameNotStartedError` | Raised when an action (pause, stop, next_turn) requires the game to be started. |
 | `GameAlreadyPausedError` | Raised when trying to pause an already paused game. |

@@ -1473,6 +1473,7 @@ Permet de créer une nouvelle instance de jeu sur le serveur.
     "name": "Ma Super Partie",
     "group_id": "uuid_du_groupe",
     "group_password": "secret_groupe",
+    "min_players": 2,
     "max_players": 4,
     "max_observers": 10,
     "turn_based": true,
@@ -1504,6 +1505,7 @@ Permet de créer une nouvelle instance de jeu sur le serveur.
 | Champ | Type JSON | Obligatoire | Description |
 |---|---|---:|---|
 | `payload.name` | `string` | Oui | Nom de la partie. |
+| `payload.min_players` | `number` | Non | Nombre minimum de joueurs pour démarrer la partie (entier). Par défaut `0` (la partie peut démarrer sans aucun joueur). S'il est supérieur à `max_players`, c'est `max_players` qui est utilisé (il faut alors exactement `max_players` joueurs pour démarrer). |
 | `payload.max_players` | `number` | Non | Nombre maximum de joueurs. Peut être `null` (illimité). |
 | `payload.max_observers` | `number` | Non | Nombre maximum d'observateurs. Peut être `null` (illimité). |
 | `payload.turn_based` | `boolean` | Non | `true` si la partie est au tour par tour. |
@@ -1571,6 +1573,7 @@ du serveur n'ont pas besoin de le fournir.
         "name": "Partie A",
         "state": "PENDING",
         "players_count": 2,
+        "min_players": 2,
         "max_players": 4,
         "observers_count": 3,
         "max_observers": 10,
@@ -1602,6 +1605,7 @@ du serveur n'ont pas besoin de le fournir.
 | `payload.games[].name` | `string` | - | Nom de la partie. |
 | `payload.games[].state` | `string` | - | État actuel de la partie (`PENDING`, `PAUSING`, `IN_PROGRESS`, `FINISHED`). |
 | `payload.games[].players_count` | `number` | - | Nombre actuel de joueurs. |
+| `payload.games[].min_players` | `number` | - | Nombre minimum de joueurs requis pour démarrer la partie (`0` si aucun minimum). Plafonné à `max_players` s'il est supérieur. |
 | `payload.games[].max_players` | `number` | - | Nombre maximum de joueurs (ou `null` pour illimité). |
 | `payload.games[].observers_count` | `number` | - | Nombre actuel d'observateurs. |
 | `payload.games[].max_observers` | `number` | - | Nombre maximum d'observateurs (ou `null` pour illimité). |
@@ -1899,6 +1903,7 @@ Permet de modifier l'état d'avancement de la partie (démarrage, pause, etc.).
 | `INVALID_ACTION` | L'action demandée n'est pas reconnue. |
 | `INSUFFICIENT_PERMISSIONS` | Le client n'a pas les droits pour contrôler cette partie. |
 | `GAME_ALREADY_STARTED` | Échec de `START` car la partie est déjà en cours ou en pause. |
+| `NOT_ENOUGH_PLAYERS` | Échec de `START` car le nombre de joueurs est inférieur au minimum requis (`min_players`). Le message indique le nombre de joueurs requis et le nombre actuel. |
 | `GAME_NOT_STARTED` | Échec de `PAUSE`, `RESUME` ou `STOP` car la partie n'est pas dans l'état requis. |
 
 ---
@@ -2299,6 +2304,7 @@ Informe les clients qu'une partie vient d'être ajoutée à un groupe.
       "name": "Partie d'Alice",
       "state": "PENDING",
       "players_count": 2,
+      "min_players": 2,
       "max_players": 4,
       "observers_count": 0,
       "max_observers": 10,
@@ -2320,6 +2326,7 @@ Informe les clients qu'une partie vient d'être ajoutée à un groupe.
 | `payload.game.name` | `string` | Oui | Nom de la partie. |
 | `payload.game.state` | `string` | Oui | État actuel de la partie (`PENDING`, `PAUSING`, `IN_PROGRESS`, `FINISHED`). |
 | `payload.game.players_count` | `number` | Oui | Nombre actuel de joueurs. |
+| `payload.game.min_players` | `number` | Oui | Nombre minimum de joueurs requis pour démarrer la partie (`0` si aucun minimum). Plafonné à `max_players` s'il est supérieur. |
 | `payload.game.max_players` | `number` | Oui | Nombre maximum de joueurs (ou `null` pour illimité). |
 | `payload.game.observers_count` | `number` | Oui | Nombre actuel d'observateurs. |
 | `payload.game.max_observers` | `number` | Oui | Nombre maximum d'observateurs (ou `null` pour illimité). |
@@ -2386,6 +2393,7 @@ Informe les clients qu'une partie d'un groupe a changé d'état ou de propriét�
       "name": "Partie de Bob",
       "state": "IN_PROGRESS",
       "players_count": 3,
+      "min_players": 2,
       "max_players": 4,
       "observers_count": 1,
       "max_observers": 10,
@@ -2410,6 +2418,7 @@ Informe les clients qu'une partie d'un groupe a changé d'état ou de propriét�
 | `payload.game.name` | `string` | Oui | Nom courant de la partie. |
 | `payload.game.state` | `string` | Oui | État courant de la partie (`PENDING`, `PAUSING`, `IN_PROGRESS`, `FINISHED`). |
 | `payload.game.players_count` | `number` | Oui | Nombre courant de joueurs. |
+| `payload.game.min_players` | `number` | Oui | Nombre minimum de joueurs requis pour démarrer la partie (`0` si aucun minimum). Plafonné à `max_players` s'il est supérieur. |
 | `payload.game.max_players` | `number` | Oui | Nombre maximum de joueurs (ou `null` pour illimité). |
 | `payload.game.observers_count` | `number` | Oui | Nombre courant d'observateurs. |
 | `payload.game.max_observers` | `number` | Oui | Nombre maximum d'observateurs (ou `null` pour illimité). |
@@ -3035,6 +3044,7 @@ Récupère la liste exhaustive des parties (actives et terminées) appartenant �
         "name": "Partie d'Alice",
         "state": "FINISHED",
         "players_count": 2,
+        "min_players": 2,
         "max_players": 4,
         "observers_count": 0,
         "max_observers": 10,
@@ -3055,6 +3065,7 @@ Récupère la liste exhaustive des parties (actives et terminées) appartenant �
 | `payload.games[].name` | `string` | - | Nom de la partie. |
 | `payload.games[].state` | `string` | - | État actuel de la partie (`PENDING`, `PAUSING`, `IN_PROGRESS`, `FINISHED`). |
 | `payload.games[].players_count` | `number` | - | Nombre actuel de joueurs. |
+| `payload.games[].min_players` | `number` | - | Nombre minimum de joueurs requis pour démarrer la partie (`0` si aucun minimum). Plafonné à `max_players` s'il est supérieur. |
 | `payload.games[].max_players` | `number` | - | Nombre maximum de joueurs (ou `null` pour illimité). |
 | `payload.games[].observers_count` | `number` | - | Nombre actuel d'observateurs. |
 | `payload.games[].max_observers` | `number` | - | Nombre maximum d'observateurs (ou `null` pour illimité). |
@@ -3539,6 +3550,7 @@ Récupère la liste de tous les joueurs (objets `Player`) présents sur le serve
 | `payload.players[].games[].name` | `string` | - | Nom de la partie. |
 | `payload.players[].games[].state` | `string` | - | État actuel de la partie (`PENDING`, `PAUSING`, `IN_PROGRESS`, `FINISHED`). |
 | `payload.players[].games[].players_count` | `number` | - | Nombre actuel de joueurs. |
+| `payload.players[].games[].min_players` | `number` | - | Nombre minimum de joueurs requis pour démarrer la partie (`0` si aucun minimum). Plafonné à `max_players` s'il est supérieur. |
 | `payload.players[].games[].max_players` | `number` | - | Nombre maximum de joueurs (ou `null` pour illimité). |
 | `payload.players[].games[].observers_count` | `number` | - | Nombre actuel d'observateurs. |
 | `payload.players[].games[].max_observers` | `number` | - | Nombre maximum d'observateurs (ou `null` pour illimité). |
@@ -3994,6 +4006,7 @@ Ce tableau regroupe l'ensemble des codes d'erreur définis dans le protocole, cl
 | `INVALID_PASSWORD` | Le mot de passe (serveur ou partie) est incorrect. | `AUTH_RESPONSE`, `GAME_JOIN_RESPONSE` |
 | `INVALID_RANK` | Le rang spécifié est en dehors des limites. | `GAME_PLAYER_ORDER_RESPONSE` |
 | `LIMIT_REACHED` | Le nombre maximum de parties sur le serveur est atteint. | `GAME_CREATE_RESPONSE` |
+| `NOT_ENOUGH_PLAYERS` | La partie ne compte pas le nombre minimum de joueurs requis pour démarrer. | `GAME_CONTROL_RESPONSE` |
 | `NOT_IN_GAME` | Le joueur n'est pas présent dans cette partie. | `GAME_LEAVE_RESPONSE`, `GAME_KICK_RESPONSE` |
 | `NOT_SUBSCRIBED` | Le client n'est pas abonné à ce groupe. | `GROUP_UNSUBSCRIBE_RESPONSE` |
 | `NOT_YOUR_TURN` | Ce n'est pas le tour de ce joueur. | `GAME_ACTION_RESPONSE`, `GAME_NEXT_TURN_RESPONSE` |

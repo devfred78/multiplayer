@@ -10,6 +10,7 @@ from .exceptions import (
     PasswordError,
     GameIsFullError,
     GameAlreadyStartedError,
+    NotEnoughPlayersError,
     GameIsFinishedError,
     GameNotStartedError,
     GameAlreadyPausedError,
@@ -184,6 +185,7 @@ class Game:
         password: str | None = None,
         observer_password: str | None = None,
         turn_based: bool = False,
+        min_players: int = 0,
         **kwargs: Any
     ):
         """Initializes a new game session.
@@ -195,10 +197,15 @@ class Game:
             password (str, optional): Password required to join as a player. Defaults to None.
             observer_password (str, optional): Password for observers. Defaults to None.
             turn_based (bool, optional): Whether the game is turn-based. Defaults to False.
+            min_players (int, optional): Min number of players required to start the
+                game. 0 (or negative) means the game can start without any player.
+                If greater than ``max_players``, ``max_players`` is used instead.
+                Defaults to 0.
             **kwargs: Custom state parameters as tuples of (ParameterFamily, initial_value).
         """
         self._id: str = str(uuid.uuid4())
         self.name: str | None = name
+        self._min_players: int = min_players
         self._max_players: int | None = max_players
         self._max_observers: int | None = max_observers
         self._hash: str | None = (
@@ -259,6 +266,21 @@ class Game:
             bool: True if turn-based, False otherwise.
         """
         return self._turn_based
+
+    @property
+    def min_players(self) -> int:
+        """The minimum number of players required to start the game.
+
+        If the requested minimum exceeds ``max_players``, the maximum number of
+        players is used instead: the game then needs exactly ``max_players``
+        players to start.
+
+        Returns:
+            int: The effective minimum number of players (0 means no minimum).
+        """
+        if self._max_players is not None and self._min_players > self._max_players:
+            return self._max_players
+        return self._min_players
 
     @property
     def players(self) -> Tuple[Player, ...]:
@@ -402,11 +424,18 @@ class Game:
         Raises:
             GameAlreadyStartedError: If the game is already in progress or paused.
             GameIsFinishedError: If the game has already finished.
+            NotEnoughPlayersError: If the game has fewer players than ``min_players``.
         """
         if self._game_state in (GameState.IN_PROGRESS, GameState.PAUSING):
             raise GameAlreadyStartedError()
         if self._game_state == GameState.FINISHED:
             raise GameIsFinishedError()
+        min_players = self.min_players
+        if len(self._players) < min_players:
+            raise NotEnoughPlayersError(
+                f"At least {min_players} player(s) required to start the game "
+                f"({len(self._players)} currently)."
+            )
         self._game_state = GameState.IN_PROGRESS
 
     def pause(self) -> None:

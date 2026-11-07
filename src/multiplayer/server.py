@@ -37,6 +37,7 @@ from .exceptions import (
     GameNotStartedError,
     GameNotTurnBasedError,
     MultiplayerError,
+    NotEnoughPlayersError,
     PasswordError,
     PlayerNotFoundInGameError,
     UserAlreadyExistsError,
@@ -1829,6 +1830,7 @@ class GameServer:
             "name": game.name,
             "state": game.game_state.name,
             "players_count": len(game.players),
+            "min_players": game.min_players,
             "max_players": getattr(game, "_max_players", None),
             "observers_count": len(game.observers),
             "max_observers": getattr(game, "_max_observers", None),
@@ -1918,6 +1920,15 @@ class GameServer:
                 "error_code": "AUTHENTICATION_REQUIRED",
                 "message": "An authenticated user is required to create a game.",
             }
+        min_players = payload.get("min_players", 0)
+        if min_players is None:
+            min_players = 0
+        if not isinstance(min_players, int) or isinstance(min_players, bool):
+            return "GAME_CREATE_RESPONSE", {
+                "success": False,
+                "error_code": "INVALID_DATA",
+                "message": "min_players must be an integer.",
+            }
         group_id = payload.get("group_id")
         group = None
         if group_id is None and not self.orphan_games_allowed:
@@ -1944,6 +1955,7 @@ class GameServer:
             max_observers=payload.get("max_observers"),
             password=payload.get("password"),
             turn_based=bool(payload.get("turn_based", False)),
+            min_players=min_players,
         )
         attributes = payload.get("attributes")
         if isinstance(attributes, dict):
@@ -2243,6 +2255,12 @@ class GameServer:
                 "success": False,
                 "error_code": "GAME_ALREADY_STARTED",
                 "message": "Game already started.",
+            }
+        except NotEnoughPlayersError as exc:
+            return "GAME_CONTROL_RESPONSE", {
+                "success": False,
+                "error_code": "NOT_ENOUGH_PLAYERS",
+                "message": str(exc),
             }
         except (GameNotStartedError, GameNotPausedError, GameIsFinishedError):
             return "GAME_CONTROL_RESPONSE", {

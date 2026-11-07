@@ -131,6 +131,9 @@ This class is derived from `MultiplayerError` and is used to report an attempt t
 #### Class `GameAlreadyStartedError`:
 This class is derived from `MultiplayerError` and is used to report an attempt to start a game that is already in progress.
 
+#### Class `NotEnoughPlayersError`:
+This class is derived from `MultiplayerError` and is used to report an attempt to start a game whose number of players is lower than the minimum required (`min_players` parameter of the `Game` class).
+
 #### Class `GameIsFinishedError`:
 This class is derived from `MultiplayerError` and is used to report an attempt to modify a game that has ended.
 
@@ -222,6 +225,7 @@ This class represents a game. It is instantiated with the following parameters:
 | `password` | str\|`None` | Game password. If `None`, the game is public (no password is needed to join the game). | No | `None`|
 | `observer_password` | str\|`None` | Observer password. If `None`, observers use the game password, defined by the `password` parameter. If that is also `None`, observers can join the game without a password. | No | `None` |
 | `turn_based` | bool | `True` if the game is turn-based, `False` for simultaneous play. | No | `False` |
+| `min_players` | int | Minimum number of players required to start the game. If 0 (or negative), the game can start without any player. If greater than `max_players`, it is equivalent to `min_players = max_players`: exactly the maximum number of players is required to start the game. | No | `0` |
 | `**kwargs` | variable | Optional parameters to customize the game. Each parameter must be a tuple `(family, initial_value)`, where `family` is a `ParameterFamily` member specifying whether the parameter is static or dynamic, and `initial_value` is its initial value. The family is chosen freely by the user to help organize information, but has no impact on internal processing (all families are handled the same way). | No | - |
 
 The class has the following attributes:
@@ -233,6 +237,7 @@ The class has the following attributes:
 | `hash` | str\|`None` | The hash of the game password. `None` if the game is public (no password).| No | The hash is automatically generated from `password` with `bcrypt`. |
 | `observer_hash` | str\|`None` | The hash of the observer password. `None` if no observer password is set. | No | The hash is automatically generated from `observer_password` with `bcrypt`.|
 | `turn_based` | bool | `True` if the game is turn-based, `False` for simultaneous play. | No | - |
+| `min_players` | int | Effective minimum number of players required to start the game (0 means no minimum). | No | Initialized with the `min_players` parameter. If that value is greater than `max_players` (when not `None`), `max_players` is returned instead. |
 | `players` | Tuple[`Player`] | Tuple (immutable list) of the `Player` instances representing the players of the game. The order of the players is the order in which they take their turns in a turn-based game. Some games allow the order to change during play, so dedicated methods are provided for this purpose. Do not attempt to change the order directly through this attribute. | No | The corresponding internal variable (`_players`) is a list, converted to a tuple when exposed publicly through the `players` attribute. |
 | `observers` | Tuple[`Player`] | Tuple (immutable list) of the `Player` instances representing the observers of the game. | No | The corresponding internal variable (`_observers`) is a list, converted to a tuple when exposed publicly through the `observers` attribute. |
 | `current_player`| `Player` | The `Player` instance whose turn it is. Only meaningful for turn-based games. | No | - |
@@ -290,13 +295,14 @@ The `Game` class has the following methods:
   - Return value: None.
 
 - `start`: starts a game.
-  - Description: This method starts a game. It raises an exception if the game is already in progress or has ended. If successful, the method sets the `game_state` attribute to `GameState.IN_PROGRESS`.
-  - Implementation details: The `GameState.PAUSING` status is also considered a game in progress.
+  - Description: This method starts a game. It raises an exception if the game is already in progress, has ended, or does not have enough players. If successful, the method sets the `game_state` attribute to `GameState.IN_PROGRESS`.
+  - Implementation details: The `GameState.PAUSING` status is also considered a game in progress. The number of players is compared to the `min_players` attribute; with the default value (0), the game can start without any player.
   - Parameters:
     - None.
   - Exceptions raised:
     - `GameAlreadyStartedError`: raised if the game is already in progress.
     - `GameIsFinishedError`: raised if the game is over.
+    - `NotEnoughPlayersError`: raised if the number of players is lower than `min_players`.
   - Return value: None.
 
 - `pause`: pauses a game.

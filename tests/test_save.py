@@ -125,7 +125,7 @@ def test_load_user_from_older_save_file(tmp_path):
 def test_save_and_load_game_with_players(tmp_path, save_format):
     file_path = tmp_path / "save.dat"
     save = Save(file_path, save_format)
-    game = Game(name="Chess", turn_based=True, style=(ParameterFamily.STATIC, "blitz"))
+    game = Game(name="Chess", turn_based=True, min_players=2, style=(ParameterFamily.STATIC, "blitz"))
     p1, p2 = Player("P1"), Player("P2")
     game.join_game_as_player(p1)
     game.join_game_as_player(p2)
@@ -140,6 +140,7 @@ def test_save_and_load_game_with_players(tmp_path, save_format):
     assert restored.ID == game.ID
     assert restored.name == "Chess"
     assert restored.turn_based is True
+    assert restored.min_players == 2
     assert restored.game_state == GameState.IN_PROGRESS
     assert [p.ID for p in restored.players] == [p1.ID, p2.ID]
     assert restored.static_state["style"] == "blitz"

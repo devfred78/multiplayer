@@ -12,7 +12,7 @@ except ImportError:
     msgpack = None
     _MSGPACK_AVAILABLE = False
 
-from multiplayer import SaveFormat
+from multiplayer import GameState, SaveFormat
 from multiplayer.game import User, Game, GameGroup
 from multiplayer.save import Save
 from multiplayer.server import (
@@ -215,6 +215,49 @@ def test_game_create_join_and_control():
 
     state = _dispatch(server, session, "GAME_STATE_GET", {"game_id": game_id})
     assert state["payload"]["state"]["status"] == "IN_PROGRESS"
+
+
+def test_game_control_start_requires_min_players():
+    server = GameServer()
+    session, _ = _make_session(server)
+    _dispatch(server, session, "PLAYER_CREATE", {"name": "Alice", "is_default": True})
+
+    created = _dispatch(server, session, "GAME_CREATE", {"name": "Duel", "min_players": 2})
+    game_id = created["payload"]["game_id"]
+    assert created["payload"]["success"] is True
+    assert server._games[game_id].min_players == 2
+
+    listed = _dispatch(server, session, "GAME_LIST", {})
+    summary = next(g for g in listed["payload"]["games"] if g["game_id"] == game_id)
+    assert summary["min_players"] == 2
+
+    _dispatch(server, session, "GAME_JOIN", {"game_id": game_id, "role": "PLAYER"})
+    refused = _dispatch(
+        server, session, "GAME_CONTROL", {"game_id": game_id, "action": "START"}
+    )
+    assert refused["payload"]["success"] is False
+    assert refused["payload"]["error_code"] == "NOT_ENOUGH_PLAYERS"
+    assert server._games[game_id].game_state == GameState.PENDING
+
+
+def test_game_summary_caps_min_players_by_max_players():
+    server = GameServer()
+    session, _ = _make_session(server)
+    created = _dispatch(
+        server, session, "GAME_CREATE", {"name": "Capped", "min_players": 6, "max_players": 4}
+    )
+    game_id = created["payload"]["game_id"]
+    listed = _dispatch(server, session, "GAME_LIST", {})
+    summary = next(g for g in listed["payload"]["games"] if g["game_id"] == game_id)
+    assert summary["min_players"] == 4
+
+
+def test_game_create_rejects_invalid_min_players():
+    server = GameServer()
+    session, _ = _make_session(server)
+    created = _dispatch(server, session, "GAME_CREATE", {"name": "Bad", "min_players": "two"})
+    assert created["payload"]["success"] is False
+    assert created["payload"]["error_code"] == "INVALID_DATA"
 
 
 def test_admin_can_disable_orphan_game_creation():

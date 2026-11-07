@@ -133,6 +133,9 @@ Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler 
 #### Classe `GameAlreadyStartedError`:
 Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative de démarrage d'une partie qui est déjà en cours.
 
+#### Classe `NotEnoughPlayersError`:
+Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative de démarrage d'une partie dont le nombre de joueurs est inférieur au minimum requis (paramètre `min_players` de la classe `Game`).
+
 #### Classe `GameIsFinishedError`:
 Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative de modification d'une partie qui est terminée.
 
@@ -224,6 +227,7 @@ Cette classe représente une partie de jeu. Elle s'instantie avec les paramètre
 | `password`          | str\|`None` | Mot de passe de la partie. Si `None`, alors la partie est publique (aucun mot de passe n'est nécessaire pour accéder à la partie). | Non  | `None`|
 | `observer_password` | str\|`None` | Mot de passe des observateurs. Si `None`, alors les observateurs utilisent le mot de passe de la partie, défini par le paramètre `password`. Si celui-ci vaut également `None`, alors les observateurs peuvent accéder à la partie sans mot de passe. | Non | `None` |
 | `turn_based`        | bool        | `True` si le jeu est au tour par tour, `False` pour un jeu simultané. | Non  | `False` |
+| `min_players`       | int         | Nombre minimal de joueurs pour que la partie puisse démarrer. Si 0 (ou négatif), alors la partie peut démarrer même sans aucun joueur. S'il est supérieur à `max_players`, cela revient à avoir `min_players = max_players` : il faut exactement le nombre maximal de joueurs pour démarrer la partie. | Non | `0` |
 | `**kwargs`          | variable    | Paramètres optionnels pour personnaliser la partie. Chaque paramètre doit se présenter sous la forme d'un tuple `(famille, valeur_initiale)` dont `famille` est un objet `ParameterFamily` qui spécifie le caractère statique ou dynamique du paramètre, et `valeur_initiale` sa valeur initiale. Le choix de la famille se fait à la convenance de l'utilisateur, pour l'aider à classer les informations, mais n'a aucun impact sur le traitement interne (les familles sont toutes traitées de la même manière). | Non  | - |
 
 La classe présente les attributs suivants:
@@ -235,6 +239,7 @@ La classe présente les attributs suivants:
 | `hash`          | str\|`None`     | Le hash du mot de passe de la partie. `None` si la partie est publique (sans mot de passe).| Non  | Le hash est automatiquement généré à partir de `password` avec `bcrypt`. |
 | `observer_hash` | str\|`None`     | Le hash du mot de passe de l'observateur. `None` si aucun mot de passe d'observation n'est défini. | Non  | Le hash est automatiquement généré à partir de `observer_password` avec `bcrypt`.|
 | `turn_based`    | bool            | `True` si le jeu est au tour par tour, `False` pour un jeu simultané. | Non  | -  |
+| `min_players`   | int             | Nombre minimal effectif de joueurs pour que la partie puisse démarrer (0 signifie aucun minimum). | Non | S'initialise avec le paramètre `min_players`. Si cette valeur est supérieure à `max_players` (lorsqu'il ne vaut pas `None`), c'est `max_players` qui est retourné. |
 | `players`       | Tuple[`Player`] | Tuple (liste non mutable) des instances `Player` représentants les joueurs de la partie. L'ordre dans lequel sont présentés les joueurs correspond à l'ordre dans lequel les joueurs prennent leurs tours dans une partie au tour par tour. Certains jeux autorisent le changement d'ordre en cours de partie. Des méthodes spécifiques sont donc à disposition pour réaliser ces changements. Ne pas essayer de modifier l'ordre directement dans cet attribut. | Non | La variable interne correspondante ( `_players`) est une liste qui est transformée en tuple pour son affichage public au travers de l'attribut `players`. |
 | `observers`     | Tuple[`Player`] | Tuple (liste non mutable) des instances `Player` représentants les observateurs de la partie. | Non  | La variable interne correspondante ( `_observers`) est une liste qui est transformée en tuple pour son affichage public au travers de l'attribut `observers`. |
 | `current_player`| `Player`        | Instance `Player` représentant le joueur dont le tour est en cours. N'a de sens que pour les parties à tour par tour. | Non  | - |
@@ -292,13 +297,14 @@ La classe `Game` présente les méthodes suivantes:
   - Valeur de retour: Aucune.
 
 - `start`: permet de démarrer une partie.
-  - Description: Cette méthode permet de démarrer une partie. Elle lance une exception si la partie est déjà en cours ou si elle est terminée. En cas de succès, la méthode passe l'attribut `game_state` à la valeur `GameState.IN_PROGRESS`.
-  - Précision d'implémentation: Le statut `GameState.PAUSING` est aussi considéré comme une partie en cours.
+  - Description: Cette méthode permet de démarrer une partie. Elle lance une exception si la partie est déjà en cours, si elle est terminée, ou si elle ne compte pas assez de joueurs. En cas de succès, la méthode passe l'attribut `game_state` à la valeur `GameState.IN_PROGRESS`.
+  - Précision d'implémentation: Le statut `GameState.PAUSING` est aussi considéré comme une partie en cours. Le nombre de joueurs est comparé à l'attribut `min_players` ; avec la valeur par défaut (0), la partie peut démarrer sans aucun joueur.
   - Paramètres:
     - Aucun.
   - Exceptions émises:
     - `GameAlreadyStartedError`: levée si la partie est déjà en cours.
     - `GameIsFinishedError`: levée si la partie est terminée.
+    - `NotEnoughPlayersError`: levée si le nombre de joueurs est inférieur à `min_players`.
   - Valeur de retour: Aucune.
 
 - `pause`: permet de mettre en pause une partie.

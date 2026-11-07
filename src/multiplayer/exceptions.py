@@ -53,6 +53,10 @@ class GameAlreadyStartedError(MultiplayerError):
     """Raised when trying to start a game that is already in progress."""
     pass
 
+class NotEnoughPlayersError(MultiplayerError):
+    """Raised when trying to start a game that has fewer players than required."""
+    pass
+
 class GameIsFinishedError(MultiplayerError):
     """Raised when trying to modify a game that has ended."""
     pass

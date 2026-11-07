@@ -1422,6 +1422,7 @@ Allows you to create a new game instance on the server.
     "name": "Ma Super Partie",
     "group_id": "optional_group_uuid",
     "group_password": "group_secret",
+    "min_players": 2,
     "max_players": 4,
     "max_observers": 10,
     "turn_based": true,
@@ -1450,6 +1451,7 @@ Allows you to create a new game instance on the server.
 | Field | JSON type | Mandatory | Description |
 |---|---|---:|---|
 | `payload.name` | `string` | Yes | Name of the game. |
+| `payload.min_players` | `number` | No | Minimum number of players required to start the game (integer). Default `0` (the game can start without any player). If greater than `max_players`, `max_players` is used instead (the game then needs exactly `max_players` players to start). |
 | `payload.max_players` | `number` | No | Maximum number of players. Can be `null` (unlimited). |
 | `payload.max_observers` | `number` | No | Maximum number of observers. Can be `null` (unlimited). |
 | `payload.turn_based` | `boolean` | No | `true` if the game is turn-based. |
@@ -1512,6 +1514,7 @@ The group administrator and server administrator do not need to provide it.
         "name": "Game A",
         "state": "PENDING",
         "players_count": 2,
+        "min_players": 2,
         "max_players": 4,
         "observers_count": 3,
         "max_observers": 10,
@@ -1542,6 +1545,7 @@ The group administrator and server administrator do not need to provide it.
 | `payload.games[].name` | `string` | - | Name of the game. |
 | `payload.games[].state` | `string` | - | Current state of the game (`PENDING`, `PAUSING`, `IN_PROGRESS`, `FINISHED`). |
 | `payload.games[].players_count` | `number` | - | Current number of players. |
+| `payload.games[].min_players` | `number` | - | Minimum number of players required to start the game (`0` if no minimum). Capped at `max_players` when greater. |
 | `payload.games[].max_players` | `number` | - | Maximum number of players (or `null` for unlimited). |
 | `payload.games[].observers_count` | `number` | - | Current number of observers. |
 | `payload.games[].max_observers` | `number` | - | Maximum number of observers (or `null` for unlimited). |
@@ -1828,6 +1832,7 @@ Allows you to modify the progress of the game (start, pause, etc.).
 | `INVALID_ACTION` | The requested action is not recognized. |
 | `INSUFFICIENT_PERMISSIONS` | The customer does not have the rights to control this part. |
 | `GAME_ALREADY_STARTED` | `START` failed because the game is already in progress or paused. |
+| `NOT_ENOUGH_PLAYERS` | `START` failed because the number of players is lower than the minimum required (`min_players`). The message gives the required and current numbers of players. |
 | `GAME_NOT_STARTED` | `PAUSE`, `RESUME` or `STOP` failed because the part is not in the required state. |
 
 ---
@@ -2203,6 +2208,7 @@ Informs clients that a game has just been added to a group.
       "name": "Alice's game",
       "state": "PENDING",
       "players_count": 2,
+      "min_players": 2,
       "max_players": 4,
       "observers_count": 0,
       "max_observers": 10,
@@ -2223,6 +2229,7 @@ Informs clients that a game has just been added to a group.
 | `payload.game.name` | `string` | Yes | Name of the game. |
 | `payload.game.state` | `string` | Yes | Current state of the game (`PENDING`, `PAUSING`, `IN_PROGRESS`, `FINISHED`). |
 | `payload.game.players_count` | `number` | Yes | Current number of players. |
+| `payload.game.min_players` | `number` | Yes | Minimum number of players required to start the game (`0` if no minimum). Capped at `max_players` when greater. |
 | `payload.game.max_players` | `number` | Yes | Maximum number of players (or `null` for unlimited). |
 | `payload.game.observers_count` | `number` | Yes | Current number of observers. |
 | `payload.game.max_observers` | `number` | Yes | Maximum number of observers (or `null` for unlimited). |
@@ -2286,6 +2293,7 @@ Informs clients that part of a group has changed state or visible properties.
       "name": "Bob's game",
       "state": "IN_PROGRESS",
       "players_count": 3,
+      "min_players": 2,
       "max_players": 4,
       "observers_count": 1,
       "max_observers": 10,
@@ -2309,6 +2317,7 @@ Informs clients that part of a group has changed state or visible properties.
 | `payload.game.name` | `string` | Yes | Common name of the game. |
 | `payload.game.state` | `string` | Yes | Current state of the game (`PENDING`, `PAUSING`, `IN_PROGRESS`, `FINISHED`). |
 | `payload.game.players_count` | `number` | Yes | Current number of players. |
+| `payload.game.min_players` | `number` | Yes | Minimum number of players required to start the game (`0` if no minimum). Capped at `max_players` when greater. |
 | `payload.game.max_players` | `number` | Yes | Maximum number of players (or `null` for unlimited). |
 | `payload.game.observers_count` | `number` | Yes | Current number of observers. |
 | `payload.game.max_observers` | `number` | Yes | Maximum number of observers (or `null` for unlimited). |
@@ -2895,6 +2904,7 @@ Retrieves the exhaustive list of games (active and completed) belonging to a giv
         "name": "Alice's game",
         "state": "FINISHED",
         "players_count": 2,
+        "min_players": 2,
         "max_players": 4,
         "observers_count": 0,
         "max_observers": 10,
@@ -2914,6 +2924,7 @@ Retrieves the exhaustive list of games (active and completed) belonging to a giv
 | `payload.games[].name` | `string` | - | Name of the game. |
 | `payload.games[].state` | `string` | - | Current state of the game (`PENDING`, `PAUSING`, `IN_PROGRESS`, `FINISHED`). |
 | `payload.games[].players_count` | `number` | - | Current number of players. |
+| `payload.games[].min_players` | `number` | - | Minimum number of players required to start the game (`0` if no minimum). Capped at `max_players` when greater. |
 | `payload.games[].max_players` | `number` | - | Maximum number of players (or `null` for unlimited). |
 | `payload.games[].observers_count` | `number` | - | Current number of observers. |
 | `payload.games[].max_observers` | `number` | - | Maximum number of observers (or `null` for unlimited). |
@@ -3360,6 +3371,7 @@ Retrieves the list of all players (`Player` objects) present on the server, whet
 | `payload.players[].games[].name` | `string` | - | Name of the game. |
 | `payload.players[].games[].state` | `string` | - | Current state of the game (`PENDING`, `PAUSING`, `IN_PROGRESS`, `FINISHED`). |
 | `payload.players[].games[].players_count` | `number` | - | Current number of players. |
+| `payload.players[].games[].min_players` | `number` | - | Minimum number of players required to start the game (`0` if no minimum). Capped at `max_players` when greater. |
 | `payload.players[].games[].max_players` | `number` | - | Maximum number of players (or `null` for unlimited). |
 | `payload.players[].games[].observers_count` | `number` | - | Current number of observers. |
 | `payload.players[].games[].max_observers` | `number` | - | Maximum number of observers (or `null` for unlimited). |
@@ -3792,6 +3804,7 @@ This table groups together all the error codes defined in the protocol, classifi
 | `INVALID_PASSWORD` | The password (server or game) is incorrect. | `AUTH_RESPONSE`, `GAME_JOIN_RESPONSE` |
 | `INVALID_RANK` | The specified rank is out of range. | `GAME_PLAYER_ORDER_RESPONSE` |
 | `LIMIT_REACHED` | The maximum number of games on the server has been reached. | `GAME_CREATE_RESPONSE` |
+| `NOT_ENOUGH_PLAYERS` | The game does not have the minimum number of players required to start. | `GAME_CONTROL_RESPONSE` |
 | `NOT_IN_GAME` | The player is not present in this part. | `GAME_LEAVE_RESPONSE`, `GAME_KICK_RESPONSE` |
 | `NOT_SUBSCRIBED` | The customer is not subscribed to this group. | `GROUP_UNSUBSCRIBE_RESPONSE` |
 | `NOT_YOUR_TURN` | It is not this player's turn. | `GAME_ACTION_RESPONSE`, `GAME_NEXT_TURN_RESPONSE` |

@@ -4,7 +4,7 @@ from multiplayer.game import Player, User, Game, GameGroup
 from multiplayer import UserRole, GameState, ParameterFamily
 from multiplayer.exceptions import (
     UserAlreadyExistsError, PasswordError, GameIsFullError, 
-    GameAlreadyStartedError, GameIsFinishedError
+    GameAlreadyStartedError, GameIsFinishedError, NotEnoughPlayersError
 )
 
 def test_player_creation():
@@ -95,6 +95,36 @@ def test_game_errors():
     g.stop()
     with pytest.raises(GameIsFinishedError):
         g.next_turn()
+
+def test_game_min_players_default_allows_empty_start():
+    g = Game()
+    assert g.min_players == 0
+    g.start()
+    assert g.game_state == GameState.IN_PROGRESS
+
+def test_game_min_players_blocks_start():
+    g = Game(min_players=2)
+    g.join_game_as_player(Player("P1"))
+    with pytest.raises(NotEnoughPlayersError):
+        g.start()
+    assert g.game_state == GameState.PENDING
+
+    g.join_game_as_player(Player("P2"))
+    g.start()
+    assert g.game_state == GameState.IN_PROGRESS
+
+def test_game_min_players_capped_by_max_players():
+    g = Game(min_players=5, max_players=2)
+    assert g.min_players == 2
+    g.join_game_as_player(Player("P1"))
+    with pytest.raises(NotEnoughPlayersError):
+        g.start()
+    g.join_game_as_player(Player("P2"))
+    g.start()
+    assert g.game_state == GameState.IN_PROGRESS
+
+def test_game_min_players_not_capped_without_max_players():
+    assert Game(min_players=5).min_players == 5
 
 def test_game_group():
     group = GameGroup("My Group", type="ranked")

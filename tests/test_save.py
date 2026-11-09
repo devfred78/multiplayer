@@ -196,7 +196,8 @@ def test_save_and_load_group(tmp_path, save_format):
     file_path = tmp_path / "save.dat"
     save = Save(file_path, save_format)
     group = GameGroup("Tournament", password="group-secret", type="ranked")
-    group.add_game(Game("G1"))
+    game = Game("G1")
+    group.add_game(game)
     save.save(group)
     save.flush()
 
@@ -208,7 +209,48 @@ def test_save_and_load_group(tmp_path, save_format):
     assert groups[0].check_password("group-secret") is True
     assert groups[0].check_password("wrong-secret") is False
     assert groups[0].parameters["type"] == "ranked"
-    assert len(groups[0].games) == 1
+    assert groups[0].games == (game.ID,)
+
+
+def test_group_is_saved_with_game_ids(tmp_path):
+    file_path = tmp_path / "save.json"
+    save = Save(file_path, SaveFormat.JSON)
+    group = GameGroup("Tournament")
+    games = [Game("G1"), Game("G2")]
+    for game in games:
+        group.add_game(game)
+    save.save(group)
+    save.flush()
+
+    content = json.loads(file_path.read_text(encoding="utf-8"))
+    assert content["GameGroup"][group.ID]["games"] == [games[0].ID, games[1].ID]
+
+
+def test_load_group_from_older_save_file(tmp_path):
+    file_path = tmp_path / "save.json"
+    embedded = {
+        "id": "game-1",
+        "name": "Embedded",
+        "players": ["player-1"],
+        "observers": [],
+        "game_state": GameState.PENDING.value,
+        "static_state": {},
+        "dynamic_state": {},
+    }
+    content = {
+        "Player": {},
+        "User": {},
+        "Game": {},
+        "GameGroup": {
+            "group-1": {"id": "group-1", "name": "Old group", "games": [embedded]},
+        },
+    }
+    file_path.write_text(json.dumps(content), encoding="utf-8")
+    reloaded = Save(file_path, SaveFormat.JSON)
+    assert reloaded.load(GameGroup)[0].games == ("game-1",)
+    games = reloaded.load(Game)
+    assert [game.ID for game in games] == ["game-1"]
+    assert games[0].players == ("player-1",)
 
 
 def test_save_and_load_server_config(tmp_path, save_format):

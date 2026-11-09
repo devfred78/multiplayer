@@ -213,11 +213,18 @@ class Game:
     This class handles the core logic of a game, including player management,
     observer tracking, password protection, and turn-based progression.
 
+    Every instance is recorded in a global registry indexed by its ID, so that a
+    game can be designated by its ID alone (for example by
+    :meth:`GameGroup.add_game`). The registry only holds weak references: it
+    does not keep a game alive.
+
     Attributes:
         name (str, optional): The name of the game session.
         static_state (dict): Custom static attributes of the game.
         dynamic_state (dict): Custom dynamic attributes of the game.
     """
+
+    _registry: "weakref.WeakValueDictionary[str, Game]" = weakref.WeakValueDictionary()
 
     def __init__(
         self,
@@ -272,6 +279,28 @@ class Game:
                     self.static_state[key] = val
                 else:
                     self.dynamic_state[key] = val
+
+        Game._registry[self._id] = self
+
+    @classmethod
+    def _resolve(cls, game: "Game | str") -> "Game":
+        """Returns the game designated by an instance or by its ID.
+
+        Args:
+            game (Game | str): The Game instance or its ID.
+
+        Returns:
+            Game: The designated game.
+
+        Raises:
+            GameNotFoundError: If no existing game has the given ID.
+        """
+        if isinstance(game, Game):
+            return game
+        found = cls._registry.get(game) if isinstance(game, str) else None
+        if found is None:
+            raise GameNotFoundError(game)
+        return found
 
     @property
     def ID(self) -> str:
@@ -568,7 +597,7 @@ class GameGroup:
     """Represents a collection of game sessions.
 
     A GameGroup allows managing multiple games together and can store
-    shared parameters.
+    shared parameters. The group only keeps the IDs of its games.
 
     Attributes:
         name (str): The name of the game group.
@@ -585,7 +614,7 @@ class GameGroup:
         """
         self._id: str = str(uuid.uuid4())
         self.name: str = name
-        self._games: List[Game] = []
+        self._games: List[str] = []
         self.parameters: Dict[str, Any] = kwargs
         self._hash: str | None = (
             bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
@@ -602,11 +631,11 @@ class GameGroup:
         return self._id
 
     @property
-    def games(self) -> Tuple[Game, ...]:
-        """The list of games currently in the group.
+    def games(self) -> Tuple[str, ...]:
+        """The IDs of the games currently in the group.
 
         Returns:
-            Tuple[Game, ...]: A read-only tuple of Game instances.
+            Tuple[str, ...]: A read-only tuple of game UUID strings.
         """
         return tuple(self._games)
 
@@ -636,18 +665,15 @@ class GameGroup:
         )
 
     def add_game(self, game: Game | str) -> None:
-        """Adds a game session to the group.
+        """Adds a game session to the end of the group.
 
         Args:
-            game (Game | str): The Game instance to add.
+            game (Game | str): The Game instance to add, or its ID.
 
         Raises:
-            GameNotFoundError: If a game ID was provided instead of an instance.
+            GameNotFoundError: If no existing game has the given ID.
         """
-        if isinstance(game, Game):
-            self._games.append(game)
-        else:
-            raise GameNotFoundError(game)
+        self._games.append(Game._resolve(game).ID)
 
     def remove_game(self, game: Game | str) -> None:
         """Removes a game session from the group.
@@ -658,9 +684,7 @@ class GameGroup:
         Raises:
             GameNotFoundInGroupError: If the game is not in the group.
         """
-        g_id = game if isinstance(game, str) else game.ID
-        for g in self._games:
-            if g.ID == g_id:
-                self._games.remove(g)
-                return
-        raise GameNotFoundInGroupError(g_id)
+        g_id = game.ID if isinstance(game, Game) else game
+        if g_id not in self._games:
+            raise GameNotFoundInGroupError(g_id)
+        self._games.remove(g_id)

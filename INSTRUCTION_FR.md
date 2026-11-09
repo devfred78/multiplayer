@@ -394,7 +394,7 @@ La classe présente les attributs suivants:
 |-----------------|-----------------|--------------|------------|----------------------------|
 | `ID`            | str             | L'identifiant unique du groupe. | Non | S'initialise automatiquement avec la valeur de `uuid.uuid4()`.|
 | `name`          | str             | Le nom ddu groupe. | Oui        | - |
-| `games`       | Tuple[`Game`] | Tuple (liste non mutable) des instances `Game` représentants les parties du groupe. | Non | La variable interne correspondante ( `_games`) est une liste qui est transformée en tuple pour son affichage public au travers de l'attribut `games`. |
+| `games`       | Tuple[str] | Tuple (liste non mutable) des ID des objets `Game` représentants les parties du groupe. | Non | La variable interne correspondante ( `_games`) est une liste qui est transformée en tuple pour son affichage public au travers de l'attribut `games`. |
 | `parameters` | dict | Paramètres de personnalisation du groupe | Oui        | S'initialise automatiquement avec les paramètres spécifiés dans `kwargs`, mais peut être complété par la suite par tout autre paramètre au choix de l'utilisateur. |
 
 
@@ -402,7 +402,7 @@ La classe `GameGroup` présente les méthodes suivantes:
 
 - `add_game`: permet d'ajouter une partie au groupe. La partie est ajoutée à la fin de la liste des parties du groupe. 
   - Description: Cette méthode permet d'ajouter une partie au groupe en spécifiant son ID ou son objet `Game` et éventuellement un mot de passe administrateur de groupe. Elle lance une exception si la partie n'existe pas ou si le mot de passe est incorrect. 
-  - Précision d'implémentation: En cas de succès, la méthode ajoute l'objet `Game` à la liste `_games` de l'instance courante.
+  - Précision d'implémentation: En cas de succès, la méthode ajoute l'ID de l'objet `Game` à la liste `_games` de l'instance courante.
   - Paramètres:
     - `game` (`Game`|str): l'instance de la partie à ajouter, ou une chaîne de caractères représentant l'ID de la partie à ajouter. Obligatoire.
   - Valeur de retour:
@@ -412,7 +412,7 @@ La classe `GameGroup` présente les méthodes suivantes:
 - `remove_game`: permet de retirer une partie du groupe. La partie est retirée de la liste des parties du groupe.
   - Paramètres:
     - `game` (`Game`|str): l'instance de la partie à retirer, ou une chaîne de caractères représentant l'ID de la partie à retirer. Obligatoire.
-  - Précision d'implémentation: En cas de succès, la méthode retire l'objet `Game` de la liste `_games` de l'instance courante.
+  - Précision d'implémentation: En cas de succès, la méthode retire l'ID de l'objet `Game` de la liste `_games` de l'instance courante.
   - Valeur de retour:
     - Aucune.
   - Exceptions émises:

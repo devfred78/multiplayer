@@ -144,17 +144,18 @@ def _game_to_dict(game: Game) -> Dict[str, Any]:
     }
 
 
-def _participant_id(entry: Any) -> str:
-    """Extracts a participant ID from a serialized game entry.
+def _entry_id(entry: Any) -> str:
+    """Extracts an object ID from a serialized reference.
 
-    Games store the IDs of their participants. Older save files embedded a
-    full copy of each participant instead, whose ID is then returned.
+    Games store the IDs of their participants and groups the IDs of their
+    games. Older save files embedded a full copy of each referenced object
+    instead, whose ID is then returned.
 
     Args:
-        entry (Any): A participant ID, or a serialized player dictionary.
+        entry (Any): An object ID, or a serialized object dictionary.
 
     Returns:
-        str: The ID of the participant.
+        str: The ID of the referenced object.
     """
     return entry["id"] if isinstance(entry, dict) else entry
 
@@ -177,11 +178,13 @@ def _game_from_dict(data: Dict[str, Any]) -> Game:
     game._hash = data.get("hash")
     game._observer_hash = data.get("observer_hash")
     game._turn_based = data.get("turn_based", False)
-    game._players = [_participant_id(p) for p in data.get("players", [])]
-    game._observers = [_participant_id(p) for p in data.get("observers", [])]
+    game._players = [_entry_id(p) for p in data.get("players", [])]
+    game._observers = [_entry_id(p) for p in data.get("observers", [])]
     game._game_state = GameState(data["game_state"])
     game.static_state = data.get("static_state", {})
     game.dynamic_state = data.get("dynamic_state", {})
+    # Restored games must be found by their ID, like newly created ones.
+    Game._registry[game._id] = game
     return game
 
 
@@ -198,7 +201,7 @@ def _group_to_dict(group: GameGroup) -> Dict[str, Any]:
         "id": group.ID,
         "name": group.name,
         "hash": group.hash,
-        "games": [_game_to_dict(g) for g in group.games],
+        "games": list(group.games),
         "parameters": group.parameters,
     }
 
@@ -217,7 +220,8 @@ def _group_from_dict(data: Dict[str, Any]) -> GameGroup:
     group.name = data["name"]
     # ``hash`` is optional for backward compatibility with older save files.
     group._hash = data.get("hash")
-    group._games = [_game_from_dict(g) for g in data.get("games", [])]
+    # Older save files embedded a full copy of each game instead of its ID.
+    group._games = [_entry_id(g) for g in data.get("games", [])]
     group.parameters = data.get("parameters", {})
     return group
 
@@ -394,24 +398,34 @@ class Save:
         serializer = _SERIALIZERS[name][0]
         self._data[name][obj.ID] = serializer(obj)
 
+    def _buffered_games(self) -> Dict[str, Dict[str, Any]]:
+        """Returns the serialized games of the buffer, indexed by their ID.
+
+        Groups only store the IDs of their games. Older save files embedded a
+        full copy of each game of a group instead: such a copy is also
+        returned when the game was not saved on its own.
+
+        Returns:
+            Dict[str, Dict[str, Any]]: The serialized games.
+        """
+        games: Dict[str, Dict[str, Any]] = dict(self._data["Game"])
+        for group in self._data["GameGroup"].values():
+            for game in group.get("games", []):
+                if isinstance(game, dict):
+                    games.setdefault(game["id"], game)
+        return games
+
     def _player_game_states(self) -> Dict[str, List[str]]:
         """Collects the states of the buffered games of each participant.
-
-        Both the games saved on their own and the games saved inside a group
-        are considered.
 
         Returns:
             Dict[str, List[str]]: The serialized game states, indexed by the ID
             of the players and observers taking part in them.
         """
-        games: Dict[str, Dict[str, Any]] = dict(self._data["Game"])
-        for group in self._data["GameGroup"].values():
-            for game in group.get("games", []):
-                games.setdefault(game["id"], game)
         states: Dict[str, List[str]] = {}
-        for game in games.values():
+        for game in self._buffered_games().values():
             for participant in game.get("players", []) + game.get("observers", []):
-                states.setdefault(_participant_id(participant), []).append(game["game_state"])
+                states.setdefault(_entry_id(participant), []).append(game["game_state"])
         return states
 
     def _clean_user_players(self, user: User) -> None:
@@ -437,6 +451,9 @@ class Save:
     def load(self, target: Union[str, type]) -> List[Union[Player, User, Game, GameGroup]]:
         """Loads all stored instances of a given class.
 
+        Loading ``Game`` also returns the games only embedded in the groups of
+        an older save file.
+
         Args:
             target (str | type): The class or class name to load (one of
                 ``Player``, ``User``, ``Game`` or ``GameGroup``).
@@ -449,7 +466,8 @@ class Save:
         """
         name = self._resolve_class_name(target)
         deserializer = _SERIALIZERS[name][1]
-        return [deserializer(data) for data in self._data[name].values()]
+        entries = self._buffered_games() if name == "Game" else self._data[name]
+        return [deserializer(data) for data in entries.values()]
 
     def clear(self) -> None:
         """Clears the in-memory buffer without touching the save file.

@@ -138,13 +138,13 @@ Organizes multiple games into a group for parallel management.
 |------|------|-------------|----------|-----------------------|
 | `ID` | `str` | Unique identifier. | No | Automatically generated using `uuid.uuid4()`. |
 | `name` | `str` | The name of the group. | Yes | - |
-| `games` | `tuple[Game]` | Read-only tuple of games in the group. | No | Backed by internal list `_games`. |
+| `games` | `tuple[str]` | Read-only tuple of the IDs of the games in the group. | No | Backed by internal list `_games` (of game IDs). |
 | `parameters` | `dict` | Custom group parameters. | Yes | Initialized from `kwargs`. |
 
 **Methods:**
 
-- `add_game(game: Game | str)`: Adds a game to the end of the group. Raises `GameNotFoundError` if invalid.
-- `remove_game(game: Game | str)`: Removes a game from the group. Raises `GameNotFoundInGroupError` if not present.
+- `add_game(game: Game | str)`: Adds the ID of a game to the end of the group. The game can be given by its ID, as long as the `Game` object still exists. Raises `GameNotFoundError` if no existing game matches.
+- `remove_game(game: Game | str)`: Removes the ID of a game from the group. Raises `GameNotFoundInGroupError` if not present.
 
 ---
 

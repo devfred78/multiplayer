@@ -7,7 +7,8 @@ from multiplayer import UserRole, GameState, ParameterFamily
 from multiplayer.exceptions import (
     UserAlreadyExistsError, PasswordError, GameIsFullError, 
     GameAlreadyStartedError, GameIsFinishedError, NotEnoughPlayersError,
-    PlayerNotFoundError, PlayerNotFoundInGameError
+    PlayerNotFoundError, PlayerNotFoundInGameError,
+    GameNotFoundError, GameNotFoundInGroupError
 )
 
 def test_player_creation():
@@ -201,3 +202,37 @@ def test_game_group():
     
     group.remove_game(g1)
     assert len(group.games) == 0
+
+def test_game_group_stores_game_ids():
+    group = GameGroup("My Group")
+    g1 = Game("Game 1")
+    g2 = Game("Game 2")
+    group.add_game(g1)
+    group.add_game(g2.ID)
+    assert group.games == (g1.ID, g2.ID)
+
+    group.remove_game(g1.ID)
+    assert group.games == (g2.ID,)
+    group.remove_game(g2)
+    assert group.games == ()
+
+def test_game_group_add_unknown_game_id():
+    group = GameGroup("My Group")
+    with pytest.raises(GameNotFoundError):
+        group.add_game("unknown-game-id")
+    with pytest.raises(GameNotFoundError):
+        group.add_game(42)
+    assert group.games == ()
+
+def test_game_group_remove_missing_game():
+    group = GameGroup("My Group")
+    with pytest.raises(GameNotFoundInGroupError):
+        group.remove_game(Game("Elsewhere"))
+    with pytest.raises(GameNotFoundInGroupError):
+        group.remove_game("unknown-game-id")
+
+def test_game_registry_does_not_keep_games_alive():
+    game_id = Game("Ephemeral").ID
+    gc.collect()
+    with pytest.raises(GameNotFoundError):
+        GameGroup("My Group").add_game(game_id)

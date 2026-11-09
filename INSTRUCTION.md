@@ -392,7 +392,7 @@ The class has the following attributes:
 |-----------------|-----------------|-------------|------------|----------------------------|
 | `ID` | str | The unique identifier of the group. | No | Automatically initialized with the value of `uuid.uuid4()`.|
 | `name` | str | The name of the group. | Yes | - |
-| `games` | Tuple[`Game`] | Tuple (immutable list) of the `Game` instances representing the games of the group. | No | The corresponding internal variable (`_games`) is a list, converted to a tuple when exposed publicly through the `games` attribute. |
+| `games` | Tuple[str] | Tuple (immutable list) of the IDs of the `Game` objects representing the games of the group. | No | The corresponding internal variable (`_games`) is a list, converted to a tuple when exposed publicly through the `games` attribute. |
 | `parameters` | dict | Customization parameters of the group. | Yes | Automatically initialized with the parameters given in `kwargs`, but can later be extended with any other parameter of the user's choice. |
 
 
@@ -400,7 +400,7 @@ The `GameGroup` class has the following methods:
 
 - `add_game`: adds a game to the group. The game is appended to the end of the group's list of games.
   - Description: This method adds a game to the group, given its ID or `Game` object, and optionally a group administrator password. It raises an exception if the game does not exist or if the password is incorrect.
-  - Implementation details: If successful, the method adds the `Game` object to the `_games` list of the current instance.
+  - Implementation details: If successful, the method adds the ID of the `Game` object to the `_games` list of the current instance.
   - Parameters:
     - `game` (`Game`|str): the game to add, given either as a `Game` instance or as a string containing its ID. Mandatory.
   - Return value:
@@ -410,7 +410,7 @@ The `GameGroup` class has the following methods:
 - `remove_game`: removes a game from the group. The game is removed from the group's list of games.
   - Parameters:
     - `game` (`Game`|str): the game to remove, given either as a `Game` instance or as a string containing its ID. Mandatory.
-  - Implementation details: If successful, the method removes the `Game` object from the `_games` list of the current instance.
+  - Implementation details: If successful, the method removes the ID of the `Game` object from the `_games` list of the current instance.
   - Return value:
     - None.
   - Exceptions raised:

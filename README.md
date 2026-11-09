@@ -63,7 +63,8 @@ from multiplayer.game import GameGroup
 
 # Organize multiple games
 group = GameGroup(name="Summer Tournament")
-group.add_game(game)
+group.add_game(game)   # or group.add_game(game.ID)
+print(group.games)     # tuple of game IDs
 ```
 
 ### Persistence

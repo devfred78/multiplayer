@@ -462,7 +462,7 @@ def test_game_creator_can_add_game_to_group_at_base_level():
         {"group_id": group.ID, "game_id": game_id, "group_password": "group-secret"},
     )
     assert added["payload"]["success"] is True
-    assert group.games[0].ID == game_id
+    assert group.games[0] == game_id
 
 
 def test_base_can_list_protected_group_games_with_password():
@@ -579,7 +579,7 @@ def test_save_persistence_drops_deleted_objects(tmp_path, save_format):
 
 
 @pytest.mark.parametrize("save_format", [SaveFormat.JSON, SaveFormat.SQLITE])
-def test_restored_groups_share_the_games_of_the_server(tmp_path, save_format):
+def test_restored_groups_keep_the_ids_of_the_games_of_the_server(tmp_path, save_format):
     path = tmp_path / f"server.{save_format.value}"
     async def exercise():
         first = GameServer(port=0, persistence_mode=save_format, persistence_path=path)
@@ -599,11 +599,9 @@ def test_restored_groups_share_the_games_of_the_server(tmp_path, save_format):
         await second.start()
         try:
             restored = second._groups[group.ID]
-            assert [game.ID for game in restored.games] == [
-                games[0].ID, games[1].ID, group_only.ID
-            ]
-            for game in restored.games:
-                assert game is second._games[game.ID]
+            # The game unknown by the server was not saved: its ID is dropped.
+            assert restored.games == (games[0].ID, games[1].ID)
+            assert all(game_id in second._games for game_id in restored.games)
         finally:
             await second.stop()
 

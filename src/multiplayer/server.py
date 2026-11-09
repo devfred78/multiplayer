@@ -774,7 +774,7 @@ class GameServer:
             for game in self._save.load(Game):
                 self._games[game.ID] = game
             for group in self._save.load(GameGroup):
-                self._share_group_games(group)
+                self._prune_group_games(group)
                 self._groups[group.ID] = group
             for player in self._save.load(Player):
                 self._players[player.ID] = player
@@ -825,22 +825,29 @@ class GameServer:
             game._observers = observers
             self._game_roles[game.ID] = roles
 
-    def _share_group_games(self, group: GameGroup) -> None:
-        """Makes a restored group hold the games known by the server.
+    def _prune_group_games(self, group: GameGroup) -> None:
+        """Drops the unknown games from a group restored from the save file.
 
-        A save file stores a full copy of every game of a group, so a restored
-        group holds game instances distinct from the ones of ``self._games``:
-        joining, leaving or controlling a game would then never be reflected
-        in the listing of its group. Each copy is replaced by the game of the
-        same ID, keeping the order of the games. A game only known through its
-        group is registered on the server.
+        A group stores the IDs of its games. Only the IDs of the games known
+        by the server are kept, in their original order.
 
         Args:
             group (GameGroup): The group restored from the save file.
         """
-        for copy in group.games:
-            group.remove_game(copy.ID)
-            group.add_game(self._games.setdefault(copy.ID, copy))
+        for game_id in group.games:
+            if game_id not in self._games:
+                group.remove_game(game_id)
+
+    def _group_games(self, group: GameGroup) -> List[Game]:
+        """Returns the games of a group known by the server, in group order.
+
+        Args:
+            group (GameGroup): The group to inspect.
+
+        Returns:
+            List[Game]: The games of the group.
+        """
+        return [self._games[game_id] for game_id in group.games if game_id in self._games]
 
     def _save_persistence(self) -> None:
         """Persists the in-memory domain objects when persistence is enabled.
@@ -1898,7 +1905,7 @@ class GameServer:
         return [
             group.ID
             for group in self._groups.values()
-            if any(g.ID == game_id for g in group.games)
+            if game_id in group.games
         ]
 
     async def _notify_game_update(self, game: Game, changed_fields: List[str]) -> None:
@@ -2033,7 +2040,7 @@ class GameServer:
                     "success": False, "error_code": "INVALID_GROUP_PASSWORD",
                     "message": "Invalid group password.",
                 }
-            games = [self._game_summary(game) for game in group.games]
+            games = [self._game_summary(game) for game in self._group_games(group)]
         else:
             games = [self._game_summary(game) for game in self._games.values()]
         return "GAME_LIST_RESPONSE", {"success": True, "games": games}
@@ -2124,7 +2131,7 @@ class GameServer:
             }
         group_password = payload.get("group_password")
         for group in self._groups.values():
-            if any(group_game.ID == game.ID for group_game in group.games):
+            if game.ID in group.games:
                 if not self._authorize_group(session, group, group_password):
                     return "GAME_JOIN_RESPONSE", {
                         "success": False,
@@ -3010,7 +3017,7 @@ class GameServer:
                 "error_code": "INSUFFICIENT_PERMISSIONS",
                 "message": "Cannot inspect this group.",
             }
-        games = [self._game_summary(game) for game in group.games]
+        games = [self._game_summary(game) for game in self._group_games(group)]
         return "GROUP_GAME_LIST_ALL_RESPONSE", {"success": True, "games": games}
 
     # ------------------------------------------------------------------ #

@@ -217,8 +217,8 @@ class Game:
             else (self._hash if password else None)
         )
         self._turn_based: bool = turn_based
-        self._players: List[Player] = []
-        self._observers: List[Player] = []
+        self._players: List[str] = []
+        self._observers: List[str] = []
         self._game_state: GameState = GameState.PENDING
         self.static_state: Dict[str, Any] = {}
         self.dynamic_state: Dict[str, Any] = {}
@@ -283,31 +283,31 @@ class Game:
         return self._min_players
 
     @property
-    def players(self) -> Tuple[Player, ...]:
-        """The list of players currently in the game.
+    def players(self) -> Tuple[str, ...]:
+        """The IDs of the players currently in the game, in turn order.
 
         Returns:
-            Tuple[Player, ...]: A read-only tuple of Player instances.
+            Tuple[str, ...]: A read-only tuple of Player IDs.
         """
         return tuple(self._players)
 
     @property
-    def observers(self) -> Tuple[Player, ...]:
-        """The list of observers currently watching the game.
+    def observers(self) -> Tuple[str, ...]:
+        """The IDs of the observers currently watching the game.
 
         Returns:
-            Tuple[Player, ...]: A read-only tuple of Player instances.
+            Tuple[str, ...]: A read-only tuple of Player IDs.
         """
         return tuple(self._observers)
 
     @property
-    def current_player(self) -> Player | None:
-        """The player whose turn it currently is.
+    def current_player(self) -> str | None:
+        """The ID of the player whose turn it currently is.
 
         Only applicable for turn-based games.
 
         Returns:
-            Player, optional: The Player instance whose turn it is, or None.
+            str, optional: The ID of the Player whose turn it is, or None.
         """
         if not self._turn_based or not self._players:
             return None
@@ -349,14 +349,11 @@ class Game:
         if self._hash and (not password or not bcrypt.checkpw(password.encode(), self._hash.encode())):
             raise PasswordError("Incorrect password.")
 
-        if isinstance(player, Player):
-            p_obj = player
-        else:
-            # For testing purpose or when ID is used, but we don't have a global registry
-            # We assume it should be a Player object in most cases for this implementation
+        if not isinstance(player, Player):
+            # Without a global registry, the existence of a bare ID cannot be checked.
             raise PlayerNotFoundError(player)
-        
-        self._players.append(p_obj)
+
+        self._players.append(player.ID)
 
     def remove_player(self, player: Player | str) -> None:
         """Removes a player from the game session.
@@ -368,11 +365,9 @@ class Game:
             PlayerNotFoundInGameError: If the player is not in this game.
         """
         p_id = player if isinstance(player, str) else player.ID
-        for p in self._players:
-            if p.ID == p_id:
-                self._players.remove(p)
-                return
-        raise PlayerNotFoundInGameError(p_id)
+        if p_id not in self._players:
+            raise PlayerNotFoundInGameError(p_id)
+        self._players.remove(p_id)
 
     def join_game_as_observer(self, player: Player | str, password: str | None = None) -> None:
         """Adds an observer to the game session.
@@ -393,12 +388,11 @@ class Game:
         if target_hash and (not password or not bcrypt.checkpw(password.encode(), target_hash.encode())):
             raise PasswordError("Incorrect observer password.")
 
-        if isinstance(player, Player):
-            p_obj = player
-        else:
+        if not isinstance(player, Player):
+            # Without a global registry, the existence of a bare ID cannot be checked.
             raise PlayerNotFoundError(player)
 
-        self._observers.append(p_obj)
+        self._observers.append(player.ID)
 
     def remove_observer(self, player: Player | str) -> None:
         """Removes an observer from the game session.
@@ -410,11 +404,9 @@ class Game:
             PlayerNotFoundInGameError: If the observer is not in this game.
         """
         p_id = player if isinstance(player, str) else player.ID
-        for p in self._observers:
-            if p.ID == p_id:
-                self._observers.remove(p)
-                return
-        raise PlayerNotFoundInGameError(p_id)
+        if p_id not in self._observers:
+            raise PlayerNotFoundInGameError(p_id)
+        self._observers.remove(p_id)
 
     def start(self) -> None:
         """Starts the game session.
@@ -530,22 +522,13 @@ class Game:
             raise GameIsFinishedError()
         
         p_id = player if isinstance(player, str) else player.ID
-        target_p = None
-        for p in self._players:
-            if p.ID == p_id:
-                target_p = p
-                break
-        
-        if not target_p:
+        if p_id not in self._players:
             raise PlayerNotFoundInGameError(p_id)
+        if not isinstance(rank, int) or rank < 0 or rank >= len(self._players):
+            raise IndexError(f"Invalid rank: {rank!r}.")
 
-        self._players.remove(target_p)
-        if rank < 0 or rank > len(self._players):
-            # Rollback
-            self._players.append(target_p)
-            raise IndexError("Invalid rank.")
-        
-        self._players.insert(rank, target_p)
+        self._players.remove(p_id)
+        self._players.insert(rank, p_id)
 
 class GameGroup:
     """Represents a collection of game sessions.

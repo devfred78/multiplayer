@@ -240,9 +240,9 @@ The class has the following attributes:
 | `observer_hash` | str\|`None` | The hash of the observer password. `None` if no observer password is set. | No | The hash is automatically generated from `observer_password` with `bcrypt`.|
 | `turn_based` | bool | `True` if the game is turn-based, `False` for simultaneous play. | No | - |
 | `min_players` | int | Effective minimum number of players required to start the game (0 means no minimum). | No | Initialized with the `min_players` parameter. If that value is greater than `max_players` (when not `None`), `max_players` is returned instead. |
-| `players` | Tuple[`Player`] | Tuple (immutable list) of the `Player` instances representing the players of the game. The order of the players is the order in which they take their turns in a turn-based game. Some games allow the order to change during play, so dedicated methods are provided for this purpose. Do not attempt to change the order directly through this attribute. | No | The corresponding internal variable (`_players`) is a list, converted to a tuple when exposed publicly through the `players` attribute. |
-| `observers` | Tuple[`Player`] | Tuple (immutable list) of the `Player` instances representing the observers of the game. | No | The corresponding internal variable (`_observers`) is a list, converted to a tuple when exposed publicly through the `observers` attribute. |
-| `current_player`| `Player` | The `Player` instance whose turn it is. Only meaningful for turn-based games. | No | - |
+| `players` | Tuple[str] | Tuple (immutable list) of the IDs of the `Player` objects representing the players of the game. The order of the players is the order in which they take their turns in a turn-based game. Some games allow the order to change during play, so dedicated methods are provided for this purpose. Do not attempt to change the order directly through this attribute. | No | The corresponding internal variable (`_players`) is a list, converted to a tuple when exposed publicly through the `players` attribute. |
+| `observers` | Tuple[str] | Tuple (immutable list) of the IDs of the `Player` objects representing the observers of the game. | No | The corresponding internal variable (`_observers`) is a list, converted to a tuple when exposed publicly through the `observers` attribute. |
+| `current_player`| str | The ID of the `Player` object whose turn it is. Only meaningful for turn-based games. | No | - |
 | `game_state` | `GameState` | Current state of the game. | No | - |
 | `static_state` | dict | Custom game attributes, intended to store information that rarely or never changes during the game.  | Yes | Automatically initialized with the parameters declared as belonging to the `ParameterFamily.STATIC` family, but can later be extended with any other parameter of the user's choice. For example, if `Game` is instantiated with `Game([...], style=(ParameterFamily.STATIC, "blitz"), score=(ParameterFamily.DYNAMIC, "0-0"))`, then `static_state` is equal to `{"style":"blitz"}`. |
 | `dynamic_state` | dict | Custom game attributes, intended to store information that may change frequently during the game. | Yes | Automatically initialized with the parameters declared as belonging to the `ParameterFamily.DYNAMIC` family, but can later be extended with any other parameter of the user's choice. For example, if `Game` is instantiated with `Game([...], style=(ParameterFamily.STATIC, "blitz"), score=(ParameterFamily.DYNAMIC, "0-0"))`, then `dynamic_state` is equal to `{"score":"0-0"}`.    |
@@ -256,7 +256,7 @@ The `Game` class has the following methods:
       - None.
 - `join_game_as_player`: joins a game as a player.
   - Description: This method lets a player join a game, given their ID or `Player` object, and a password if the game is private. It raises an exception if the player does not exist or if the password is incorrect.
-  - Implementation details: If successful, the method adds the `Player` object to the `_players` list of the current instance.
+  - Implementation details: If successful, the method adds the ID of the `Player` object to the `_players` list of the current instance.
   - Parameters:
     - `player` (`Player`|str): the player joining the game, given either as the corresponding `Player` object or as a string containing their ID. Mandatory.
     - `password` (str\|`None`): password required to join the game. If the game is public, pass `None`. Optional. Default: `None`.
@@ -268,7 +268,7 @@ The `Game` class has the following methods:
 
 - `remove_player`: removes a player from the game.
   - Description: This method removes a player from the game, given their ID or `Player` object. It raises an exception if the player is not found in the game.
-  - Implementation details: If successful, the method removes the `Player` object from the `_players` list of the current instance.
+  - Implementation details: If successful, the method removes the ID of the `Player` object from the `_players` list of the current instance.
   - Parameters:
     - `player` (`Player`|str): the player to remove from the game, given either as the corresponding `Player` object or as a string containing their ID. Mandatory.
   - Exceptions raised:
@@ -277,7 +277,7 @@ The `Game` class has the following methods:
 
 - `join_game_as_observer`: joins a game as an observer.
   - Description: This method lets a player join a game as an observer. It raises an exception if the game is private and the password is incorrect.
-  - Implementation details: If successful, the method adds the `Player` object to the `_observers` list of the current instance.
+  - Implementation details: If successful, the method adds the ID of the `Player` object to the `_observers` list of the current instance.
   - Parameters:
     - `player` (`Player`|str): the player joining the game as an observer, given either as the corresponding `Player` object or as a string containing their ID. Mandatory.
     - `password` (str\|`None`): password required to join the game as an observer. If observation of the game is public, pass `None`. Optional. Default: `None`.
@@ -289,7 +289,7 @@ The `Game` class has the following methods:
 
 - `remove_observer`: removes an observer from a game.
   - Description: This method lets an observer leave a game. It raises an exception if the specified player is not found in the game.
-  - Implementation details: If successful, the method removes the `Player` object from the `_observers` list of the current instance.
+  - Implementation details: If successful, the method removes the ID of the `Player` object from the `_observers` list of the current instance.
   - Parameters:
     - `player` (`Player`|str): the player leaving the game as an observer, given either as the corresponding `Player` object or as a string containing their ID. Mandatory.
   - Exceptions raised:

@@ -134,12 +134,27 @@ def _game_to_dict(game: Game) -> Dict[str, Any]:
         "hash": game.hash,
         "observer_hash": game.observer_hash,
         "turn_based": game.turn_based,
-        "players": [_player_to_dict(p) for p in game.players],
-        "observers": [_player_to_dict(p) for p in game.observers],
+        "players": list(game.players),
+        "observers": list(game.observers),
         "game_state": game.game_state.value,
         "static_state": game.static_state,
         "dynamic_state": game.dynamic_state,
     }
+
+
+def _participant_id(entry: Any) -> str:
+    """Extracts a participant ID from a serialized game entry.
+
+    Games store the IDs of their participants. Older save files embedded a
+    full copy of each participant instead, whose ID is then returned.
+
+    Args:
+        entry (Any): A participant ID, or a serialized player dictionary.
+
+    Returns:
+        str: The ID of the participant.
+    """
+    return entry["id"] if isinstance(entry, dict) else entry
 
 
 def _game_from_dict(data: Dict[str, Any]) -> Game:
@@ -160,8 +175,8 @@ def _game_from_dict(data: Dict[str, Any]) -> Game:
     game._hash = data.get("hash")
     game._observer_hash = data.get("observer_hash")
     game._turn_based = data.get("turn_based", False)
-    game._players = [_player_from_dict(p) for p in data.get("players", [])]
-    game._observers = [_player_from_dict(p) for p in data.get("observers", [])]
+    game._players = [_participant_id(p) for p in data.get("players", [])]
+    game._observers = [_participant_id(p) for p in data.get("observers", [])]
     game._game_state = GameState(data["game_state"])
     game.static_state = data.get("static_state", {})
     game.dynamic_state = data.get("dynamic_state", {})
@@ -394,7 +409,7 @@ class Save:
         states: Dict[str, List[str]] = {}
         for game in games.values():
             for participant in game.get("players", []) + game.get("observers", []):
-                states.setdefault(participant["id"], []).append(game["game_state"])
+                states.setdefault(_participant_id(participant), []).append(game["game_state"])
         return states
 
     def _clean_user_players(self, user: User) -> None:

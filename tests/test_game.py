@@ -4,7 +4,8 @@ from multiplayer.game import Player, User, Game, GameGroup
 from multiplayer import UserRole, GameState, ParameterFamily
 from multiplayer.exceptions import (
     UserAlreadyExistsError, PasswordError, GameIsFullError, 
-    GameAlreadyStartedError, GameIsFinishedError, NotEnoughPlayersError
+    GameAlreadyStartedError, GameIsFinishedError, NotEnoughPlayersError,
+    PlayerNotFoundError, PlayerNotFoundInGameError
 )
 
 def test_player_creation():
@@ -46,14 +47,14 @@ def test_game_lifecycle():
     g.join_game_as_player(p1)
     g.join_game_as_player(p2)
     
-    assert len(g.players) == 2
+    assert g.players == (p1.ID, p2.ID)
     
     g.start()
     assert g.game_state == GameState.IN_PROGRESS
-    assert g.current_player.ID == p1.ID
+    assert g.current_player == p1.ID
     
     g.next_turn()
-    assert g.current_player.ID == p2.ID
+    assert g.current_player == p2.ID
     
     g.pause()
     assert g.game_state == GameState.PAUSING
@@ -63,6 +64,47 @@ def test_game_lifecycle():
     
     g.stop()
     assert g.game_state == GameState.FINISHED
+
+def test_game_stores_participant_ids():
+    g = Game(turn_based=True)
+    p1, p2, p3 = Player("P1"), Player("P2"), Player("P3")
+    watcher = Player("Watcher")
+    for player in (p1, p2, p3):
+        g.join_game_as_player(player)
+    g.join_game_as_observer(watcher)
+
+    assert g.players == (p1.ID, p2.ID, p3.ID)
+    assert g.observers == (watcher.ID,)
+    assert all(isinstance(player_id, str) for player_id in g.players + g.observers)
+
+    g.set_player_rank(p3, 0)
+    assert g.players == (p3.ID, p1.ID, p2.ID)
+    g.set_player_rank(p1.ID, 2)
+    assert g.players == (p3.ID, p2.ID, p1.ID)
+    with pytest.raises(IndexError):
+        g.set_player_rank(p2, 3)
+    assert g.players == (p3.ID, p2.ID, p1.ID)
+    g.reverse_order()
+    assert g.players == (p1.ID, p2.ID, p3.ID)
+
+    g.remove_player(p2)
+    g.remove_player(p3.ID)
+    g.remove_observer(watcher.ID)
+    assert g.players == (p1.ID,)
+    assert g.observers == ()
+    with pytest.raises(PlayerNotFoundInGameError):
+        g.remove_player(p2.ID)
+    with pytest.raises(PlayerNotFoundInGameError):
+        g.remove_observer(watcher)
+
+def test_game_rejects_unknown_player_id():
+    g = Game()
+    with pytest.raises(PlayerNotFoundError):
+        g.join_game_as_player("unknown-id")
+    with pytest.raises(PlayerNotFoundError):
+        g.join_game_as_observer("unknown-id")
+    assert g.players == ()
+    assert g.observers == ()
 
 def test_game_passwords():
     g = Game(password="secret", observer_password="watch")

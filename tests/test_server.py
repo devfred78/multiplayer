@@ -971,7 +971,7 @@ def test_disconnection_only_removes_the_guest_players_from_their_games():
 
         game = server._games[game_id]
         assert server._game_roles[game_id] == {user.players_id[0]: "PLAYER"}
-        assert [player.ID for player in game.players] == [user.players_id[0]]
+        assert game.players == (user.players_id[0],)
         assert game.observers == ()
     finally:
         User._existing_usernames.discard("kept_player")
@@ -1062,8 +1062,8 @@ def test_the_participants_of_the_accounts_survive_a_restart(tmp_path, save_forma
 
         game = second._games[game_id]
         assert second._game_roles[game_id] == {user.players_id[0]: "PLAYER"}
-        assert [player.ID for player in game.players] == [user.players_id[0]]
-        assert game.players[0] is second._players[user.players_id[0]]
+        assert game.players == (user.players_id[0],)
+        assert user.players_id[0] in second._players
         assert game.observers == ()
         assert second._game_creator_user[game_id] == "restored_player"
 
@@ -1265,7 +1265,7 @@ def test_garbage_collection_removes_the_players_only_in_finished_games():
         assert user.players_id == [waiting_id, active_id]
         assert {waiting_id, active_id} <= set(server._players)
         # The finished game keeps its participants for its results.
-        assert finished_id in [player.ID for player in server._games[over].players]
+        assert finished_id in server._games[over].players
     finally:
         User._existing_usernames.discard("collected_user")
 

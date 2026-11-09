@@ -794,28 +794,31 @@ class GameServer:
     def _restore_game_participants(self) -> None:
         """Rebuilds the participants of the games restored from the save file.
 
-        A save file stores a copy of every player and observer of a game, so
-        each copy is replaced by the player of the same ID known by the
-        server, keeping the order of the players, which gives the turns. Only
-        the players of a user account are kept: a guest player belonged to a
-        session that no longer exists. The role of each kept participant is
-        recorded, so that it can be listed, leave the game or be kicked.
+        A save file stores the IDs of the players and observers of a game.
+        Only the IDs of the players known by the server and belonging to a
+        user account are kept, in their original order, which gives the turns:
+        a guest player belonged to a session that no longer exists. The role
+        of each kept participant is recorded, so that it can be listed, leave
+        the game or be kicked.
         """
         persistent_ids = self._persistent_player_ids()
         for game in self._games.values():
             roles: Dict[str, str] = {}
-            players: List[Player] = []
-            observers: List[Player] = []
-            for copies, kept, role in (
+            players: List[str] = []
+            observers: List[str] = []
+            for saved_ids, kept, role in (
                 (game.players, players, "PLAYER"),
                 (game.observers, observers, "OBSERVER"),
             ):
-                for copy in copies:
-                    player = self._players.get(copy.ID)
-                    if player is None or player.ID not in persistent_ids or player.ID in roles:
+                for player_id in saved_ids:
+                    if (
+                        player_id not in self._players
+                        or player_id not in persistent_ids
+                        or player_id in roles
+                    ):
                         continue
-                    kept.append(player)
-                    roles[player.ID] = role
+                    kept.append(player_id)
+                    roles[player_id] = role
             # The restored lists are replaced in place, as the save layer does:
             # joining again would check the passwords and the capacities.
             game._players = players
@@ -846,7 +849,7 @@ class GameServer:
         server are also removed from the save file. Only the players of a user
         account are saved: a guest player belongs to a session, which does not
         survive a restart, so it could never be used again. The games keep
-        their own copy of their participants, guests included.
+        the IDs of all their participants, guests included.
         """
         if self.persistence_mode is None or self.persistence_path is None:
             return
@@ -2440,7 +2443,7 @@ class GameServer:
             game.turn_based
             and roles.get(player_id) == "PLAYER"
             and game.current_player is not None
-            and game.current_player.ID != player_id
+            and game.current_player != player_id
         ):
             return "GAME_ACTION_RESPONSE", {
                 "success": False,
@@ -2521,13 +2524,12 @@ class GameServer:
                 "error_code": "GAME_NOT_FOUND",
                 "message": "Game not found.",
             }
-        current = game.current_player
         return "GAME_STATE_GET_RESPONSE", {
             "success": True,
             "state": {
                 "status": game.game_state.name,
                 "custom": self._game_custom_state.get(game.ID, {}),
-                "current_player_id": current.ID if current is not None else None,
+                "current_player_id": game.current_player,
             },
         }
 
@@ -2557,7 +2559,7 @@ class GameServer:
                 "message": "Game is not turn-based.",
             }
         player_id = payload.get("player_id")
-        if game.current_player is not None and game.current_player.ID != player_id:
+        if game.current_player is not None and game.current_player != player_id:
             return "GAME_NEXT_TURN_RESPONSE", {
                 "success": False,
                 "error_code": "NOT_YOUR_TURN",
@@ -2571,8 +2573,7 @@ class GameServer:
                 "error_code": "GAME_NOT_TURN_BASED",
                 "message": "Cannot advance the turn.",
             }
-        current = game.current_player
-        current_id = current.ID if current is not None else None
+        current_id = game.current_player
         await self._broadcast_game(
             game.ID,
             {

@@ -142,8 +142,39 @@ def test_save_and_load_game_with_players(tmp_path, save_format):
     assert restored.turn_based is True
     assert restored.min_players == 2
     assert restored.game_state == GameState.IN_PROGRESS
-    assert [p.ID for p in restored.players] == [p1.ID, p2.ID]
+    assert restored.players == (p1.ID, p2.ID)
+    assert restored.current_player == p1.ID
     assert restored.static_state["style"] == "blitz"
+
+
+def test_load_game_from_older_save_file(tmp_path):
+    file_path = tmp_path / "save.json"
+    content = {
+        "Player": {},
+        "User": {},
+        "Game": {
+            "game-1": {
+                "id": "game-1",
+                "name": "Old",
+                "hash": None,
+                "observer_hash": None,
+                "turn_based": True,
+                "players": [
+                    {"id": "player-1", "name": "P1", "static_state": {}, "dynamic_state": {}},
+                    {"id": "player-2", "name": "P2", "static_state": {}, "dynamic_state": {}},
+                ],
+                "observers": [{"id": "watcher-1", "name": "W", "static_state": {}, "dynamic_state": {}}],
+                "game_state": GameState.PENDING.value,
+                "static_state": {},
+                "dynamic_state": {},
+            }
+        },
+        "GameGroup": {},
+    }
+    file_path.write_text(json.dumps(content), encoding="utf-8")
+    game = Save(file_path, SaveFormat.JSON).load(Game)[0]
+    assert game.players == ("player-1", "player-2")
+    assert game.observers == ("watcher-1",)
 
 
 def test_save_and_load_group(tmp_path, save_format):

@@ -242,9 +242,9 @@ La classe présente les attributs suivants:
 | `observer_hash` | str\|`None`     | Le hash du mot de passe de l'observateur. `None` si aucun mot de passe d'observation n'est défini. | Non  | Le hash est automatiquement généré à partir de `observer_password` avec `bcrypt`.|
 | `turn_based`    | bool            | `True` si le jeu est au tour par tour, `False` pour un jeu simultané. | Non  | -  |
 | `min_players`   | int             | Nombre minimal effectif de joueurs pour que la partie puisse démarrer (0 signifie aucun minimum). | Non | S'initialise avec le paramètre `min_players`. Si cette valeur est supérieure à `max_players` (lorsqu'il ne vaut pas `None`), c'est `max_players` qui est retourné. |
-| `players`       | Tuple[`Player`] | Tuple (liste non mutable) des instances `Player` représentants les joueurs de la partie. L'ordre dans lequel sont présentés les joueurs correspond à l'ordre dans lequel les joueurs prennent leurs tours dans une partie au tour par tour. Certains jeux autorisent le changement d'ordre en cours de partie. Des méthodes spécifiques sont donc à disposition pour réaliser ces changements. Ne pas essayer de modifier l'ordre directement dans cet attribut. | Non | La variable interne correspondante ( `_players`) est une liste qui est transformée en tuple pour son affichage public au travers de l'attribut `players`. |
-| `observers`     | Tuple[`Player`] | Tuple (liste non mutable) des instances `Player` représentants les observateurs de la partie. | Non  | La variable interne correspondante ( `_observers`) est une liste qui est transformée en tuple pour son affichage public au travers de l'attribut `observers`. |
-| `current_player`| `Player`        | Instance `Player` représentant le joueur dont le tour est en cours. N'a de sens que pour les parties à tour par tour. | Non  | - |
+| `players`       | Tuple[str] | Tuple (liste non mutable) des ID des objets `Player` représentants les joueurs de la partie. L'ordre dans lequel sont présentés les joueurs correspond à l'ordre dans lequel les joueurs prennent leurs tours dans une partie au tour par tour. Certains jeux autorisent le changement d'ordre en cours de partie. Des méthodes spécifiques sont donc à disposition pour réaliser ces changements. Ne pas essayer de modifier l'ordre directement dans cet attribut. | Non | La variable interne correspondante ( `_players`) est une liste qui est transformée en tuple pour son affichage public au travers de l'attribut `players`. |
+| `observers`     | Tuple[str] | Tuple (liste non mutable) des ID des objets `Player` représentants les observateurs de la partie. | Non  | La variable interne correspondante ( `_observers`) est une liste qui est transformée en tuple pour son affichage public au travers de l'attribut `observers`. |
+| `current_player`| str        | ID de l'objet `Player` représentant le joueur dont le tour est en cours. N'a de sens que pour les parties à tour par tour. | Non  | - |
 | `game_state`    | `GameState` | État actuel de la partie. | Non  | - |
 | `static_state`  | dict | Attributs personnalisés de la partie, dont la vocation est de stocker des informations qui ne changent pas ou peu pendant la partie.  | Oui  | S'initialise automatiquement avec les paramètres spécifiés comme appartenant à la famille `ParameterFamily.STATIC`, mais peut être complété par la suite par tout autre paramètre au choix de l'utilisateur. Par exemple, si `Game` est instantié avec `Game([...], style=(ParameterFamily.STATIC, "blitz"), score=(ParameterFamily.DYNAMIC, "0-0"))`, alors `static_state`est égal à `{"style":"blitz"}`. |
 | `dynamic_state` | dict | Attributs personnalisés de la partie, dont la vocation est de stocker des informations qui peuvent être modifiées souvent pendant la partie. | Oui        | S'initialise automatiquement avec les paramètres spécifiés comme appartenant à la famille `ParameterFamily.DYNAMIC`, mais peut être complété par la suite par tout autre paramètre au choix de l'utilisateur. Par exemple, si `Game` est instantié avec `Game([...], style=(ParameterFamily.STATIC, "blitz"), score=(ParameterFamily.DYNAMIC, "0-0"))`, alors `dynamic_state` est égal à `{"score":"0-0"}`.    |
@@ -258,7 +258,7 @@ La classe `Game` présente les méthodes suivantes:
       - Aucune.
 - `join_game_as_player`: permet de rejoindre une partie en tant que joueur.
   - Description: Cette méthode permet à un joueur de rejoindre une partie en spécifiant son ID ou son objet `Player` et éventuellement un mot de passe si la partie est privée. Elle lance une exception si le joueur n'existe pas ou si le mot de passe est incorrect.
-  - Précision d'implémentation: En cas de succès, la méthode ajoute l'objet `Player` à la liste `_players` de l'instance courante.
+  - Précision d'implémentation: En cas de succès, la méthode ajoute l'ID de l'objet `Player` à la liste `_players` de l'instance courante.
   - Paramètres:
     - `player` (`Player`|str): le joueur qui rejoint la partie. Il s'agit soit de l'objet `Player` correspondant au joueur, soit une chaîne de caractères correspondant à son ID. Obligatoire.
     - `password` (str\|`None`): mot de passe pour rejoindre la partie. Si la partie est publique, alors il faut indiquer `None`. Optionnel. Valeur par défaut: `None`.
@@ -270,7 +270,7 @@ La classe `Game` présente les méthodes suivantes:
 
 - `remove_player`: permet de retirer un joueur de la partie.
   - Description: Cette méthode permet de retirer un joueur de la partie en spécifiant son ID ou son objet `Player`. Elle lance une exception si le joueur n'est pas trouvé dans la partie.
-  - Précision d'implémentation: En cas de succès, la méthode retire l'objet `Player` de la liste `_players` de l'instance courante.
+  - Précision d'implémentation: En cas de succès, la méthode retire l'ID de l'objet `Player` de la liste `_players` de l'instance courante.
   - Paramètres:
     - `player` (`Player`|str): le joueur à retirer de la partie. Il s'agit soit de l'objet `Player` correspondant au joueur, soit une chaîne de caractères correspondant à son ID. Obligatoire.
   - Exceptions émises:
@@ -279,7 +279,7 @@ La classe `Game` présente les méthodes suivantes:
 
 - `join_game_as_observer`: permet de rejoindre une partie en tant qu'observateur.
   - Description: Cette méthode permet à un joueur de rejoindre une partie en tant qu'observateur. Elle lance une exception si la partie est privée et que le mot de passe est incorrect.
-  - Précision d'implémentation: En cas de succès, la méthode ajoute l'objet `Player` à la liste `_observers` de l'instance courante.
+  - Précision d'implémentation: En cas de succès, la méthode ajoute l'ID de l'objet `Player` à la liste `_observers` de l'instance courante.
   - Paramètres:
     - `player` (`Player`|str): le joueur qui rejoint la partie en tant qu'observateur. Il s'agit soit de l'objet `Player` correspondant au joueur, soit une chaîne de caractères correspondant à son ID. Obligatoire.
     - `password` (str\|`None`): mot de passe pour rejoindre la partie en tant qu'observateur. Si l'observation de la partie est publique, alors il faut indiquer `None`. Optionnel. Valeur par défaut: `None`.
@@ -291,7 +291,7 @@ La classe `Game` présente les méthodes suivantes:
 
 - `remove_observer`: permet de retirer un observateur d'une partie.
   - Description: Cette méthode permet à un observateur de quitter une partie. Elle lance une exception si le joueur spécifié n'est pas trouvé dans la partie.
-  - Précision d'implémentation: En cas de succès, la méthode retire l'objet `Player` de la liste `_observers` de l'instance courante.
+  - Précision d'implémentation: En cas de succès, la méthode retire l'ID de l'objet `Player` de la liste `_observers` de l'instance courante.
   - Paramètres:
     - `player` (`Player`|str): le joueur qui quitte la partie en tant qu'observateur. Il s'agit soit de l'objet `Player` correspondant au joueur, soit une chaîne de caractères correspondant à son ID. Obligatoire.
   - Exceptions émises:

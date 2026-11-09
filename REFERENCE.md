@@ -88,9 +88,9 @@ Manages a single game session, players, and state transitions.
 | `observer_hash` | `str \| None` | Hashed observer password. | No | Generated via `bcrypt`. |
 | `turn_based` | `bool` | Turn-based flag. | No | - |
 | `min_players` | `int` | Effective min players required to start the game. | No | Initialized from the `min_players` parameter, capped at `max_players` when greater. |
-| `players` | `tuple[Player]` | Read-only tuple of players in turn order. | No | Backed by internal list `_players`. |
-| `observers` | `tuple[Player]` | Read-only tuple of observers. | No | Backed by internal list `_observers`. |
-| `current_player` | `Player \| None` | The player whose turn it is. | No | Only relevant for turn-based games. |
+| `players` | `tuple[str]` | Read-only tuple of the IDs of the players, in turn order. | No | Backed by internal list `_players` (of player IDs). |
+| `observers` | `tuple[str]` | Read-only tuple of the IDs of the observers. | No | Backed by internal list `_observers` (of player IDs). |
+| `current_player` | `str \| None` | The ID of the player whose turn it is. | No | Only relevant for turn-based games. |
 | `game_state` | `GameState` | Current state of the game. | No | - |
 | `static_state` | `dict` | Static custom attributes. | Yes | Initialized from `ParameterFamily.STATIC`. |
 | `dynamic_state` | `dict` | Dynamic custom attributes. | Yes | Initialized from `ParameterFamily.DYNAMIC`. |

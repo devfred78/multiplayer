@@ -147,6 +147,21 @@ def test_save_and_load_game_with_players(tmp_path, save_format):
     assert restored.static_state["style"] == "blitz"
 
 
+def test_loaded_games_are_registered(tmp_path, save_format):
+    file_path = tmp_path / "save.dat"
+    save = Save(file_path, save_format)
+    game = Game("Restored")
+    save.save(game)
+    save.flush()
+
+    restored = Save(file_path, save_format).load(Game)[0]
+    assert restored is not game
+    assert Game.get_by_id(game.ID) is restored
+    group = GameGroup("Group")
+    group.add_game(game.ID)
+    assert group.games == (game.ID,)
+
+
 def test_loaded_players_are_registered(tmp_path, save_format):
     file_path = tmp_path / "save.dat"
     save = Save(file_path, save_format)

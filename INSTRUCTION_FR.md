@@ -259,8 +259,15 @@ La classe présente les attributs suivants:
 | `static_state`  | dict | Attributs personnalisés de la partie, dont la vocation est de stocker des informations qui ne changent pas ou peu pendant la partie.  | Oui  | S'initialise automatiquement avec les paramètres spécifiés comme appartenant à la famille `ParameterFamily.STATIC`, mais peut être complété par la suite par tout autre paramètre au choix de l'utilisateur. Par exemple, si `Game` est instantié avec `Game([...], style=(ParameterFamily.STATIC, "blitz"), score=(ParameterFamily.DYNAMIC, "0-0"))`, alors `static_state`est égal à `{"style":"blitz"}`. |
 | `dynamic_state` | dict | Attributs personnalisés de la partie, dont la vocation est de stocker des informations qui peuvent être modifiées souvent pendant la partie. | Oui        | S'initialise automatiquement avec les paramètres spécifiés comme appartenant à la famille `ParameterFamily.DYNAMIC`, mais peut être complété par la suite par tout autre paramètre au choix de l'utilisateur. Par exemple, si `Game` est instantié avec `Game([...], style=(ParameterFamily.STATIC, "blitz"), score=(ParameterFamily.DYNAMIC, "0-0"))`, alors `dynamic_state` est égal à `{"score":"0-0"}`.    |
 
+Chaque objet `Game` créé (ou restauré depuis une sauvegarde) est enregistré dans un registre global, indexé par son ID. C'est ce registre qui permet de désigner une partie par son seul ID, par exemple dans la méthode `add_game` de la classe `GameGroup`.
+
 La classe `Game` présente les méthodes suivantes:
 
+- `get_by_id` (méthode de classe): permet de retrouver une partie existante à partir de son ID.
+  - Précision d'implémentation: Le registre ne conserve que des références faibles (`weakref.WeakValueDictionary`) : il n'empêche pas la destruction d'un objet `Game` qui n'est plus utilisé par ailleurs.
+  - Paramètres:
+    - `game_id` (str): l'ID de la partie recherchée. Obligatoire.
+  - Valeur de retour: L'objet `Game` correspondant, ou `None` si aucune partie existante ne porte cet ID.
 - `change_password`: permet de changer le mot de passe de la partie. Le paramètre `hash` de l'instance courante est mis à jour avec le nouveau mot de passe via `bcrypt`
     - Paramètres:
       - `new_password` (str): le nouveau mot de passe à utiliser pour la partie. Obligatoire.

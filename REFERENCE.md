@@ -105,6 +105,7 @@ Manages a single game session, players, and state transitions.
 
 | Method | Description | Parameters | Raises |
 |--------|-------------|------------|--------|
+| `get_by_id` (class method) | Returns the existing game with the given ID, or `None`. Every created (or restored) game is recorded in a global registry of weak references, which does not keep games alive. | `game_id (str)` | - |
 | `change_password` | Changes the game password. | `new_password (str)` | - |
 | `join_game_as_player` | Adds a player to the game. | `player (Player\|str)`, `password (str\|None)` | `PlayerNotFoundError`, `PasswordError`, `GameIsFullError` |
 | `remove_player` | Removes a player. | `player (Player\|str)` | `PlayerNotFoundInGameError` |

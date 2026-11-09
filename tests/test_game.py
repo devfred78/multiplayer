@@ -231,8 +231,14 @@ def test_game_group_remove_missing_game():
     with pytest.raises(GameNotFoundInGroupError):
         group.remove_game("unknown-game-id")
 
+def test_game_registry_finds_games_by_id():
+    g = Game("Registered")
+    assert Game.get_by_id(g.ID) is g
+    assert Game.get_by_id("unknown-id") is None
+
 def test_game_registry_does_not_keep_games_alive():
     game_id = Game("Ephemeral").ID
     gc.collect()
+    assert Game.get_by_id(game_id) is None
     with pytest.raises(GameNotFoundError):
         GameGroup("My Group").add_game(game_id)

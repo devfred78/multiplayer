@@ -214,8 +214,8 @@ class Game:
     observer tracking, password protection, and turn-based progression.
 
     Every instance is recorded in a global registry indexed by its ID, so that a
-    game can be designated by its ID alone (for example by
-    :meth:`GameGroup.add_game`). The registry only holds weak references: it
+    game can be designated by its ID alone (see :meth:`get_by_id`), for example
+    by :meth:`GameGroup.add_game`. The registry only holds weak references: it
     does not keep a game alive.
 
     Attributes:
@@ -283,6 +283,19 @@ class Game:
         Game._registry[self._id] = self
 
     @classmethod
+    def get_by_id(cls, game_id: str) -> "Game | None":
+        """Looks up an existing game from its ID.
+
+        Args:
+            game_id (str): The ID of the game to look up.
+
+        Returns:
+            Game, optional: The game with this ID, or None if no such game
+            exists (anymore).
+        """
+        return cls._registry.get(game_id)
+
+    @classmethod
     def _resolve(cls, game: "Game | str") -> "Game":
         """Returns the game designated by an instance or by its ID.
 
@@ -297,7 +310,7 @@ class Game:
         """
         if isinstance(game, Game):
             return game
-        found = cls._registry.get(game) if isinstance(game, str) else None
+        found = cls.get_by_id(game) if isinstance(game, str) else None
         if found is None:
             raise GameNotFoundError(game)
         return found

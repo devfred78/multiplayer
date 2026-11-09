@@ -257,8 +257,15 @@ The class has the following attributes:
 | `static_state` | dict | Custom game attributes, intended to store information that rarely or never changes during the game.  | Yes | Automatically initialized with the parameters declared as belonging to the `ParameterFamily.STATIC` family, but can later be extended with any other parameter of the user's choice. For example, if `Game` is instantiated with `Game([...], style=(ParameterFamily.STATIC, "blitz"), score=(ParameterFamily.DYNAMIC, "0-0"))`, then `static_state` is equal to `{"style":"blitz"}`. |
 | `dynamic_state` | dict | Custom game attributes, intended to store information that may change frequently during the game. | Yes | Automatically initialized with the parameters declared as belonging to the `ParameterFamily.DYNAMIC` family, but can later be extended with any other parameter of the user's choice. For example, if `Game` is instantiated with `Game([...], style=(ParameterFamily.STATIC, "blitz"), score=(ParameterFamily.DYNAMIC, "0-0"))`, then `dynamic_state` is equal to `{"score":"0-0"}`.    |
 
+Every `Game` object created (or restored from a save) is recorded in a global registry, indexed by its ID. This registry makes it possible to designate a game by its ID alone, for example in the `add_game` method of the `GameGroup` class.
+
 The `Game` class has the following methods:
 
+- `get_by_id` (class method): looks up an existing game from its ID.
+  - Implementation details: The registry only holds weak references (`weakref.WeakValueDictionary`): it does not prevent the destruction of a `Game` object that is no longer used elsewhere.
+  - Parameters:
+    - `game_id` (str): the ID of the game to look up. Mandatory.
+  - Return value: The corresponding `Game` object, or `None` if no existing game has this ID.
 - `change_password`: changes the password of the game. The `hash` attribute of the current instance is updated with the new password using `bcrypt`.
     - Parameters:
       - `new_password` (str): the new password to use for the game. Mandatory.

@@ -1,5 +1,6 @@
 """Game logic for the multiplayer library."""
 import uuid
+import weakref
 from typing import List, Tuple, Dict, Any
 import bcrypt
 from . import UserRole, GameState, ParameterFamily
@@ -26,11 +27,17 @@ class Player:
     This class stores player-specific information, including their unique identifier,
     name, and custom state parameters divided into static and dynamic categories.
 
+    Every instance is recorded in a global registry indexed by its ID, so that a
+    player can be designated by its ID alone (see :meth:`get_by_id`). The
+    registry only holds weak references: it does not keep a player alive.
+
     Attributes:
         name (str): The name of the player.
         static_state (dict): Custom attributes that rarely change during the game.
         dynamic_state (dict): Custom attributes that frequently change during the game.
     """
+
+    _registry: "weakref.WeakValueDictionary[str, Player]" = weakref.WeakValueDictionary()
 
     def __init__(self, name: str, **kwargs: Any):
         """Initializes a new player instance.
@@ -53,6 +60,41 @@ class Player:
                     self.static_state[key] = val
                 else:
                     self.dynamic_state[key] = val
+
+        Player._registry[self._id] = self
+
+    @classmethod
+    def get_by_id(cls, player_id: str) -> "Player | None":
+        """Looks up an existing player from its ID.
+
+        Args:
+            player_id (str): The ID of the player to look up.
+
+        Returns:
+            Player, optional: The player with this ID, or None if no such
+            player exists (anymore).
+        """
+        return cls._registry.get(player_id)
+
+    @classmethod
+    def _resolve(cls, player: "Player | str") -> "Player":
+        """Returns the player designated by an instance or by its ID.
+
+        Args:
+            player (Player | str): The Player instance or its ID.
+
+        Returns:
+            Player: The designated player.
+
+        Raises:
+            PlayerNotFoundError: If no existing player has the given ID.
+        """
+        if isinstance(player, Player):
+            return player
+        found = cls.get_by_id(player) if isinstance(player, str) else None
+        if found is None:
+            raise PlayerNotFoundError(player)
+        return found
 
     @property
     def ID(self) -> str:
@@ -341,7 +383,7 @@ class Game:
         Raises:
             GameIsFullError: If the maximum number of players has been reached.
             PasswordError: If the provided password is incorrect.
-            PlayerNotFoundError: If a player ID was provided but no Player object.
+            PlayerNotFoundError: If no existing player has the provided ID.
         """
         if self._max_players is not None and len(self._players) >= self._max_players:
             raise GameIsFullError("Game is full.")
@@ -349,11 +391,7 @@ class Game:
         if self._hash and (not password or not bcrypt.checkpw(password.encode(), self._hash.encode())):
             raise PasswordError("Incorrect password.")
 
-        if not isinstance(player, Player):
-            # Without a global registry, the existence of a bare ID cannot be checked.
-            raise PlayerNotFoundError(player)
-
-        self._players.append(player.ID)
+        self._players.append(Player._resolve(player).ID)
 
     def remove_player(self, player: Player | str) -> None:
         """Removes a player from the game session.
@@ -379,7 +417,7 @@ class Game:
         Raises:
             GameIsFullError: If the maximum number of observers has been reached.
             PasswordError: If the provided password is incorrect.
-            PlayerNotFoundError: If a player ID was provided but no Player object.
+            PlayerNotFoundError: If no existing player has the provided ID.
         """
         if self._max_observers is not None and len(self._observers) >= self._max_observers:
             raise GameIsFullError("Observers list is full.")
@@ -388,11 +426,7 @@ class Game:
         if target_hash and (not password or not bcrypt.checkpw(password.encode(), target_hash.encode())):
             raise PasswordError("Incorrect observer password.")
 
-        if not isinstance(player, Player):
-            # Without a global registry, the existence of a bare ID cannot be checked.
-            raise PlayerNotFoundError(player)
-
-        self._observers.append(player.ID)
+        self._observers.append(Player._resolve(player).ID)
 
     def remove_observer(self, player: Player | str) -> None:
         """Removes an observer from the game session.

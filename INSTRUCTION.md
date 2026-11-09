@@ -179,6 +179,16 @@ It has the following attributes:
 | `static_state` | dict | Custom player attributes, intended to store information that rarely or never changes during the game.  | Yes | Automatically initialized with the parameters declared as belonging to the `ParameterFamily.STATIC` family, but can later be extended with any other parameter of the user's choice. For example, if `Player` is instantiated with `Player(name="My name", color=(ParameterFamily.STATIC, "white"), score=(ParameterFamily.DYNAMIC, 0))`, then `static_state` is equal to `{"color":"white"}`. |
 | `dynamic_state` | dict | Custom player attributes, intended to store information that may change frequently during the game. | Yes | Automatically initialized with the parameters declared as belonging to the `ParameterFamily.DYNAMIC` family, but can later be extended with any other parameter of the user's choice. For example, if `Player` is instantiated with `Player(name="My name", color=(ParameterFamily.STATIC, "white"), score=(ParameterFamily.DYNAMIC, 0))`, then `dynamic_state` is equal to `{"score":0}`.    |
 
+Every `Player` object created (or restored from a save) is recorded in a global registry, indexed by its ID. This registry makes it possible to designate a player by its ID alone, for example in the `join_game_as_player` and `join_game_as_observer` methods of the `Game` class.
+
+The `Player` class has the following methods:
+
+- `get_by_id` (class method): looks up an existing player from its ID.
+  - Implementation details: The registry only holds weak references (`weakref.WeakValueDictionary`): it does not prevent the destruction of a `Player` object that is no longer used elsewhere.
+  - Parameters:
+    - `player_id` (str): the ID of the player to look up. Mandatory.
+  - Return value: The corresponding `Player` object, or `None` if no existing player has this ID.
+
 #### Class `User`
 This class represents a user account. It grants access to various capabilities depending on its access level (authentication). A user is an entity distinct from the player: the user manages credentials and rights, while the player manages presence in the game.
 

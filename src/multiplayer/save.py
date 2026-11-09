@@ -66,6 +66,8 @@ def _player_from_dict(data: Dict[str, Any]) -> Player:
     player.name = data["name"]
     player.static_state = data.get("static_state", {})
     player.dynamic_state = data.get("dynamic_state", {})
+    # Restored players must be found by their ID, like newly created ones.
+    Player._registry[player._id] = player
     return player
 
 

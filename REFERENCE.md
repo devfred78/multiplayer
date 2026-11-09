@@ -25,6 +25,12 @@ Represents a player in a game context.
 | `static_state` | `dict` | Custom attributes for data that rarely changes. | Yes | Initialized with parameters from `ParameterFamily.STATIC`. |
 | `dynamic_state` | `dict` | Custom attributes for data that changes frequently. | Yes | Initialized with parameters from `ParameterFamily.DYNAMIC`. |
 
+**Methods:**
+
+| Method | Description | Parameters | Raises |
+|--------|-------------|------------|--------|
+| `get_by_id` (class method) | Returns the existing player with the given ID, or `None`. Every created (or restored) player is recorded in a global registry of weak references, which does not keep players alive. | `player_id (str)` | - |
+
 ---
 
 ### User

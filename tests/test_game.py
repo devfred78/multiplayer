@@ -1,3 +1,5 @@
+import gc
+
 import pytest
 import bcrypt
 from multiplayer.game import Player, User, Game, GameGroup
@@ -97,12 +99,34 @@ def test_game_stores_participant_ids():
     with pytest.raises(PlayerNotFoundInGameError):
         g.remove_observer(watcher)
 
+def test_player_registry_finds_players_by_id():
+    p = Player("Registered")
+    assert Player.get_by_id(p.ID) is p
+    assert Player.get_by_id("unknown-id") is None
+
+def test_player_registry_does_not_keep_players_alive():
+    p = Player("Ephemeral")
+    player_id = p.ID
+    del p
+    gc.collect()
+    assert Player.get_by_id(player_id) is None
+
+def test_game_join_with_player_id():
+    g = Game()
+    p, watcher = Player("P"), Player("Watcher")
+    g.join_game_as_player(p.ID)
+    g.join_game_as_observer(watcher.ID)
+    assert g.players == (p.ID,)
+    assert g.observers == (watcher.ID,)
+
 def test_game_rejects_unknown_player_id():
     g = Game()
     with pytest.raises(PlayerNotFoundError):
         g.join_game_as_player("unknown-id")
     with pytest.raises(PlayerNotFoundError):
         g.join_game_as_observer("unknown-id")
+    with pytest.raises(PlayerNotFoundError):
+        g.join_game_as_player(None)
     assert g.players == ()
     assert g.observers == ()
 

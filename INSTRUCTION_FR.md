@@ -181,6 +181,16 @@ Elle présente les attributs suivants:
 | `static_state`  | dict | Attributs personnalisés du joueur, dont la vocation est de stocker des informations qui ne changent pas ou peu pendant la partie.  | Oui  | S'initialise automatiquement avec les paramètres spécifiés comme appartenant à la famille `ParameterFamily.STATIC`, mais peut être complété par la suite par tout autre paramètre au choix de l'utilisateur. Par exemple, si `Player` est instantié avec `Player(name="Mon nom", color=(ParameterFamily.STATIC, "white"), score=(ParameterFamily.DYNAMIC, 0))`, alors `static_state`est égal à `{"color":"white"}`. |
 | `dynamic_state` | dict | Attributs personnalisés du joueur, dont la vocation est de stocker des informations qui peuvent être modifiées souvent pendant la partie. | Oui        | S'initialise automatiquement avec les paramètres spécifiés comme appartenant à la famille `ParameterFamily.DYNAMIC`, mais peut être complété par la suite par tout autre paramètre au choix de l'utilisateur. Par exemple, si `Player` est instantié avec `Player(name="Mon nom", color=(ParameterFamily.STATIC, "white"), score=(ParameterFamily.DYNAMIC, 0))`, alors `dynamic_state` est égal à `{"score":0}`.    |
 
+Chaque objet `Player` créé (ou restauré depuis une sauvegarde) est enregistré dans un registre global, indexé par son ID. C'est ce registre qui permet de désigner un joueur par son seul ID, par exemple dans les méthodes `join_game_as_player` et `join_game_as_observer` de la classe `Game`.
+
+La classe `Player` présente les méthodes suivantes:
+
+- `get_by_id` (méthode de classe): permet de retrouver un joueur existant à partir de son ID.
+  - Précision d'implémentation: Le registre ne conserve que des références faibles (`weakref.WeakValueDictionary`) : il n'empêche pas la destruction d'un objet `Player` qui n'est plus utilisé par ailleurs.
+  - Paramètres:
+    - `player_id` (str): l'ID du joueur recherché. Obligatoire.
+  - Valeur de retour: L'objet `Player` correspondant, ou `None` si aucun joueur existant ne porte cet ID.
+
 #### Classe `User`
 Cette classe représente un compte utilisateur. Celui-ci permet d'accéder à diverses capacités selon son niveau d'accès (authentification). Un utilisateur est une entité distincte du joueur : l'utilisateur gère les identifiants et les droits, tandis que le joueur gère la présence dans le jeu.
 

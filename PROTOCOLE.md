@@ -1,5 +1,7 @@
 ﻿# Exchange protocol between the client and the server
 
+**Protocol version:** 2 — **Revision:** 2.1 (see the "Version history" paragraph)
+
 This section describes the messages exchanged between clients and the server.
 
 ## Preamble to the exchange protocol
@@ -285,9 +287,9 @@ It allows the recipient to determine the treatment to be applied. Its value must
 
 #### `version` field
 
-The `version` field indicates the protocol version used for the message.
+The `version` field indicates the major protocol version used for the message.
 
-In this version of the protocol, the expected value is `2`.
+In this version of the protocol, the expected value is `2`, whatever the protocol revision (see the "Versioning and extensibility" paragraph). A message whose `version` field is not `2` is refused (error code `UNSUPPORTED_VERSION` for a TCP request, message ignored for a discovery request).
 
 #### `payload` field
 
@@ -445,6 +447,7 @@ Possible format: JSON
 
 Examples:
 
+- information about the protocol version, revision and features supported by the server;
 - presentation of the server password;
 - user authentication;
 - disconnection;
@@ -483,7 +486,23 @@ Examples:
 - join a game as an observer;
 - leave a game;
 - start, pause, resume or end a game;
-- change the order of players in a turn-based game.
+- change the order of players in a turn-based game;
+- consult the player factory of a game, to build the player creation form;
+- create a player from the player factory of a game and make it join the game.
+
+#### Factory template management messages
+
+These messages concern the player factory templates (`PlayerFactoryTemplate`) held by the server, which define the customization options of the players of a game.
+
+Transport used: TCP.
+
+Possible format: JSON
+
+Examples:
+
+- list the available templates;
+- consult a template;
+- create, update or delete a template (server administrator).
 
 #### Group management messages
 
@@ -615,6 +634,24 @@ The following principles apply:
 - new message types may be added in future versions;
 - new optional fields can be added without breaking compatibility.
 
+The protocol distinguishes two notions:
+
+- **The major version**, transmitted in the `version` field of each message (currently `2`). It expresses the ability of two programs to communicate, and only changes in the event of a compatibility break.
+- **The revision**, of the form `major.minor` (currently `2.1`). It expresses the available features. It is not transmitted in each message, but announced by the server, in the discovery response (`revision` field of `DISCOVERY_RESPONSE`) and in the response to the `PROTOCOL_INFO` request.
+
+A minor revision can only add new message types, new optional fields or new error codes. It never modifies the behavior of existing messages for a client that does not use these additions. A client can thus communicate with a server of a lower or higher revision than its own, for all the features they have in common. Before using a feature introduced by a given revision, a client must check that the server announces a sufficient revision. A server that does not recognize a message type responds with the `UNKNOWN_TYPE` error code.
+
+Each message introduced by a minor revision is flagged in its description by the **Minimum revision** mention.
+
+#### Version history
+
+| Revision | Content |
+|---|---|
+| 2.0 | Initial revision of version 2 of the protocol. |
+| 2.1 | Player factories: factory template management messages (`FACTORY_TEMPLATE_LIST`, `FACTORY_TEMPLATE_GET`, `FACTORY_TEMPLATE_CREATE`, `FACTORY_TEMPLATE_UPDATE`, `FACTORY_TEMPLATE_DELETE`), consultation of the player factory of a game and creation of a player from it (`GAME_FACTORY_GET`, `GAME_FACTORY_JOIN`), `GAME_FACTORY_UPDATED` notification, `factory_template_id` field of `GAME_CREATE`, `has_player_factory` field of `GAME_LIST_RESPONSE`, checks of the factory options and `details` field of `GAME_JOIN_RESPONSE`, `static_attributes` and `dynamic_attributes` fields of `PLAYER_CREATE`, and associated error codes (`FACTORY_TEMPLATE_NOT_FOUND`, `INVALID_OPTION`, `INVALID_OPTION_VALUE`, `LACKING_OPTION`, `NO_PLAYER_FACTORY`, `OPTION_ALREADY_EXISTS`, `OPTION_VALUE_ALREADY_GIVEN`). Revision announcement: `PROTOCOL_INFO` request and `revision` field of `DISCOVERY_RESPONSE`. |
+
+Compatibility between revisions 2.0 and 2.1: a revision 2.0 client keeps working with a revision 2.1 server. However, it can only join as a player a game that has a player factory (`GAME_JOIN`) if its player carries the values expected by the factory; otherwise, it receives one of the error codes `LACKING_OPTION`, `INVALID_OPTION_VALUE` or `OPTION_VALUE_ALREADY_GIVEN`, which it handles like any other error. A revision 2.1 client connected to a revision 2.0 server must not use the messages introduced by revision 2.1: the server would respond `UNKNOWN_TYPE`, and would ignore the new optional fields.
+
 ### General security
 
 The protocol must be interpreted according to a principle of distrust of the data received.
@@ -682,6 +719,7 @@ Message sent by a server in response to a valid discovery request.
   "type": "DISCOVERY_RESPONSE",
   "service_name": "multiplayer_server",
   "version": 2,
+  "revision": "2.1",
   "service_host": "192.168.1.20",
   "service_port": 65432,
   "unencrypted_port": null,
@@ -696,7 +734,8 @@ Message sent by a server in response to a valid discovery request.
 |---|---|---:|---|---|
 | `type` | `string` | Yes | `"DISCOVERY_RESPONSE"` | Identifies the message as a discovery response. |
 | `service_name` | `string` | Yes | `"multiplayer_server"` | Identifies the service. |
-| `version` | `number` | Yes | `2` | Protocol version. |
+| `version` | `number` | Yes | `2` | Major protocol version. |
+| `revision` | `string` | No | String of the form `major.minor` (e.g. `"2.1"`) | Protocol revision supported by the server (minimum revision: 2.1). A revision 2.0 server does not send this field: its absence means revision `"2.0"`. |
 | `service_host` | `string` | Yes | IPv4 address or DNS name | Address that clients should use to connect to the server. |
 | `service_port` | `number` | Yes | Integer from `1` to `65535` | TCP port used by the service's primary or secure access point. |
 | `unencrypted_port` | `number\| null` | Yes | Integer from `1` to `65535`, or `null` | TCP port for unencrypted connections. `null` means it is not available. |
@@ -713,12 +752,75 @@ Message sent by a server in response to a valid discovery request.
 - If `use_tls` is `false`, `service_port` is the server's primary unencrypted TCP port and `unencrypted_port` must be `null`.
 - When `unencrypted_port` is not `null`, clients that do not want or cannot use TLS should use `unencrypted_port` rather than `service_port`.
 - If `password_required` is `true`, the client must authenticate using the intended connection protocol.
+- If `revision` is absent, the client must consider that the server is of revision `"2.0"`.
 
 ---
 
 ## Connection and access messages
 
 These messages allow the client to establish a session with the server and change its access level.
+
+### Protocol information
+
+**Direction:** Client → Server  
+**Transport:** TCP  
+**Encoding:** JSON UTF-8  
+**Minimum access level:** `OPEN`  
+**Minimum revision:** 2.1
+
+Allows a client to know the protocol version and revision supported by the server, as well as the available features, in order to only use the messages that the server is able to process. It is recommended to send it immediately after establishing the TCP connection. This request can be used before any authentication, including when the server requires a password (`password_required` set to `true`).
+
+A revision 2.0 server does not know this request and responds with the `UNKNOWN_TYPE` error code: the client must then consider that the server is of revision `"2.0"`, without any optional feature.
+
+#### Example
+```json
+{
+  "type": "PROTOCOL_INFO",
+  "version": 2,
+  "payload": {}
+}
+```
+#### Response (`PROTOCOL_INFO_RESPONSE`)
+```json
+{
+  "type": "PROTOCOL_INFO_RESPONSE",
+  "version": 2,
+  "payload": {
+    "success": true,
+    "version": 2,
+    "revision": "2.1",
+    "features": ["player_factory"],
+    "message": "Protocol information retrieved successfully"
+  }
+}
+```
+#### Fields (`PROTOCOL_INFO`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `type` | `string` | Yes | `"PROTOCOL_INFO"` |
+| `version` | `number` | Yes | `2` |
+| `payload` | `object` | Yes | Empty object. |
+
+#### Fields (`PROTOCOL_INFO_RESPONSE`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `payload.success` | `boolean` | Yes | `true` if the request was successful. |
+| `payload.version` | `number` | Yes | Major protocol version (`2`). |
+| `payload.revision` | `string` | Yes | Protocol revision supported by the server, of the form `major.minor` (e.g. `"2.1"`). |
+| `payload.features` | `array` | Yes | List of the optional features available on the server (see below). Can be empty. |
+| `payload.message` | `string` | Yes | Information message. |
+
+#### Features
+
+A feature groups a set of messages and fields. Its presence in the `features` list indicates that the server is able to process them. A feature is introduced by a given revision, but a server of sufficient revision may not offer it (for example if it is disabled by its configuration): the client must therefore rely on the `features` list rather than on the revision number alone.
+
+| Feature | Minimum revision | Messages and fields concerned |
+|---|---|---|
+| `player_factory` | 2.1 | Factory template management messages (`FACTORY_TEMPLATE_*`), `GAME_FACTORY_GET` and `GAME_FACTORY_JOIN` requests, `GAME_FACTORY_UPDATED` notification, `factory_template_id` field of `GAME_CREATE`, `has_player_factory` field of `GAME_LIST_RESPONSE`. |
+
+---
 
 ### Server password overview
 
@@ -729,7 +831,7 @@ These messages allow the client to establish a session with the server and chang
 
 This request is used when a server requires a password to authorize basic access (moving to the `BASE` level). It must be sent immediately after establishing the TCP connection if `password_required` was `true` in the discovery response.
 
-When `password_required` is `true`, no other application request should be sent before `SERVER_AUTH` succeeds. After successful server authentication, the client moves to the `BASE` level and can then send requests authorized by this level.
+When `password_required` is `true`, no other application request should be sent before `SERVER_AUTH` succeeds, except for the `PROTOCOL_INFO` request, which remains usable at the `OPEN` level. After successful server authentication, the client moves to the `BASE` level and can then send requests authorized by this level.
 
 If `password_required` is `false`, the client can directly send requests authorized at the `OPEN` or `BASE` level depending on the context of the server and the configured password.
 
@@ -764,6 +866,10 @@ This request allows a connected client (`BASE` level or higher) to create a **Pl
 
 A client can create several players during the session (for example to manage several participants on the same machine). One of them can be designated as the "default" player for the session. If a default player already exists, the new player created with the `is_default` option set to `true` takes that role, but the previous player continues to exist.
 
+The custom attributes of the player are provided by the client, which chooses in which dictionary of the **Player** object each of them is stored: `static_attributes` for attributes that do not change, or rarely, during the game (`static_state` dictionary), `dynamic_attributes` for those that can change often (`dynamic_state` dictionary). This choice is important when the player is intended to join a game that has a player factory: the checks performed when the player arrives look for the value of each option in the dictionary associated with the option (see `GAME_FACTORY_GET`, `target` field). To create a player compliant with the player factory of a game, it is simpler to use the `GAME_FACTORY_JOIN` request.
+
+The `attributes` field is kept for compatibility: it is equivalent to `dynamic_attributes`.
+
 #### Example
 ```json
 {
@@ -772,8 +878,11 @@ A client can create several players during the session (for example to manage se
   "payload": {
     "name": "GuestPlayer",
     "is_default": true,
-    "attributes": {
+    "static_attributes": {
       "color": "blue"
+    },
+    "dynamic_attributes": {
+      "score": 0
     }
   }
 }
@@ -798,7 +907,9 @@ A client can create several players during the session (for example to manage se
 | `version` | `number` | Yes | `2` |
 | `payload.name` | `string` | Yes | Desired name for the player. |
 | `payload.is_default` | `boolean` | No | If `true`, this player becomes the default player of the session (`true` by default if it is the first player). |
-| `payload.attributes` | `object` | No | Custom attributes for the session. |
+| `payload.static_attributes` | `object` | No | Custom attributes stored in the `static_state` dictionary of the player. Minimum revision: 2.1. |
+| `payload.dynamic_attributes` | `object` | No | Custom attributes stored in the `dynamic_state` dictionary of the player. Minimum revision: 2.1. |
+| `payload.attributes` | `object` | No | Kept for compatibility, equivalent to `dynamic_attributes`. A same key cannot appear in both `attributes` and `dynamic_attributes` (`INVALID_DATA` error). |
 
 #### Fields (`PLAYER_CREATE_RESPONSE`)
 
@@ -814,6 +925,7 @@ A client can create several players during the session (for example to manage se
 | Code | Description |
 |---|---|
 | `INVALID_NAME` | The name provided is invalid or already in use. |
+| `INVALID_DATA` | The attributes provided are malformed (they are not JSON objects), or a same key appears in both `attributes` and `dynamic_attributes`. |
 
 ---
 
@@ -1088,7 +1200,7 @@ These messages concern user accounts.
 
 This request allows you to create a new user account on the server.
 
-Creating a user account does not generate any **Player** object: players are created separately via the `PLAYER_CREATE` request, which also accepts the game-related custom attributes (`attributes` field). The players created while the user is authenticated are added to the `players_id` list of their account.
+Creating a user account does not generate any **Player** object: players are created separately via the `PLAYER_CREATE` request, which also accepts the game-related custom attributes (`static_attributes` and `dynamic_attributes` fields), or via the `GAME_FACTORY_JOIN` request for games that have a player factory. The players created while the user is authenticated are added to the `players_id` list of their account.
 
 #### Creation rules
 
@@ -1420,6 +1532,8 @@ This section describes messages for creating, listing, and joining game parties.
 
 Allows you to create a new game instance on the server.
 
+The game can be given, from its creation, a player factory built from a template held by the server (`factory_template_id` field, see `FACTORY_TEMPLATE_LIST`). The template can only be chosen when the game is created: the protocol does not provide any request to add, replace or remove the player factory of an existing game. The options of the factory are copies of those of the template: a later update or deletion of the template has no effect on the game.
+
 #### Example
 ```json
 {
@@ -1434,6 +1548,7 @@ Allows you to create a new game instance on the server.
     "max_observers": 10,
     "turn_based": true,
     "password": "private_game",
+    "factory_template_id": "template_uuid",
     "attributes": {
       "map": "island_01",
       "difficulty": "medium"
@@ -1465,6 +1580,7 @@ Allows you to create a new game instance on the server.
 | `payload.password` | `string` | No | Password to join the game. |
 | `payload.group_id` | `string` | No | Group UUID in which to create the game. |
 | `payload.group_password` | `string` | No | Group password, required when the session has not already been authorized. |
+| `payload.factory_template_id` | `string` | No | UUID of the player factory template to apply to the game. If absent or `null`, the game has no player factory. Minimum revision: 2.1 (`player_factory` feature). |
 | `payload.attributes` | `object` | No | Custom game attributes. |
 
 #### Fields (`GAME_CREATE_RESPONSE`)
@@ -1483,6 +1599,7 @@ Allows you to create a new game instance on the server.
 | `INSUFFICIENT_PERMISSIONS` | The user role does not allow creating a game. |
 | `INVALID_DATA` | Invalid creation parameters. |
 | `LIMIT_REACHED` | The maximum number of games on the server has been reached. |
+| `FACTORY_TEMPLATE_NOT_FOUND` | The factory template indicated by `factory_template_id` does not exist. The game is not created. |
 
 ---
 
@@ -1525,7 +1642,8 @@ The group administrator and server administrator do not need to provide it.
         "max_players": 4,
         "observers_count": 3,
         "max_observers": 10,
-        "requires_password": true
+        "requires_password": true,
+        "has_player_factory": true
       }
     ]
   }
@@ -1557,6 +1675,7 @@ The group administrator and server administrator do not need to provide it.
 | `payload.games[].observers_count` | `number` | - | Current number of observers. |
 | `payload.games[].max_observers` | `number` | - | Maximum number of observers (or `null` for unlimited). |
 | `payload.games[].requires_password` | `boolean` | - | `true` if a password is required to join. |
+| `payload.games[].has_player_factory` | `boolean` | - | `true` if the game has a player factory. The client can then offer a player creation form (see `GAME_FACTORY_GET` and `GAME_FACTORY_JOIN`). Minimum revision: 2.1 (`player_factory` feature). |
 | `payload.error_code` | `string` | No | Error code in case of failure (see table below). |
 | `payload.message` | `string` | Yes | Information or error message. |
 
@@ -1658,6 +1777,8 @@ If the player identifier (`player_id`) is not specified in the request, the serv
 
 A player can only take part in a single game: if the designated player already takes part in a game (including a finished game), the request fails with `ALREADY_IN_GAME`. To take part in another game, the client must create a new **Player** object (`PLAYER_CREATE`).
 
+If the game has a player factory and the requested role is `PLAYER`, the server checks that the player complies with the constraints of the factory: presence of a value for each option, compatibility of its type, validity, and uniqueness among the players of the game for unique options. These checks do not apply to observers. To create a player compliant with the factory and make it join the game in a single operation, it is recommended to use the `GAME_FACTORY_JOIN` request.
+
 #### Example
 ```json
 {
@@ -1698,6 +1819,7 @@ A player can only take part in a single game: if the designated player already t
 |---|---|---:|---|
 | `payload.success` | `boolean` | Yes | `true` if the operation was successful. |
 | `payload.error_code` | `string` | No | Error code in case of failure (see table below). |
+| `payload.details` | `object` | No | Details about the error, for errors related to the option values of the player factory of the game. See the "Details of option value errors" paragraph. Minimum revision: 2.1. |
 | `payload.message` | `string` | Yes | Information or error message. |
 
 #### Error codes (`GAME_JOIN_RESPONSE`)
@@ -1713,6 +1835,299 @@ A player can only take part in a single game: if the designated player already t
 | `GAME_ALREADY_STARTED` | The game has already started and is no longer accepting new players (does not affect observers). |
 | `INSUFFICIENT_PERMISSIONS` | The user's access level is insufficient for the requested role (eg: `BASE` requesting `PLAYER`). |
 | `PLAYER_NOT_FOUND` | The player ID is missing and no default player is set for the session, or the specified ID was not found on the server. |
+| `LACKING_OPTION` | The game has a player factory, and the player does not carry a value for one of its options (`details.reason` set to `ABSENT_FROM_PLAYER`). See the "Details of option value errors" paragraph. |
+| `INVALID_OPTION_VALUE` | The game has a player factory, and the player carries, for one of its options, a value of an incompatible type (`details.reason` set to `INCOMPATIBLE_TYPE`) or an invalid value (`details.reason` set to `INVALID_VALUE`). See the "Details of option value errors" paragraph. |
+| `OPTION_VALUE_ALREADY_GIVEN` | The game has a player factory, and the player carries, for a unique option, a value already carried by another player of the game. The `details` field indicates the option (`option_id`) and the value concerned (`value`). |
+
+---
+
+### Creating a player from a game's player factory
+
+The following two requests allow a client to offer the user a player creation form built from the player factory of a game, then to send the user's choices to the server.
+
+#### Option representation
+
+The options of a player factory, like those of a template (see the factory template management messages), are represented by the following JSON object:
+
+```json
+{
+  "option_id": "option_uuid",
+  "type": "LIST",
+  "name": "Color",
+  "description": "Color of the pieces",
+  "default": "%%RANDOM_CHOICE%%",
+  "min": null,
+  "max": null,
+  "step": 1,
+  "choices": ["white", "black"],
+  "unicity": true,
+  "target": "STATIC",
+  "attribute": null,
+  "key": "Color"
+}
+```
+
+| Field | JSON type | Description |
+|---|---|---|
+| `option_id` | `string` | UUID of the option. The options of a factory have UUIDs distinct from those of the options of the template they come from. |
+| `type` | `string` | Type of the option: `CHECK`, `RANGE`, `LIST` or `TEXT`. |
+| `name` | `string` | Name of the option, intended to be displayed to the user. |
+| `description` | `string` | Description of the option. |
+| `default` | `boolean`\|`number`\|`string`\|`null` | Raw default value of the option. It can contain unevaluated runtime constants (e.g. `"%%USERNAME%%"`). The value `null` means "first available value": `false` for a `CHECK` option, `min` (or failing that the possible value closest to `0`) for a `RANGE` option, the first element of `choices` for a `LIST` option, and `""` (empty string) for a `TEXT` option. To pre-fill a form, use instead the `proposed_value` field provided by `GAME_FACTORY_GET`. |
+| `min` | `number`\|`null` | Minimum value (`RANGE` options). `null` if no minimum. |
+| `max` | `number`\|`null` | Maximum value (`RANGE` options). `null` if no maximum. |
+| `step` | `number` | Increment between two possible values (`RANGE` options). |
+| `choices` | `array` | List of possible choices (`LIST` options). |
+| `unicity` | `boolean` | `true` if a value can only be carried by a single player of the game. |
+| `target` | `string` | Location of the value in the **Player** object: `ATTRIBUTE` (attribute of the player designated by the `attribute` field), `STATIC` (`static_state` dictionary) or `DYNAMIC` (`dynamic_state` dictionary). |
+| `attribute` | `string`\|`null` | Name of the player attribute when `target` is `ATTRIBUTE` (only possible value for now: `"name"`). `null` otherwise. |
+| `key` | `string` | Frozen key of the option: key under which the value is stored in `static_state` or `dynamic_state`. Read-only. |
+
+#### Details of option value errors
+
+When a request fails because of the value of an option (codes `INVALID_OPTION_VALUE`, `OPTION_VALUE_ALREADY_GIVEN` and `LACKING_OPTION`), the response includes a `payload.details` field specifying the error:
+
+| Field | JSON type | Codes concerned | Description |
+|---|---|---|---|
+| `details.option_id` | `string` | All | UUID of the option concerned. For `INVALID_OPTION_VALUE` with the `UNKNOWN_OPTION` reason, it is the key sent by the client, which does not match any option. |
+| `details.value` | `boolean`\|`number`\|`string`\|`null` | `INVALID_OPTION_VALUE`, `OPTION_VALUE_ALREADY_GIVEN` | Value at fault. |
+| `details.reason` | `string` | `INVALID_OPTION_VALUE`, `LACKING_OPTION` | Reason for the error (see below). |
+
+Possible values of `details.reason`:
+
+| Code | Reason | Description |
+|---|---|---|
+| `INVALID_OPTION_VALUE` | `UNKNOWN_OPTION` | The key sent in `values` does not match any option of the factory. |
+| `INVALID_OPTION_VALUE` | `INCOMPATIBLE_TYPE` | The type of the value is not compatible with that of the option, neither directly nor by conversion. |
+| `INVALID_OPTION_VALUE` | `INVALID_VALUE` | The value is outside the `min` / `max` bounds, does not match a `step` increment, or is absent from `choices`. |
+| `LACKING_OPTION` | `ABSENT_FROM_PLAYER` | The player joining the game does not carry a value for this option. |
+| `LACKING_OPTION` | `NO_AVAILABLE_VALUE` | No value was provided for this option and there is no possible value left (for example, all the colors are already taken). |
+
+---
+
+#### Player factory of a game
+
+**Direction:** Client → Server  
+**Transport:** TCP  
+**Encoding:** JSON UTF-8  
+**Minimum access level:** `BASE`  
+**Minimum revision:** 2.1 (`player_factory` feature)
+
+Provides the full description of the player factory of a game, so that the client can build the player creation form. For each option, the server also provides the values already taken by the players of the game (`exclusions`) and the proposed value (`proposed_value`), computed for the client's session: the runtime constants of the "Context" source (`%%USERNAME%%`, `%%CLIENTADDRESS%%`, `%%SERVERNAME%%`, `%%SERVERADDRESS%%`) are evaluated from the session and the connection of the client. The context is never provided by the client.
+
+Since the form is used to join the game, the request is subject to the same passwords as `GAME_JOIN`: password of the game if it is private, and password of the group if the game belongs to a protected group and the session has not already been authorized.
+
+A successful consultation subscribes the session to the `GAME_FACTORY_UPDATED` notifications of this game (see the corresponding notification).
+
+##### Example
+```json
+{
+  "type": "GAME_FACTORY_GET",
+  "version": 2,
+  "payload": {
+    "game_id": "game_uuid",
+    "password": "private_game"
+  }
+}
+```
+##### Response (`GAME_FACTORY_GET_RESPONSE`)
+```json
+{
+  "type": "GAME_FACTORY_GET_RESPONSE",
+  "version": 2,
+  "payload": {
+    "success": true,
+    "game_id": "game_uuid",
+    "factory_id": "factory_uuid",
+    "options": [
+      {
+        "option_id": "option_uuid",
+        "type": "LIST",
+        "name": "Color",
+        "description": "Color of the pieces",
+        "default": "%%RANDOM_CHOICE%%",
+        "min": null,
+        "max": null,
+        "step": 1,
+        "choices": ["white", "black"],
+        "unicity": true,
+        "target": "STATIC",
+        "attribute": null,
+        "key": "Color",
+        "exclusions": ["white"],
+        "proposed_value": "black"
+      }
+    ],
+    "message": "Player factory retrieved successfully"
+  }
+}
+```
+##### Fields (`GAME_FACTORY_GET`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `type` | `string` | Yes | `"GAME_FACTORY_GET"` |
+| `version` | `number` | Yes | `2` |
+| `payload.game_id` | `string` | Yes | UUID of the game. |
+| `payload.password` | `string` | No | Password of the game (if required). |
+| `payload.group_password` | `string` | No | Password of a protected group containing the game (if required). |
+
+##### Fields (`GAME_FACTORY_GET_RESPONSE`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `payload.success` | `boolean` | Yes | `true` if the request was successful. |
+| `payload.game_id` | `string` | No | UUID of the game (if successful). |
+| `payload.factory_id` | `string` | No | UUID of the player factory of the game (if successful). |
+| `payload.options` | `array` | No | Options of the factory, in their order of definition (if successful). Each option follows the representation described above, supplemented by the `exclusions` and `proposed_value` fields. |
+| `payload.options[].exclusions` | `array` | - | Values already carried by the players of the game for this option, computed at the time of the request. Empty list for a non-unique option. |
+| `payload.options[].proposed_value` | `boolean`\|`number`\|`string`\|`null` | - | Proposed value for this option, after evaluation of the runtime constants and taking the exclusions into account. `null` if there is no possible value left. |
+| `payload.error_code` | `string` | No | Error code in case of failure (see table below). |
+| `payload.message` | `string` | Yes | Information or error message. |
+
+##### Error codes (`GAME_FACTORY_GET_RESPONSE`)
+
+| Code | Description |
+|---|---|
+| `GAME_NOT_FOUND` | The specified game does not exist. |
+| `NO_PLAYER_FACTORY` | The game does not have a player factory. |
+| `INVALID_PASSWORD` | The game password is missing or incorrect. |
+| `INVALID_GROUP_PASSWORD` | The group password is missing or incorrect. |
+
+---
+
+#### Creating a player and joining the game
+
+**Direction:** Client → Server  
+**Transport:** TCP  
+**Encoding:** JSON UTF-8  
+**Minimum access level:** `PLAYER`  
+**Minimum revision:** 2.1 (`player_factory` feature)
+
+Creates a **Player** object from the player factory of a game and the values chosen by the user, and makes it join the game as a player, in a single operation. If joining the game fails, no player is created. As for `GAME_JOIN` with the `PLAYER` role, an authenticated user is required.
+
+The chosen values are indexed by the UUID of the options of the factory (`option_id` field provided by `GAME_FACTORY_GET`). An absent option takes its proposed value, recomputed at the time of the request: random draws and the current date may then differ from those presented to the user. It is therefore recommended that the client explicitly sends the values it displayed. The values sent are never evaluated as runtime constants.
+
+If successful, the created player is attached to the session as with `PLAYER_CREATE`: its identifier is added to the `players_id` list of the authenticated user, and it can be designated as the default player of the session (`is_default`). The session is unsubscribed from the `GAME_FACTORY_UPDATED` notifications of the game.
+
+##### Example
+```json
+{
+  "type": "GAME_FACTORY_JOIN",
+  "version": 2,
+  "payload": {
+    "game_id": "game_uuid",
+    "values": {
+      "option_uuid": "black"
+    },
+    "password": "private_game",
+    "is_default": false
+  }
+}
+```
+##### Response (`GAME_FACTORY_JOIN_RESPONSE`)
+```json
+{
+  "type": "GAME_FACTORY_JOIN_RESPONSE",
+  "version": 2,
+  "payload": {
+    "success": true,
+    "player_id": "uuid_du_joueur_cree",
+    "name": "alice",
+    "static_attributes": {
+      "Color": "black"
+    },
+    "dynamic_attributes": {},
+    "message": "Player created and joined game successfully"
+  }
+}
+```
+##### Fields (`GAME_FACTORY_JOIN`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `type` | `string` | Yes | `"GAME_FACTORY_JOIN"` |
+| `version` | `number` | Yes | `2` |
+| `payload.game_id` | `string` | Yes | UUID of the game to join. |
+| `payload.values` | `object` | No | Chosen values, indexed by the UUID of the options of the factory. Default: empty object (all the options take their proposed value). |
+| `payload.password` | `string` | No | Password to join the game (if required). |
+| `payload.group_password` | `string` | No | Password of a protected group containing the game (if required). |
+| `payload.is_default` | `boolean` | No | If `true`, the created player becomes the default player of the session (`true` by default if it is the first player of the session). |
+
+##### Fields (`GAME_FACTORY_JOIN_RESPONSE`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `payload.success` | `boolean` | Yes | `true` if the player was created and joined the game. |
+| `payload.player_id` | `string` | No | UUID of the created player (if successful). |
+| `payload.name` | `string` | No | Name assigned to the player (if successful). |
+| `payload.static_attributes` | `object` | No | Content of the `static_state` dictionary of the created player (if successful). |
+| `payload.dynamic_attributes` | `object` | No | Content of the `dynamic_state` dictionary of the created player (if successful). |
+| `payload.error_code` | `string` | No | Error code in case of failure (see table below). |
+| `payload.details` | `object` | No | Details about the error, for errors related to option values (`option_id`, and depending on the case `value` and `reason`). See the "Details of option value errors" paragraph. |
+| `payload.message` | `string` | Yes | Information or error message. |
+
+##### Error codes (`GAME_FACTORY_JOIN_RESPONSE`)
+
+The error codes of `GAME_JOIN_RESPONSE` apply (except `PLAYER_NOT_FOUND` and `ALREADY_IN_GAME`, irrelevant since the player is created by the request), as well as the following:
+
+| Code | Description |
+|---|---|
+| `NO_PLAYER_FACTORY` | The game does not have a player factory. |
+| `INVALID_OPTION_VALUE` | A key of `values` does not match any option of the factory (`details.reason` set to `UNKNOWN_OPTION`), or a value is of an incompatible type (`INCOMPATIBLE_TYPE`) or invalid (`INVALID_VALUE`) for its option. |
+| `OPTION_VALUE_ALREADY_GIVEN` | A value chosen for a unique option is already carried by another player of the game. The `details` field indicates the option (`option_id`) and the value concerned (`value`). |
+| `LACKING_OPTION` | An option absent from `values` has no possible value left, proposed value set to `null` (`details.reason` set to `NO_AVAILABLE_VALUE`). |
+
+The fields of `payload.details` are described in the "Details of option value errors" paragraph.
+
+---
+
+#### Player factory update notification
+
+**Direction:** Server → Client  
+**Broadcast:** Sessions subscribed to the player factory of the game  
+**Transport:** TCP  
+**Encoding:** JSON UTF-8  
+**Minimum revision:** 2.1 (`player_factory` feature)
+
+Informs the clients that are preparing a player creation form that the values already taken in the game have changed, so that they can update the choices presented to the user. Thus, when a first player chooses "white" in a chess game, the other users filling in the form immediately see that only "black" remains available.
+
+The notification is sent each time a player joins the game (`GAME_JOIN` with the `PLAYER` role, or `GAME_FACTORY_JOIN`) or leaves it (`GAME_LEAVE`, kick, deletion of the user account), when the game has a player factory. The arrival or departure of an observer does not trigger a notification.
+
+A session is subscribed to the player factory of a game as soon as it has successfully consulted this factory (`GAME_FACTORY_GET`). The subscription ends:
+- after a successful `GAME_FACTORY_JOIN` request on this game;
+- after a successful consultation of the player factory of another game (a session is only subscribed to a single factory at a time);
+- when the game leaves the `PENDING` state (no new player being able to join it any more), or is deleted;
+- when the session is closed.
+
+Only the exclusions are sent: the proposed values depend on the context of each session (runtime constants) and are not recomputed by the notification. If the client wants a new proposed value, it can consult the factory again with `GAME_FACTORY_GET`.
+
+##### Example
+```json
+{
+  "type": "GAME_FACTORY_UPDATED",
+  "version": 2,
+  "payload": {
+    "game_id": "game_uuid",
+    "options": [
+      {
+        "option_id": "option_uuid",
+        "exclusions": ["white"]
+      }
+    ]
+  }
+}
+```
+##### Fields (`GAME_FACTORY_UPDATED`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `type` | `string` | Yes | `"GAME_FACTORY_UPDATED"` |
+| `version` | `number` | Yes | `2` |
+| `payload.game_id` | `string` | Yes | UUID of the game concerned. |
+| `payload.options` | `array` | Yes | New exclusions of the unique options of the factory. Non-unique options do not appear. |
+| `payload.options[].option_id` | `string` | Yes | UUID of the option. |
+| `payload.options[].exclusions` | `array` | Yes | Values now carried by the players of the game for this option. |
 
 ---
 
@@ -1920,6 +2335,380 @@ Allows you to modify the order in which players play in a game configured as tur
 | `INVALID_RANK` | The specified rank is out of bounds (e.g. negative or greater than the number of players). |
 | `INVALID_ACTION` | The specified action is not recognized. |
 | `INSUFFICIENT_PERMISSIONS` | The customer does not have the rights to modify the order. |
+
+---
+
+## Factory template management messages
+
+This section describes the messages used to consult and manage the player factory templates (`PlayerFactoryTemplate`) held by the server. A template defines a set of player customization options. It is chosen when a game is created (`factory_template_id` field of `GAME_CREATE`), which then receives a player factory built from a copy of its options.
+
+Templates are common to the whole server. Any client of `BASE` level can consult them, but only a server administrator (`ADMIN` level) can create, update or delete them. When persistence is enabled, templates are saved and restored with the other server data. Their creation, update and deletion are recorded in the server audit log (`FACTORY_TEMPLATE_CREATE`, `FACTORY_TEMPLATE_UPDATE` and `FACTORY_TEMPLATE_DELETE` actions).
+
+The options of a template follow the representation described in the "Option representation" paragraph (see the messages for creating a player from a game's player factory).
+
+### List of factory templates
+
+**Direction:** Client → Server  
+**Transport:** TCP  
+**Encoding:** JSON UTF-8  
+**Minimum access level:** `BASE`  
+**Minimum revision:** 2.1 (`player_factory` feature)
+
+Retrieves the list of factory templates available on the server, for example to offer the user the choice of the template when creating a game.
+
+#### Example
+```json
+{
+  "type": "FACTORY_TEMPLATE_LIST",
+  "version": 2,
+  "payload": {}
+}
+```
+#### Response (`FACTORY_TEMPLATE_LIST_RESPONSE`)
+```json
+{
+  "type": "FACTORY_TEMPLATE_LIST_RESPONSE",
+  "version": 2,
+  "payload": {
+    "success": true,
+    "templates": [
+      {
+        "template_id": "template_uuid",
+        "name": "Chess",
+        "options_count": 2
+      }
+    ],
+    "message": "Factory templates retrieved successfully"
+  }
+}
+```
+#### Fields (`FACTORY_TEMPLATE_LIST_RESPONSE`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `payload.success` | `boolean` | Yes | `true` if the request was successful. |
+| `payload.templates` | `array` | No | List of the available templates (if successful). |
+| `payload.templates[].template_id` | `string` | - | UUID of the template. |
+| `payload.templates[].name` | `string` | - | Name of the template. |
+| `payload.templates[].options_count` | `number` | - | Number of options of the template. |
+| `payload.error_code` | `string` | No | Error code on failure. |
+| `payload.message` | `string` | Yes | Information or error message. |
+
+#### Error codes (`FACTORY_TEMPLATE_LIST_RESPONSE`)
+
+| Code | Description |
+|---|---|
+| `INSUFFICIENT_PERMISSIONS` | The client's access level does not allow listing the templates. |
+
+---
+
+### Factory template details
+
+**Direction:** Client → Server  
+**Transport:** TCP  
+**Encoding:** JSON UTF-8  
+**Minimum access level:** `BASE`  
+**Minimum revision:** 2.1 (`player_factory` feature)
+
+Retrieves the full definition of a factory template, for example to present the user with a preview of the options of the template before applying it to a new game. Default values are provided raw: runtime constants are only evaluated at the level of the player factory of a game (see `GAME_FACTORY_GET`).
+
+#### Example
+```json
+{
+  "type": "FACTORY_TEMPLATE_GET",
+  "version": 2,
+  "payload": {
+    "template_id": "template_uuid"
+  }
+}
+```
+#### Response (`FACTORY_TEMPLATE_GET_RESPONSE`)
+```json
+{
+  "type": "FACTORY_TEMPLATE_GET_RESPONSE",
+  "version": 2,
+  "payload": {
+    "success": true,
+    "template_id": "template_uuid",
+    "name": "Chess",
+    "options": [
+      {
+        "option_id": "option_uuid",
+        "type": "LIST",
+        "name": "Color",
+        "description": "Color of the pieces",
+        "default": "%%RANDOM_CHOICE%%",
+        "min": null,
+        "max": null,
+        "step": 1,
+        "choices": ["white", "black"],
+        "unicity": true,
+        "target": "STATIC",
+        "attribute": null,
+        "key": "Color"
+      }
+    ],
+    "message": "Factory template retrieved successfully"
+  }
+}
+```
+#### Fields (`FACTORY_TEMPLATE_GET`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `type` | `string` | Yes | `"FACTORY_TEMPLATE_GET"` |
+| `version` | `number` | Yes | `2` |
+| `payload.template_id` | `string` | Yes | UUID of the template. |
+
+#### Fields (`FACTORY_TEMPLATE_GET_RESPONSE`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `payload.success` | `boolean` | Yes | `true` if the request was successful. |
+| `payload.template_id` | `string` | No | UUID of the template (if successful). |
+| `payload.name` | `string` | No | Name of the template (if successful). |
+| `payload.options` | `array` | No | Options of the template, in their order of definition (if successful). |
+| `payload.error_code` | `string` | No | Error code in case of failure (see table below). |
+| `payload.message` | `string` | Yes | Information or error message. |
+
+#### Error codes (`FACTORY_TEMPLATE_GET_RESPONSE`)
+
+| Code | Description |
+|---|---|
+| `FACTORY_TEMPLATE_NOT_FOUND` | The specified template does not exist. |
+
+---
+
+### Factory template creation
+
+**Direction:** Client → Server  
+**Transport:** TCP  
+**Encoding:** JSON UTF-8  
+**Minimum access level:** `ADMIN`  
+**Minimum revision:** 2.1 (`player_factory` feature)
+
+Creates a new factory template from a full definition. The options are sent without `option_id` or `key`: the server generates the UUID of each option, and its frozen key corresponds to the name of the option. The options are added to the template in the order of the list, according to the rules of the `add_option` method of the `PlayerFactoryTemplate` class (similarity check, replacement of an option associated with the `name` attribute by a later option of the list associated with the same attribute).
+
+The creation is atomic: if one of the options is rejected, no template is created.
+
+#### Example
+```json
+{
+  "type": "FACTORY_TEMPLATE_CREATE",
+  "version": 2,
+  "payload": {
+    "name": "Chess",
+    "options": [
+      {
+        "type": "LIST",
+        "name": "Color",
+        "description": "Color of the pieces",
+        "choices": ["white", "black"],
+        "default": "%%RANDOM_CHOICE%%",
+        "unicity": true,
+        "target": "STATIC"
+      },
+      {
+        "type": "TEXT",
+        "name": "Nickname",
+        "default": "%%USERNAME%%",
+        "unicity": true,
+        "target": "ATTRIBUTE",
+        "attribute": "name"
+      }
+    ]
+  }
+}
+```
+#### Response (`FACTORY_TEMPLATE_CREATE_RESPONSE`)
+```json
+{
+  "type": "FACTORY_TEMPLATE_CREATE_RESPONSE",
+  "version": 2,
+  "payload": {
+    "success": true,
+    "template_id": "template_uuid",
+    "option_ids": ["color_option_uuid", "nickname_option_uuid"],
+    "message": "Factory template created successfully"
+  }
+}
+```
+#### Fields (`FACTORY_TEMPLATE_CREATE`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `type` | `string` | Yes | `"FACTORY_TEMPLATE_CREATE"` |
+| `version` | `number` | Yes | `2` |
+| `payload.name` | `string` | Yes | Name of the template. It is strongly recommended that it be unique on the server. |
+| `payload.options` | `array` | Yes | Options of the template, in the desired order. Can be empty. |
+| `payload.options[].type` | `string` | Yes | Type of the option: `CHECK`, `RANGE`, `LIST` or `TEXT`. |
+| `payload.options[].name` | `string` | Yes | Name of the option. It becomes its frozen key. |
+| `payload.options[].description` | `string` | No | Description of the option. Default: empty string. |
+| `payload.options[].default` | `boolean`\|`number`\|`string`\|`null` | No | Default value, which can contain runtime constants. Default: `null`, which means "first available value" (see the "Option representation" paragraph). |
+| `payload.options[].min` | `number`\|`null` | No | Minimum value (`RANGE` options). Default: `null`. |
+| `payload.options[].max` | `number`\|`null` | No | Maximum value (`RANGE` options). Default: `null`. |
+| `payload.options[].step` | `number` | No | Increment (`RANGE` options). Default: `1`. |
+| `payload.options[].choices` | `array` | No | Possible choices (`LIST` options). Default: empty list. |
+| `payload.options[].unicity` | `boolean` | No | `true` if a value can only be carried by a single player of the game. Default: `false`. |
+| `payload.options[].target` | `string` | Yes | `ATTRIBUTE`, `STATIC` or `DYNAMIC`. The value `ATTRIBUTE` is only accepted for options of type `TEXT` or `LIST`, since the `name` attribute of the player is a character string: for a `CHECK` or `RANGE` option, the request fails with the `INVALID_OPTION` code. |
+| `payload.options[].attribute` | `string` | No | Mandatory if `target` is `ATTRIBUTE` (only possible value for now: `"name"`). Ignored otherwise. |
+
+#### Fields (`FACTORY_TEMPLATE_CREATE_RESPONSE`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `payload.success` | `boolean` | Yes | `true` if the template was created. |
+| `payload.template_id` | `string` | No | UUID of the created template (if successful). |
+| `payload.option_ids` | `array` | No | UUIDs of the options of the template, in the order of the list sent (if successful). An option replaced by a later option associated with the `name` attribute does not appear. |
+| `payload.error_code` | `string` | No | Error code in case of failure (see table below). |
+| `payload.details` | `object` | No | Details about the error, for errors related to options: index of the option in the list sent (`option_index`) and reason (`reason`). |
+| `payload.message` | `string` | Yes | Information or error message. |
+
+#### Error codes (`FACTORY_TEMPLATE_CREATE_RESPONSE`)
+
+| Code | Description |
+|---|---|
+| `INSUFFICIENT_PERMISSIONS` | Only a server administrator can create a template. |
+| `INVALID_DATA` | The request is malformed (missing name, `options` is not a list, etc.). |
+| `INVALID_OPTION` | An option is invalid: unknown type, inconsistent parameters, unknown or misused runtime constant, unrecognized `target` or `attribute` value, etc. The `details` field indicates the option concerned. |
+| `OPTION_ALREADY_EXISTS` | The name of an option is identical to the frozen key of a previous option of the list. The `details` field indicates the option concerned. |
+
+---
+
+### Factory template update
+
+**Direction:** Client → Server  
+**Transport:** TCP  
+**Encoding:** JSON UTF-8  
+**Minimum access level:** `ADMIN`  
+**Minimum revision:** 2.1 (`player_factory` feature)
+
+Changes the name of an existing template and/or replaces all of its options. The template keeps its UUID. When the `options` field is provided, all the existing options of the template are removed, then the options sent are added according to the same rules as for `FACTORY_TEMPLATE_CREATE`: they receive new UUIDs and new frozen keys.
+
+The update is atomic: if one of the options is rejected, the template remains unchanged. It has no effect on the games that already have a player factory built from this template, whose options are independent copies.
+
+#### Example
+```json
+{
+  "type": "FACTORY_TEMPLATE_UPDATE",
+  "version": 2,
+  "payload": {
+    "template_id": "template_uuid",
+    "name": "Chess (variant)",
+    "options": [
+      {
+        "type": "LIST",
+        "name": "Color",
+        "choices": ["white", "black"],
+        "default": "white",
+        "unicity": true,
+        "target": "STATIC"
+      }
+    ]
+  }
+}
+```
+#### Response (`FACTORY_TEMPLATE_UPDATE_RESPONSE`)
+```json
+{
+  "type": "FACTORY_TEMPLATE_UPDATE_RESPONSE",
+  "version": 2,
+  "payload": {
+    "success": true,
+    "template_id": "template_uuid",
+    "option_ids": ["new_color_option_uuid"],
+    "message": "Factory template updated successfully"
+  }
+}
+```
+#### Fields (`FACTORY_TEMPLATE_UPDATE`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `type` | `string` | Yes | `"FACTORY_TEMPLATE_UPDATE"` |
+| `version` | `number` | Yes | `2` |
+| `payload.template_id` | `string` | Yes | UUID of the template to update. |
+| `payload.name` | `string` | No | New name of the template. If absent, the name is unchanged. |
+| `payload.options` | `array` | No | New complete list of options, in the same format as for `FACTORY_TEMPLATE_CREATE`. If absent, the options are unchanged. |
+
+At least one of the `name` or `options` fields must be provided.
+
+#### Fields (`FACTORY_TEMPLATE_UPDATE_RESPONSE`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `payload.success` | `boolean` | Yes | `true` if the template was updated. |
+| `payload.template_id` | `string` | No | UUID of the template (if successful). |
+| `payload.option_ids` | `array` | No | UUIDs of the options of the template after the update, in their order of definition (if successful). |
+| `payload.error_code` | `string` | No | Error code in case of failure (see table below). |
+| `payload.details` | `object` | No | Details about the error, for errors related to options (`option_index`, `reason`). |
+| `payload.message` | `string` | Yes | Information or error message. |
+
+#### Error codes (`FACTORY_TEMPLATE_UPDATE_RESPONSE`)
+
+| Code | Description |
+|---|---|
+| `INSUFFICIENT_PERMISSIONS` | Only a server administrator can update a template. |
+| `FACTORY_TEMPLATE_NOT_FOUND` | The specified template does not exist. |
+| `INVALID_DATA` | The request is malformed, or neither of the `name` and `options` fields is provided. |
+| `INVALID_OPTION` | An option is invalid. The `details` field indicates the option concerned. |
+| `OPTION_ALREADY_EXISTS` | The name of an option is identical to the frozen key of a previous option of the list. The `details` field indicates the option concerned. |
+
+---
+
+### Factory template deletion
+
+**Direction:** Client → Server  
+**Transport:** TCP  
+**Encoding:** JSON UTF-8  
+**Minimum access level:** `ADMIN`  
+**Minimum revision:** 2.1 (`player_factory` feature)
+
+Deletes a factory template from the server. The deletion has no effect on the games that already have a player factory built from this template. The template can no longer be chosen when creating a game.
+
+#### Example
+```json
+{
+  "type": "FACTORY_TEMPLATE_DELETE",
+  "version": 2,
+  "payload": {
+    "template_id": "template_uuid"
+  }
+}
+```
+#### Response (`FACTORY_TEMPLATE_DELETE_RESPONSE`)
+```json
+{
+  "type": "FACTORY_TEMPLATE_DELETE_RESPONSE",
+  "version": 2,
+  "payload": {
+    "success": true,
+    "message": "Factory template deleted successfully"
+  }
+}
+```
+#### Fields (`FACTORY_TEMPLATE_DELETE`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `type` | `string` | Yes | `"FACTORY_TEMPLATE_DELETE"` |
+| `version` | `number` | Yes | `2` |
+| `payload.template_id` | `string` | Yes | UUID of the template to delete. |
+
+#### Fields (`FACTORY_TEMPLATE_DELETE_RESPONSE`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `payload.success` | `boolean` | Yes | `true` if the template was deleted. |
+| `payload.error_code` | `string` | No | Error code in case of failure (see table below). |
+| `payload.message` | `string` | Yes | Information or error message. |
+
+#### Error codes (`FACTORY_TEMPLATE_DELETE_RESPONSE`)
+
+| Code | Description |
+|---|---|
+| `INSUFFICIENT_PERMISSIONS` | Only a server administrator can delete a template. |
+| `FACTORY_TEMPLATE_NOT_FOUND` | The specified template does not exist. |
 
 ---
 
@@ -3653,6 +4442,12 @@ sequenceDiagram
     C->>S: DISCOVERY (UDP)
     S-->>C: DISCOVERY_RESPONSE (UDP)
     C->>S: TCP connect
+    C->>S: PROTOCOL_INFO
+    alt server of revision 2.1 or higher
+        S-->>C: PROTOCOL_INFO_RESPONSE (revision, features)
+    else server of revision 2.0
+        S-->>C: ERROR (UNKNOWN_TYPE)
+    end
     opt password_required = true
         C->>S: SERVER_AUTH
         S-->>C: AUTH_RESPONSE
@@ -3711,6 +4506,35 @@ sequenceDiagram
     opt broadcast start
         S-->>P: GAME_STATE_CHANGED (IN_PROGRESS)
     end
+```
+### Creating a game with a factory template
+```mermaid
+sequenceDiagram
+    participant A as Administrator
+    participant C as Creator
+    participant U1 as User 1
+    participant U2 as User 2
+    participant S as Server
+
+    A->>S: FACTORY_TEMPLATE_CREATE
+    S-->>A: FACTORY_TEMPLATE_CREATE_RESPONSE
+    C->>S: FACTORY_TEMPLATE_LIST
+    S-->>C: FACTORY_TEMPLATE_LIST_RESPONSE
+    opt template preview
+        C->>S: FACTORY_TEMPLATE_GET
+        S-->>C: FACTORY_TEMPLATE_GET_RESPONSE
+    end
+    C->>S: GAME_CREATE (factory_template_id)
+    S-->>C: GAME_CREATE_RESPONSE
+    U1->>S: GAME_FACTORY_GET
+    S-->>U1: GAME_FACTORY_GET_RESPONSE
+    U2->>S: GAME_FACTORY_GET
+    S-->>U2: GAME_FACTORY_GET_RESPONSE
+    U1->>S: GAME_FACTORY_JOIN (values)
+    S-->>U1: GAME_FACTORY_JOIN_RESPONSE
+    S-->>U2: GAME_FACTORY_UPDATED (exclusions)
+    U2->>S: GAME_FACTORY_JOIN (values)
+    S-->>U2: GAME_FACTORY_JOIN_RESPONSE
 ```
 ### Evolution of the game
 ```mermaid
@@ -3781,6 +4605,7 @@ This table groups together all the notifications sent by the server, classified 
 | `GAME_EVENT` | Notifies participants of an action performed by one of them or by the server. | Customers connected to the game |
 | `GAME_STATE_CHANGED` | Informs clients that the global or custom state of the game has been changed. | Customers connected to the game |
 | `GAME_TURN_CHANGED` | Notifies connected clients that a new round has started and identifies the active player. | Customers connected to the game |
+| `GAME_FACTORY_UPDATED` | Informs the clients preparing a player creation form that the values already taken in the game have changed. | Sessions subscribed to the player factory of the game (see `GAME_FACTORY_GET`) |
 
 ---
 
@@ -3795,10 +4620,11 @@ This table groups together all the error codes defined in the protocol, classifi
 | `ALREADY_IN_GAME` | The player is already taking part in this game or in another game (a **Player** object can only take part in a single game), or its state cannot be reset while it takes part in a game. | `GAME_JOIN_RESPONSE`, `PLAYER_UPDATE_RESPONSE` |
 | `ALREADY_SUBSCRIBED` | The customer is already subscribed to this group. | `GROUP_SUBSCRIBE_RESPONSE` |
 | `CANNOT_DELETE_SELF` | An administrator cannot delete their own account via this request. | `USER_DELETE_RESPONSE` |
-| `GAME_ALREADY_STARTED` | The game has already started (or no longer accepts players). | `GAME_JOIN_RESPONSE`, `GAME_CONTROL_RESPONSE` |
+| `FACTORY_TEMPLATE_NOT_FOUND` | The specified factory template does not exist. | `GAME_CREATE_RESPONSE`, `FACTORY_TEMPLATE_GET_RESPONSE`, `FACTORY_TEMPLATE_UPDATE_RESPONSE`, `FACTORY_TEMPLATE_DELETE_RESPONSE` |
+| `GAME_ALREADY_STARTED` | The game has already started (or no longer accepts players). | `GAME_JOIN_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE`, `GAME_CONTROL_RESPONSE` |
 | `GAME_FINISHED` | The game is already over. | `GAME_PLAYER_ORDER_RESPONSE` |
-| `GAME_FULL` | The maximum number of players or observers has been reached. | `GAME_JOIN_RESPONSE` |
-| `GAME_NOT_FOUND` | The specified part does not exist. | `GAME_JOIN_RESPONSE`, `GAME_LEAVE_RESPONSE`, `GAME_CONTROL_RESPONSE`, `GAME_PLAYER_ORDER_RESPONSE`, `GAME_ACTION_RESPONSE`, `GAME_NEXT_TURN_RESPONSE`, `GROUP_ADD_GAME_RESPONSE`, `GAME_KICK_RESPONSE`, `GAME_PARTICIPANTS_LIST_RESPONSE` |
+| `GAME_FULL` | The maximum number of players or observers has been reached. | `GAME_JOIN_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE` |
+| `GAME_NOT_FOUND` | The specified part does not exist. | `GAME_JOIN_RESPONSE`, `GAME_FACTORY_GET_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE`, `GAME_LEAVE_RESPONSE`, `GAME_CONTROL_RESPONSE`, `GAME_PLAYER_ORDER_RESPONSE`, `GAME_ACTION_RESPONSE`, `GAME_NEXT_TURN_RESPONSE`, `GROUP_ADD_GAME_RESPONSE`, `GAME_KICK_RESPONSE`, `GAME_PARTICIPANTS_LIST_RESPONSE` |
 | `GAME_NOT_STARTED` | The part is not in the state required for the action. | `GAME_CONTROL_RESPONSE` |
 | `GAME_NOT_TURN_BASED` | The game is not configured for turn-based play. | `GAME_PLAYER_ORDER_RESPONSE`, `GAME_NEXT_TURN_RESPONSE` |
 | `GAME_PAUSED` | The action is refused because the game is paused. | `GAME_ACTION_RESPONSE` |
@@ -3808,16 +4634,24 @@ This table groups together all the error codes defined in the protocol, classifi
 | `PERSISTENCE_ERROR` | An error occurred during a persistence operation. | `SERVER_PERSISTENCE_SAVE_RESPONSE`, `SERVER_PERSISTENCE_RELOAD_RESPONSE` |
 | `INVALID_ACTION` | The requested action is not recognized or refused by logic. | `GAME_CONTROL_RESPONSE`, `GAME_PLAYER_ORDER_RESPONSE`, `GAME_ACTION_RESPONSE` |
 | `INVALID_CREDENTIALS` | Incorrect username or password. | `AUTH_RESPONSE` |
-| `INVALID_DATA` | Invalid or malformed data provided. | `USER_CREATE_RESPONSE`, `USER_UPDATE_RESPONSE`, `GAME_CREATE_RESPONSE`, `GROUP_CREATE_RESPONSE`, `SERVER_CONFIG_SET_RESPONSE`, `SERVER_AUDIT_LOG_GET_RESPONSE` |
+| `INVALID_DATA` | Invalid or malformed data provided. | `USER_CREATE_RESPONSE`, `USER_UPDATE_RESPONSE`, `GAME_CREATE_RESPONSE`, `GROUP_CREATE_RESPONSE`, `SERVER_CONFIG_SET_RESPONSE`, `SERVER_AUDIT_LOG_GET_RESPONSE`, `PLAYER_CREATE_RESPONSE`, `FACTORY_TEMPLATE_CREATE_RESPONSE`, `FACTORY_TEMPLATE_UPDATE_RESPONSE` |
 | `INVALID_NAME` | The name provided is invalid or already in use. | `PLAYER_CREATE_RESPONSE`, `PLAYER_UPDATE_RESPONSE` |
-| `INVALID_PASSWORD` | The password (server or game) is incorrect. | `AUTH_RESPONSE`, `GAME_JOIN_RESPONSE` |
+| `INVALID_OPTION` | An option of the definition of a factory template is invalid. | `FACTORY_TEMPLATE_CREATE_RESPONSE`, `FACTORY_TEMPLATE_UPDATE_RESPONSE` |
+| `INVALID_OPTION_VALUE` | An option value is unknown, of an incompatible type or invalid for the player factory of the game. | `GAME_JOIN_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE` |
+| `INVALID_PASSWORD` | The password (server or game) is incorrect. | `AUTH_RESPONSE`, `GAME_JOIN_RESPONSE`, `GAME_FACTORY_GET_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE` |
 | `INVALID_RANK` | The specified rank is out of range. | `GAME_PLAYER_ORDER_RESPONSE` |
+| `LACKING_OPTION` | The player does not carry a value for an option of the player factory of the game, or an option has no possible value left. | `GAME_JOIN_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE` |
 | `LIMIT_REACHED` | The maximum number of games on the server has been reached. | `GAME_CREATE_RESPONSE` |
+| `NO_PLAYER_FACTORY` | The game does not have a player factory. | `GAME_FACTORY_GET_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE` |
 | `NOT_ENOUGH_PLAYERS` | The game does not have the minimum number of players required to start. | `GAME_CONTROL_RESPONSE` |
 | `NOT_IN_GAME` | The player is not present in this part. | `GAME_LEAVE_RESPONSE`, `GAME_KICK_RESPONSE` |
 | `NOT_SUBSCRIBED` | The customer is not subscribed to this group. | `GROUP_UNSUBSCRIBE_RESPONSE` |
 | `NOT_YOUR_TURN` | It is not this player's turn. | `GAME_ACTION_RESPONSE`, `GAME_NEXT_TURN_RESPONSE` |
+| `OPTION_ALREADY_EXISTS` | The name of an option is identical to the frozen key of a previous option of the template. | `FACTORY_TEMPLATE_CREATE_RESPONSE`, `FACTORY_TEMPLATE_UPDATE_RESPONSE` |
+| `OPTION_VALUE_ALREADY_GIVEN` | A value chosen for a unique option is already carried by another player of the game. | `GAME_JOIN_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE` |
 | `PLAYER_NOT_FOUND` | The specified player does not exist or is not found. | `PLAYER_UPDATE_RESPONSE`, `GAME_JOIN_RESPONSE`, `GAME_LEAVE_RESPONSE`, `GAME_CONTROL_RESPONSE`, `GAME_PLAYER_ORDER_RESPONSE`, `GAME_ACTION_RESPONSE`, `GAME_KICK_RESPONSE` |
 | `REGISTRATION_DISABLED` | Account creation is disabled for this access level. | `USER_CREATE_RESPONSE` |
+| `UNKNOWN_TYPE` | The message type is not recognized by the server, for example a message introduced by a protocol revision that the server does not support. | `ERROR` |
+| `UNSUPPORTED_VERSION` | The major protocol version indicated in the `version` field is not supported. | `ERROR` |
 | `USER_ALREADY_EXISTS` | A user with this name already exists. | `USER_CREATE_RESPONSE` |
 | `USER_NOT_FOUND` | The specified user does not exist. | `AUTH_RESPONSE`, `USER_UPDATE_RESPONSE`, `USER_DELETE_RESPONSE` |

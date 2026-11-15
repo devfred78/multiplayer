@@ -1,5 +1,7 @@
 # Protocole d'échanges entre le client et le serveur
 
+**Version du protocole :** 2 — **Révision :** 2.1 (voir le paragraphe "Historique des révisions")
+
 Dans cette section sont décrits les messages échangés entre les clients et le serveur.
 
 ## Préambule au protocole d’échanges
@@ -286,9 +288,9 @@ Il permet au destinataire de déterminer le traitement à appliquer. Sa valeur d
 
 #### Champ `version`
 
-Le champ `version` indique la version du protocole utilisée pour le message.
+Le champ `version` indique la version majeure du protocole utilisée pour le message.
 
-Dans cette version du protocole, la valeur attendue est `2`.
+Dans cette version du protocole, la valeur attendue est `2`, quelle que soit la révision du protocole (voir le paragraphe "Versionnement et extensibilité"). Un message dont le champ `version` ne vaut pas `2` est refusé (code d'erreur `UNSUPPORTED_VERSION` pour une requête TCP, message ignoré pour une requête de découverte).
 
 #### Champ `payload`
 
@@ -446,6 +448,7 @@ Format possible : JSON
 
 Exemples :
 
+- informations sur la version, la révision et les fonctionnalités du protocole prises en charge par le serveur ;
 - présentation du mot de passe serveur ;
 - authentification utilisateur ;
 - déconnexion ;
@@ -484,7 +487,23 @@ Exemples :
 - rejoindre une partie comme observateur ;
 - quitter une partie ;
 - démarrer, mettre en pause, reprendre ou terminer une partie ;
-- modifier l’ordre des joueurs dans une partie au tour par tour.
+- modifier l’ordre des joueurs dans une partie au tour par tour ;
+- consulter la factory de joueurs d'une partie, pour construire le formulaire de création d'un joueur ;
+- créer un joueur à partir de la factory d'une partie et le faire rejoindre la partie.
+
+#### Messages de gestion des modèles de factory
+
+Ces messages concernent les modèles de factory de joueurs (`PlayerFactoryTemplate`) détenus par le serveur, qui définissent les options de personnalisation des joueurs d'une partie.
+
+Transport utilisé : TCP.
+
+Format possible : JSON
+
+Exemples :
+
+- lister les modèles disponibles ;
+- consulter un modèle ;
+- créer, modifier ou supprimer un modèle (administrateur serveur).
 
 #### Messages de gestion des groupes
 
@@ -616,6 +635,24 @@ Les principes suivants s’appliquent :
 - de nouveaux types de messages peuvent être ajoutés dans les versions futures ;
 - de nouveaux champs optionnels peuvent être ajoutés sans casser la compatibilité.
 
+Le protocole distingue deux notions:
+
+- **La version majeure**, transmise dans le champ `version` de chaque message (actuellement `2`). Elle exprime la capacité de deux programmes à communiquer, et ne change qu'en cas de rupture de compatibilité.
+- **La révision**, de la forme `majeure.mineure` (actuellement `2.1`). Elle exprime les fonctionnalités disponibles. Elle n'est pas transmise dans chaque message, mais annoncée par le serveur, dans la réponse de découverte (champ `revision` de `DISCOVERY_RESPONSE`) et dans la réponse à la requête `PROTOCOL_INFO`.
+
+Une révision mineure ne peut qu'ajouter de nouveaux types de messages, de nouveaux champs optionnels ou de nouveaux codes d'erreur. Elle ne modifie jamais le comportement des messages existants pour un client qui n'utilise pas ces ajouts. Un client peut ainsi communiquer avec un serveur de révision inférieure ou supérieure à la sienne, pour toutes les fonctionnalités qu'ils ont en commun. Avant d'utiliser une fonctionnalité introduite par une révision donnée, un client doit vérifier que le serveur annonce une révision suffisante. Un serveur qui ne reconnaît pas un type de message répond par le code d'erreur `UNKNOWN_TYPE`.
+
+Chaque message introduit par une révision mineure est signalé dans sa description par la mention **Révision minimale**.
+
+#### Historique des révisions
+
+| Révision | Contenu |
+|---|---|
+| 2.0 | Révision initiale de la version 2 du protocole. |
+| 2.1 | Factories de joueurs : messages de gestion des modèles de factory (`FACTORY_TEMPLATE_LIST`, `FACTORY_TEMPLATE_GET`, `FACTORY_TEMPLATE_CREATE`, `FACTORY_TEMPLATE_UPDATE`, `FACTORY_TEMPLATE_DELETE`), consultation de la factory d'une partie et création d'un joueur à partir de celle-ci (`GAME_FACTORY_GET`, `GAME_FACTORY_JOIN`), notification `GAME_FACTORY_UPDATED`, champ `factory_template_id` de `GAME_CREATE`, champ `has_player_factory` de `GAME_LIST_RESPONSE`, contrôles des options de la factory et champ `details` de `GAME_JOIN_RESPONSE`, champs `static_attributes` et `dynamic_attributes` de `PLAYER_CREATE`, et codes d'erreur associés (`FACTORY_TEMPLATE_NOT_FOUND`, `INVALID_OPTION`, `INVALID_OPTION_VALUE`, `LACKING_OPTION`, `NO_PLAYER_FACTORY`, `OPTION_ALREADY_EXISTS`, `OPTION_VALUE_ALREADY_GIVEN`). Annonce de la révision : requête `PROTOCOL_INFO` et champ `revision` de `DISCOVERY_RESPONSE`. |
+
+Compatibilité entre les révisions 2.0 et 2.1 : un client de révision 2.0 continue de fonctionner avec un serveur de révision 2.1. Il ne peut toutefois rejoindre en tant que joueur une partie dotée d'une factory de joueurs (`GAME_JOIN`) que si son joueur porte les valeurs attendues par la factory ; à défaut, il reçoit l'un des codes d'erreur `LACKING_OPTION`, `INVALID_OPTION_VALUE` ou `OPTION_VALUE_ALREADY_GIVEN`, qu'il traite comme toute autre erreur. Un client de révision 2.1 connecté à un serveur de révision 2.0 ne doit pas utiliser les messages introduits par la révision 2.1 : le serveur répondrait `UNKNOWN_TYPE`, et ignorerait les nouveaux champs optionnels.
+
 ### Sécurité générale
 
 Le protocole doit être interprété selon un principe de méfiance vis-à-vis des données reçues.
@@ -687,6 +724,7 @@ Message envoyé par un serveur en réponse à une requête de découverte valide
   "type": "DISCOVERY_RESPONSE",
   "service_name": "multiplayer_server",
   "version": 2,
+  "revision": "2.1",
   "service_host": "192.168.1.20",
   "service_port": 65432,
   "unencrypted_port": null,
@@ -702,7 +740,8 @@ Message envoyé par un serveur en réponse à une requête de découverte valide
 |---|---|---:|---|---|
 | `type` | `string` | Oui | `"DISCOVERY_RESPONSE"` | Identifie le message comme une réponse de découverte. |
 | `service_name` | `string` | Oui | `"multiplayer_server"` | Identifie le service. |
-| `version` | `number` | Oui | `2` | Version du protocole. |
+| `version` | `number` | Oui | `2` | Version majeure du protocole. |
+| `revision` | `string` | Non | Chaîne de la forme `majeure.mineure` (ex : `"2.1"`) | Révision du protocole prise en charge par le serveur (révision minimale : 2.1). Un serveur de révision 2.0 n'envoie pas ce champ : son absence signifie la révision `"2.0"`. |
 | `service_host` | `string` | Oui | Adresse IPv4 ou nom DNS | Adresse que les clients doivent utiliser pour se connecter au serveur. |
 | `service_port` | `number` | Oui | Entier de `1` à `65535` | Port TCP utilisé par le point d’accès principal ou sécurisé du service. |
 | `unencrypted_port` | `number \| null` | Oui | Entier de `1` à `65535`, ou `null` | Port TCP pour les connexions non chiffrées. `null` signifie qu’il n’est pas disponible. |
@@ -719,12 +758,79 @@ Message envoyé par un serveur en réponse à une requête de découverte valide
 - Si `use_tls` vaut `false`, `service_port` est le point d'accès TCP non chiffré principal du serveur et `unencrypted_port` doit être `null`.
 - Quand `unencrypted_port` n'est pas `null`, les clients qui ne souhaitent pas ou ne peuvent pas utiliser TLS doivent utiliser `unencrypted_port` plutôt que `service_port`.
 - Si `password_required` vaut `true`, le client doit s’authentifier selon le protocole de connexion prévu.
+- Si `revision` est absent, le client doit considérer que le serveur est de révision `"2.0"`.
 
 ---
 
 ## Messages de connexion et d’accès
 
 Ces messages permettent au client d'établir une session avec le serveur et de faire évoluer son niveau d'accès.
+
+### Informations sur le protocole
+
+**Direction :** Client → Serveur  
+**Transport :** TCP  
+**Encodage :** JSON UTF-8  
+**Niveau d'accès minimal :** `OPEN`  
+**Révision minimale :** 2.1
+
+Permet à un client de connaître la version et la révision du protocole prises en charge par le serveur, ainsi que les fonctionnalités disponibles, afin de n'utiliser que les messages que le serveur sait traiter. Il est recommandé de l'envoyer immédiatement après l'établissement de la connexion TCP. Cette requête est utilisable avant toute authentification, y compris lorsque le serveur exige un mot de passe (`password_required` à `true`).
+
+Un serveur de révision 2.0 ne connaît pas cette requête et répond par le code d'erreur `UNKNOWN_TYPE` : le client doit alors considérer que le serveur est de révision `"2.0"`, sans fonctionnalité optionnelle.
+
+#### Exemple
+
+```json
+{
+  "type": "PROTOCOL_INFO",
+  "version": 2,
+  "payload": {}
+}
+```
+
+#### Réponse (`PROTOCOL_INFO_RESPONSE`)
+
+```json
+{
+  "type": "PROTOCOL_INFO_RESPONSE",
+  "version": 2,
+  "payload": {
+    "success": true,
+    "version": 2,
+    "revision": "2.1",
+    "features": ["player_factory"],
+    "message": "Protocol information retrieved successfully"
+  }
+}
+```
+
+#### Champs (`PROTOCOL_INFO`)
+
+| Champ | Type JSON | Obligatoire | Description |
+|---|---|---:|---|
+| `type` | `string` | Oui | `"PROTOCOL_INFO"` |
+| `version` | `number` | Oui | `2` |
+| `payload` | `object` | Oui | Objet vide. |
+
+#### Champs (`PROTOCOL_INFO_RESPONSE`)
+
+| Champ | Type JSON | Obligatoire | Description |
+|---|---|---:|---|
+| `payload.success` | `boolean` | Oui | `true` si la requête a réussi. |
+| `payload.version` | `number` | Oui | Version majeure du protocole (`2`). |
+| `payload.revision` | `string` | Oui | Révision du protocole prise en charge par le serveur, de la forme `majeure.mineure` (ex : `"2.1"`). |
+| `payload.features` | `array` | Oui | Liste des fonctionnalités optionnelles disponibles sur le serveur (voir ci-dessous). Peut être vide. |
+| `payload.message` | `string` | Oui | Message d'information. |
+
+#### Fonctionnalités
+
+Une fonctionnalité regroupe un ensemble de messages et de champs. Sa présence dans la liste `features` indique que le serveur sait les traiter. Une fonctionnalité est introduite par une révision donnée, mais un serveur de révision suffisante peut ne pas la proposer (par exemple si elle est désactivée par sa configuration) : le client doit donc se fier à la liste `features` plutôt qu'au seul numéro de révision.
+
+| Fonctionnalité | Révision minimale | Messages et champs concernés |
+|---|---|---|
+| `player_factory` | 2.1 | Messages de gestion des modèles de factory (`FACTORY_TEMPLATE_*`), requêtes `GAME_FACTORY_GET` et `GAME_FACTORY_JOIN`, notification `GAME_FACTORY_UPDATED`, champ `factory_template_id` de `GAME_CREATE`, champ `has_player_factory` de `GAME_LIST_RESPONSE`. |
+
+---
 
 ### Présentation du mot de passe serveur
 
@@ -735,7 +841,7 @@ Ces messages permettent au client d'établir une session avec le serveur et de f
 
 Cette requête est utilisée lorsqu'un serveur nécessite un mot de passe pour autoriser l'accès de base (passage au niveau `BASE`). Elle doit être envoyée immédiatement après l'établissement de la connexion TCP si `password_required` était à `true` dans la réponse de découverte.
 
-Lorsque `password_required` vaut `true`, aucune autre requête applicative ne doit être envoyée avant la réussite de `SERVER_AUTH`. Après une authentification serveur réussie, le client passe au niveau `BASE` et peut ensuite envoyer les requêtes autorisées par ce niveau.
+Lorsque `password_required` vaut `true`, aucune autre requête applicative ne doit être envoyée avant la réussite de `SERVER_AUTH`, à l'exception de la requête `PROTOCOL_INFO`, qui reste utilisable au niveau `OPEN`. Après une authentification serveur réussie, le client passe au niveau `BASE` et peut ensuite envoyer les requêtes autorisées par ce niveau.
 
 Si `password_required` vaut `false`, le client peut directement envoyer des requêtes autorisées au niveau `OPEN` ou `BASE` selon le contexte du serveur et du mot de passe configuré.
 
@@ -772,6 +878,10 @@ Cette requête permet à un client connecté (niveau `BASE` ou supérieur) de se
 
 Un client peut créer plusieurs joueurs au cours de la session (par exemple pour gérer plusieurs participants sur la même machine). L'un d'entre eux peut être désigné comme joueur "par défaut" de la session. Si un joueur par défaut existe déjà, le nouveau joueur créé avec l'option `is_default` à `true` prend ce rôle, mais le joueur précédent continue d'exister.
 
+Les attributs personnalisés du joueur sont fournis par le client, qui choisit dans quel dictionnaire de l'objet **Joueur** chacun d'eux est rangé : `static_attributes` pour les attributs qui ne changent pas ou peu pendant la partie (dictionnaire `static_state`), `dynamic_attributes` pour ceux qui peuvent changer souvent (dictionnaire `dynamic_state`). Ce choix est important lorsque le joueur est destiné à rejoindre une partie dotée d'une factory de joueurs : les contrôles effectués à l'arrivée du joueur recherchent la valeur de chaque option dans le dictionnaire associé à l'option (voir `GAME_FACTORY_GET`, champ `target`). Pour créer un joueur conforme à la factory d'une partie, il est plus simple d'utiliser la requête `GAME_FACTORY_JOIN`.
+
+Le champ `attributes` est conservé pour compatibilité : il est équivalent à `dynamic_attributes`.
+
 #### Exemple
 
 ```json
@@ -781,8 +891,11 @@ Un client peut créer plusieurs joueurs au cours de la session (par exemple pour
   "payload": {
     "name": "GuestPlayer",
     "is_default": true,
-    "attributes": {
+    "static_attributes": {
       "color": "blue"
+    },
+    "dynamic_attributes": {
+      "score": 0
     }
   }
 }
@@ -810,7 +923,9 @@ Un client peut créer plusieurs joueurs au cours de la session (par exemple pour
 | `version` | `number` | Oui | `2` |
 | `payload.name` | `string` | Oui | Nom souhaité pour le joueur. |
 | `payload.is_default` | `boolean` | Non | Si `true`, ce joueur devient le joueur par défaut de la session (`true` par défaut s'il s'agit du premier joueur). |
-| `payload.attributes` | `object` | Non | Attributs personnalisés pour la session. |
+| `payload.static_attributes` | `object` | Non | Attributs personnalisés rangés dans le dictionnaire `static_state` du joueur. Révision minimale : 2.1. |
+| `payload.dynamic_attributes` | `object` | Non | Attributs personnalisés rangés dans le dictionnaire `dynamic_state` du joueur. Révision minimale : 2.1. |
+| `payload.attributes` | `object` | Non | Conservé pour compatibilité, équivalent à `dynamic_attributes`. Une même clé ne peut pas figurer à la fois dans `attributes` et dans `dynamic_attributes` (erreur `INVALID_DATA`). |
 
 #### Champs (`PLAYER_CREATE_RESPONSE`)
 
@@ -826,6 +941,7 @@ Un client peut créer plusieurs joueurs au cours de la session (par exemple pour
 | Code | Description |
 |---|---|
 | `INVALID_NAME` | Le nom fourni est invalide ou déjà utilisé. |
+| `INVALID_DATA` | Les attributs fournis sont mal formés (ce ne sont pas des objets JSON), ou une même clé figure à la fois dans `attributes` et dans `dynamic_attributes`. |
 
 ---
 
@@ -1116,7 +1232,7 @@ Ces messages concernent les comptes utilisateurs.
 
 Cette requête permet de créer un nouveau compte utilisateur sur le serveur.
 
-La création d'un compte utilisateur ne génère aucun objet **Joueur** : les joueurs sont créés séparément via la requête `PLAYER_CREATE`, qui accepte également les attributs personnalisés liés au jeu (champ `attributes`). Les joueurs créés alors que l'utilisateur est authentifié sont ajoutés à la liste `players_id` de son compte.
+La création d'un compte utilisateur ne génère aucun objet **Joueur** : les joueurs sont créés séparément via la requête `PLAYER_CREATE`, qui accepte également les attributs personnalisés liés au jeu (champs `static_attributes` et `dynamic_attributes`), ou via la requête `GAME_FACTORY_JOIN` pour les parties dotées d'une factory de joueurs. Les joueurs créés alors que l'utilisateur est authentifié sont ajoutés à la liste `players_id` de son compte.
 
 #### Règles de création
 
@@ -1470,6 +1586,8 @@ Cette section décrit les messages permettant de créer, lister et rejoindre des
 
 Permet de créer une nouvelle instance de jeu sur le serveur.
 
+La partie peut être dotée, dès sa création, d'une factory de joueurs construite à partir d'un modèle détenu par le serveur (champ `factory_template_id`, voir `FACTORY_TEMPLATE_LIST`). Le modèle ne peut être choisi qu'à la création de la partie : le protocole ne prévoit aucune requête pour ajouter, remplacer ou retirer la factory d'une partie existante. Les options de la factory sont des copies de celles du modèle : une modification ou une suppression ultérieure du modèle est sans effet sur la partie.
+
 #### Exemple
 
 ```json
@@ -1485,6 +1603,7 @@ Permet de créer une nouvelle instance de jeu sur le serveur.
     "max_observers": 10,
     "turn_based": true,
     "password": "partie_privee",
+    "factory_template_id": "uuid_du_modele",
     "attributes": {
       "map": "island_01",
       "difficulty": "medium"
@@ -1519,6 +1638,7 @@ Permet de créer une nouvelle instance de jeu sur le serveur.
 | `payload.password` | `string` | Non | Mot de passe pour rejoindre la partie. |
 | `payload.group_id` | `string` | Non | UUID du groupe dans lequel créer la partie. |
 | `payload.group_password` | `string` | Non | Mot de passe du groupe, requis si la session n'est pas déjà autorisée. |
+| `payload.factory_template_id` | `string` | Non | UUID du modèle de factory de joueurs à appliquer à la partie. Si absent ou `null`, la partie n'a pas de factory de joueurs. Révision minimale : 2.1 (fonctionnalité `player_factory`). |
 | `payload.attributes` | `object` | Non | Attributs personnalisés de la partie. |
 
 #### Champs (`GAME_CREATE_RESPONSE`)
@@ -1537,6 +1657,7 @@ Permet de créer une nouvelle instance de jeu sur le serveur.
 | `INSUFFICIENT_PERMISSIONS` | Le rôle de l'utilisateur ne permet pas de créer de partie. |
 | `INVALID_DATA` | Paramètres de création invalides. |
 | `LIMIT_REACHED` | Le nombre maximum de parties sur le serveur est atteint. |
+| `FACTORY_TEMPLATE_NOT_FOUND` | Le modèle de factory indiqué par `factory_template_id` n'existe pas. La partie n'est pas créée. |
 
 ---
 
@@ -1584,7 +1705,8 @@ du serveur n'ont pas besoin de le fournir.
         "max_players": 4,
         "observers_count": 3,
         "max_observers": 10,
-        "requires_password": true
+        "requires_password": true,
+        "has_player_factory": true
       }
     ]
   }
@@ -1617,6 +1739,7 @@ du serveur n'ont pas besoin de le fournir.
 | `payload.games[].observers_count` | `number` | - | Nombre actuel d'observateurs. |
 | `payload.games[].max_observers` | `number` | - | Nombre maximum d'observateurs (ou `null` pour illimité). |
 | `payload.games[].requires_password` | `boolean` | - | `true` si un mot de passe est requis pour rejoindre. |
+| `payload.games[].has_player_factory` | `boolean` | - | `true` si la partie est dotée d'une factory de joueurs. Le client peut alors proposer un formulaire de création de joueur (voir `GAME_FACTORY_GET` et `GAME_FACTORY_JOIN`). Révision minimale : 2.1 (fonctionnalité `player_factory`). |
 | `payload.error_code` | `string` | Non | Code d'erreur en cas d'échec (voir tableau ci-dessous). |
 | `payload.message` | `string` | Oui | Message d'information ou d'erreur. |
 
@@ -1717,6 +1840,8 @@ Si l'identifiant du joueur (`player_id`) n'est pas précisé dans la requête, l
 
 Un joueur ne peut participer qu'à une seule partie : si le joueur désigné participe déjà à une partie (y compris une partie terminée), la requête échoue avec `ALREADY_IN_GAME`. Pour participer à une autre partie, le client doit créer un nouvel objet **Joueur** (`PLAYER_CREATE`).
 
+Si la partie est dotée d'une factory de joueurs et que le rôle demandé est `PLAYER`, le serveur vérifie que le joueur respecte les contraintes de la factory : présence d'une valeur pour chaque option, compatibilité de son type, validité, et unicité parmi les joueurs de la partie pour les options uniques. Ces contrôles ne s'appliquent pas aux observateurs. Pour créer un joueur conforme à la factory et le faire rejoindre la partie en une seule opération, il est recommandé d'utiliser la requête `GAME_FACTORY_JOIN`.
+
 #### Exemple
 
 ```json
@@ -1761,6 +1886,7 @@ Un joueur ne peut participer qu'à une seule partie : si le joueur désigné par
 |---|---|---:|---|
 | `payload.success` | `boolean` | Oui | `true` si l'opération a réussi. |
 | `payload.error_code` | `string` | Non | Code d'erreur en cas d'échec (voir tableau ci-dessous). |
+| `payload.details` | `object` | Non | Précisions sur l'erreur, pour les erreurs liées aux valeurs d'options de la factory de la partie. Voir le paragraphe "Détails des erreurs liées aux valeurs d'options". Révision minimale : 2.1. |
 | `payload.message` | `string` | Oui | Message d'information ou d'erreur. |
 
 #### Codes d'erreur (`GAME_JOIN_RESPONSE`)
@@ -1776,6 +1902,309 @@ Un joueur ne peut participer qu'à une seule partie : si le joueur désigné par
 | `GAME_ALREADY_STARTED` | La partie a déjà commencé et n'accepte plus de nouveaux joueurs (n'affecte pas les observateurs). |
 | `INSUFFICIENT_PERMISSIONS` | Le niveau d'accès de l'utilisateur est insuffisant pour le rôle demandé (ex: `BASE` demandant `PLAYER`). |
 | `PLAYER_NOT_FOUND` | L'identifiant du joueur est manquant et aucun joueur par défaut n'est défini pour la session, ou l'identifiant spécifié n'a pas été trouvé sur le serveur. |
+| `LACKING_OPTION` | La partie est dotée d'une factory de joueurs, et le joueur ne porte pas de valeur pour l'une de ses options (`details.reason` à `ABSENT_FROM_PLAYER`). Voir le paragraphe "Détails des erreurs liées aux valeurs d'options". |
+| `INVALID_OPTION_VALUE` | La partie est dotée d'une factory de joueurs, et le joueur porte, pour l'une de ses options, une valeur de type incompatible (`details.reason` à `INCOMPATIBLE_TYPE`) ou non valide (`details.reason` à `INVALID_VALUE`). Voir le paragraphe "Détails des erreurs liées aux valeurs d'options". |
+| `OPTION_VALUE_ALREADY_GIVEN` | La partie est dotée d'une factory de joueurs, et le joueur porte, pour une option unique, une valeur déjà portée par un autre joueur de la partie. Le champ `details` indique l'option (`option_id`) et la valeur concernées (`value`). |
+
+---
+
+### Création d'un joueur à partir de la factory d'une partie
+
+Les deux requêtes suivantes permettent à un client de proposer à l'utilisateur un formulaire de création de joueur construit à partir de la factory de joueurs d'une partie, puis de transmettre ses choix au serveur.
+
+#### Représentation d'une option
+
+Les options d'une factory de joueurs, comme celles d'un modèle (voir les messages de gestion des modèles de factory), sont représentées par l'objet JSON suivant:
+
+```json
+{
+  "option_id": "uuid_option",
+  "type": "LIST",
+  "name": "Couleur",
+  "description": "Couleur des pièces",
+  "default": "%%RANDOM_CHOICE%%",
+  "min": null,
+  "max": null,
+  "step": 1,
+  "choices": ["blanc", "noir"],
+  "unicity": true,
+  "target": "STATIC",
+  "attribute": null,
+  "key": "Couleur"
+}
+```
+
+| Champ | Type JSON | Description |
+|---|---|---|
+| `option_id` | `string` | UUID de l'option. Les options d'une factory ont des UUID distincts de ceux des options du modèle dont elles sont issues. |
+| `type` | `string` | Type de l'option : `CHECK`, `RANGE`, `LIST` ou `TEXT`. |
+| `name` | `string` | Nom de l'option, destiné à être affiché à l'utilisateur. |
+| `description` | `string` | Description de l'option. |
+| `default` | `boolean`\|`number`\|`string`\|`null` | Valeur par défaut brute de l'option. Elle peut contenir des constantes d'exécution non évaluées (ex : `"%%USERNAME%%"`). La valeur `null` signifie "première valeur disponible" : `false` pour une option `CHECK`, `min` (ou à défaut la valeur possible la plus proche de `0`) pour une option `RANGE`, le premier élément de `choices` pour une option `LIST`, et `""` (chaîne vide) pour une option `TEXT`. Pour pré-remplir un formulaire, utiliser plutôt le champ `proposed_value` fourni par `GAME_FACTORY_GET`. |
+| `min` | `number`\|`null` | Valeur minimale (options `RANGE`). `null` si pas de minimum. |
+| `max` | `number`\|`null` | Valeur maximale (options `RANGE`). `null` si pas de maximum. |
+| `step` | `number` | Incrément entre deux valeurs possibles (options `RANGE`). |
+| `choices` | `array` | Liste des choix possibles (options `LIST`). |
+| `unicity` | `boolean` | `true` si une valeur ne peut être portée que par un seul joueur de la partie. |
+| `target` | `string` | Emplacement de la valeur dans l'objet **Joueur** : `ATTRIBUTE` (attribut du joueur désigné par le champ `attribute`), `STATIC` (dictionnaire `static_state`) ou `DYNAMIC` (dictionnaire `dynamic_state`). |
+| `attribute` | `string`\|`null` | Nom de l'attribut du joueur lorsque `target` vaut `ATTRIBUTE` (seule valeur possible pour l'instant : `"name"`). `null` sinon. |
+| `key` | `string` | Clé figée de l'option : clé sous laquelle la valeur est rangée dans `static_state` ou `dynamic_state`. Lecture seule. |
+
+#### Détails des erreurs liées aux valeurs d'options
+
+Lorsqu'une requête échoue en raison de la valeur d'une option (codes `INVALID_OPTION_VALUE`, `OPTION_VALUE_ALREADY_GIVEN` et `LACKING_OPTION`), la réponse comporte un champ `payload.details` précisant l'erreur:
+
+| Champ | Type JSON | Codes concernés | Description |
+|---|---|---|---|
+| `details.option_id` | `string` | Tous | UUID de l'option concernée. Pour `INVALID_OPTION_VALUE` avec la raison `UNKNOWN_OPTION`, il s'agit de la clé transmise par le client, qui ne correspond à aucune option. |
+| `details.value` | `boolean`\|`number`\|`string`\|`null` | `INVALID_OPTION_VALUE`, `OPTION_VALUE_ALREADY_GIVEN` | Valeur en cause. |
+| `details.reason` | `string` | `INVALID_OPTION_VALUE`, `LACKING_OPTION` | Raison de l'erreur (voir ci-dessous). |
+
+Valeurs possibles de `details.reason`:
+
+| Code | Raison | Description |
+|---|---|---|
+| `INVALID_OPTION_VALUE` | `UNKNOWN_OPTION` | La clé transmise dans `values` ne correspond à aucune option de la factory. |
+| `INVALID_OPTION_VALUE` | `INCOMPATIBLE_TYPE` | Le type de la valeur n'est compatible avec celui de l'option, ni directement ni par conversion. |
+| `INVALID_OPTION_VALUE` | `INVALID_VALUE` | La valeur est en dehors des bornes `min` / `max`, ne correspond pas à un incrément `step`, ou est absente de `choices`. |
+| `LACKING_OPTION` | `ABSENT_FROM_PLAYER` | Le joueur qui rejoint la partie ne porte pas de valeur pour cette option. |
+| `LACKING_OPTION` | `NO_AVAILABLE_VALUE` | Aucune valeur n'a été fournie pour cette option et il n'existe plus de valeur possible (par exemple, toutes les couleurs sont déjà prises). |
+
+---
+
+#### Consultation de la factory d'une partie
+
+**Direction :** Client → Serveur  
+**Transport :** TCP  
+**Encodage :** JSON UTF-8  
+**Niveau d'accès minimal :** `BASE`  
+**Révision minimale :** 2.1 (fonctionnalité `player_factory`)
+
+Fournit la description complète de la factory de joueurs d'une partie, afin que le client puisse construire le formulaire de création d'un joueur. Pour chaque option, le serveur fournit en plus les valeurs déjà prises par les joueurs de la partie (`exclusions`) et la valeur proposée (`proposed_value`), calculée pour la session du client : les constantes d'exécution de source "Contexte" (`%%USERNAME%%`, `%%CLIENTADDRESS%%`, `%%SERVERNAME%%`, `%%SERVERADDRESS%%`) sont évaluées à partir de la session et de la connexion du client. Le contexte n'est jamais fourni par le client.
+
+Le formulaire servant à rejoindre la partie, la requête est soumise aux mêmes mots de passe que `GAME_JOIN` : mot de passe de la partie si elle est privée, et mot de passe du groupe si la partie appartient à un groupe protégé et que la session n'est pas déjà autorisée.
+
+Une consultation réussie abonne la session aux notifications `GAME_FACTORY_UPDATED` de cette partie (voir la notification correspondante).
+
+##### Exemple
+
+```json
+{
+  "type": "GAME_FACTORY_GET",
+  "version": 2,
+  "payload": {
+    "game_id": "uuid_de_la_partie",
+    "password": "partie_privee"
+  }
+}
+```
+
+##### Réponse (`GAME_FACTORY_GET_RESPONSE`)
+
+```json
+{
+  "type": "GAME_FACTORY_GET_RESPONSE",
+  "version": 2,
+  "payload": {
+    "success": true,
+    "game_id": "uuid_de_la_partie",
+    "factory_id": "uuid_de_la_factory",
+    "options": [
+      {
+        "option_id": "uuid_option",
+        "type": "LIST",
+        "name": "Couleur",
+        "description": "Couleur des pièces",
+        "default": "%%RANDOM_CHOICE%%",
+        "min": null,
+        "max": null,
+        "step": 1,
+        "choices": ["blanc", "noir"],
+        "unicity": true,
+        "target": "STATIC",
+        "attribute": null,
+        "key": "Couleur",
+        "exclusions": ["blanc"],
+        "proposed_value": "noir"
+      }
+    ],
+    "message": "Player factory retrieved successfully"
+  }
+}
+```
+
+##### Champs (`GAME_FACTORY_GET`)
+
+| Champ | Type JSON | Obligatoire | Description |
+|---|---|---:|---|
+| `type` | `string` | Oui | `"GAME_FACTORY_GET"` |
+| `version` | `number` | Oui | `2` |
+| `payload.game_id` | `string` | Oui | UUID de la partie. |
+| `payload.password` | `string` | Non | Mot de passe de la partie (si requis). |
+| `payload.group_password` | `string` | Non | Mot de passe d'un groupe protégé contenant la partie (si requis). |
+
+##### Champs (`GAME_FACTORY_GET_RESPONSE`)
+
+| Champ | Type JSON | Obligatoire | Description |
+|---|---|---:|---|
+| `payload.success` | `boolean` | Oui | `true` si la requête a réussi. |
+| `payload.game_id` | `string` | Non | UUID de la partie (en cas de succès). |
+| `payload.factory_id` | `string` | Non | UUID de la factory de joueurs de la partie (en cas de succès). |
+| `payload.options` | `array` | Non | Options de la factory, dans leur ordre de définition (en cas de succès). Chaque option suit la représentation décrite ci-dessus, complétée des champs `exclusions` et `proposed_value`. |
+| `payload.options[].exclusions` | `array` | - | Valeurs déjà portées par les joueurs de la partie pour cette option, calculées au moment de la requête. Liste vide pour une option non unique. |
+| `payload.options[].proposed_value` | `boolean`\|`number`\|`string`\|`null` | - | Valeur proposée pour cette option, après évaluation des constantes d'exécution et prise en compte des exclusions. `null` s'il n'existe plus de valeur possible. |
+| `payload.error_code` | `string` | Non | Code d'erreur en cas d'échec (voir tableau ci-dessous). |
+| `payload.message` | `string` | Oui | Message d'information ou d'erreur. |
+
+##### Codes d'erreur (`GAME_FACTORY_GET_RESPONSE`)
+
+| Code | Description |
+|---|---|
+| `GAME_NOT_FOUND` | La partie spécifiée n'existe pas. |
+| `NO_PLAYER_FACTORY` | La partie n'est pas dotée d'une factory de joueurs. |
+| `INVALID_PASSWORD` | Le mot de passe de la partie est absent ou incorrect. |
+| `INVALID_GROUP_PASSWORD` | Le mot de passe du groupe est absent ou incorrect. |
+
+---
+
+#### Création d'un joueur et arrivée dans la partie
+
+**Direction :** Client → Serveur  
+**Transport :** TCP  
+**Encodage :** JSON UTF-8  
+**Niveau d'accès minimal :** `PLAYER`  
+**Révision minimale :** 2.1 (fonctionnalité `player_factory`)
+
+Crée un objet **Joueur** à partir de la factory de joueurs d'une partie et des valeurs choisies par l'utilisateur, et le fait rejoindre la partie en tant que joueur, en une seule opération. Si l'arrivée dans la partie échoue, aucun joueur n'est créé. Comme pour `GAME_JOIN` avec le rôle `PLAYER`, un utilisateur authentifié est requis.
+
+Les valeurs choisies sont indexées par l'UUID des options de la factory (champ `option_id` fourni par `GAME_FACTORY_GET`). Une option absente prend sa valeur proposée, recalculée au moment de la requête : les tirages aléatoires et la date courante peuvent alors différer de ceux présentés à l'utilisateur. Il est donc recommandé au client de transmettre explicitement les valeurs qu'il a affichées. Les valeurs transmises ne sont jamais évaluées comme des constantes d'exécution.
+
+En cas de succès, le joueur créé est rattaché à la session comme avec `PLAYER_CREATE` : son identifiant est ajouté à la liste `players_id` de l'utilisateur authentifié, et il peut être désigné comme joueur par défaut de la session (`is_default`). La session est désabonnée des notifications `GAME_FACTORY_UPDATED` de la partie.
+
+##### Exemple
+
+```json
+{
+  "type": "GAME_FACTORY_JOIN",
+  "version": 2,
+  "payload": {
+    "game_id": "uuid_de_la_partie",
+    "values": {
+      "uuid_option": "noir"
+    },
+    "password": "partie_privee",
+    "is_default": false
+  }
+}
+```
+
+##### Réponse (`GAME_FACTORY_JOIN_RESPONSE`)
+
+```json
+{
+  "type": "GAME_FACTORY_JOIN_RESPONSE",
+  "version": 2,
+  "payload": {
+    "success": true,
+    "player_id": "uuid_du_joueur_cree",
+    "name": "alice",
+    "static_attributes": {
+      "Couleur": "noir"
+    },
+    "dynamic_attributes": {},
+    "message": "Player created and joined game successfully"
+  }
+}
+```
+
+##### Champs (`GAME_FACTORY_JOIN`)
+
+| Champ | Type JSON | Obligatoire | Description |
+|---|---|---:|---|
+| `type` | `string` | Oui | `"GAME_FACTORY_JOIN"` |
+| `version` | `number` | Oui | `2` |
+| `payload.game_id` | `string` | Oui | UUID de la partie à rejoindre. |
+| `payload.values` | `object` | Non | Valeurs choisies, indexées par l'UUID des options de la factory. Par défaut : objet vide (toutes les options prennent leur valeur proposée). |
+| `payload.password` | `string` | Non | Mot de passe pour rejoindre la partie (si requis). |
+| `payload.group_password` | `string` | Non | Mot de passe d'un groupe protégé contenant la partie (si requis). |
+| `payload.is_default` | `boolean` | Non | Si `true`, le joueur créé devient le joueur par défaut de la session (`true` par défaut s'il s'agit du premier joueur de la session). |
+
+##### Champs (`GAME_FACTORY_JOIN_RESPONSE`)
+
+| Champ | Type JSON | Obligatoire | Description |
+|---|---|---:|---|
+| `payload.success` | `boolean` | Oui | `true` si le joueur a été créé et a rejoint la partie. |
+| `payload.player_id` | `string` | Non | UUID du joueur créé (en cas de succès). |
+| `payload.name` | `string` | Non | Nom attribué au joueur (en cas de succès). |
+| `payload.static_attributes` | `object` | Non | Contenu du dictionnaire `static_state` du joueur créé (en cas de succès). |
+| `payload.dynamic_attributes` | `object` | Non | Contenu du dictionnaire `dynamic_state` du joueur créé (en cas de succès). |
+| `payload.error_code` | `string` | Non | Code d'erreur en cas d'échec (voir tableau ci-dessous). |
+| `payload.details` | `object` | Non | Précisions sur l'erreur, pour les erreurs liées aux valeurs d'options (`option_id`, et selon le cas `value` et `reason`). Voir le paragraphe "Détails des erreurs liées aux valeurs d'options". |
+| `payload.message` | `string` | Oui | Message d'information ou d'erreur. |
+
+##### Codes d'erreur (`GAME_FACTORY_JOIN_RESPONSE`)
+
+Les codes d'erreur de `GAME_JOIN_RESPONSE` s'appliquent (à l'exception de `PLAYER_NOT_FOUND` et `ALREADY_IN_GAME`, sans objet puisque le joueur est créé par la requête), ainsi que les suivants:
+
+| Code | Description |
+|---|---|
+| `NO_PLAYER_FACTORY` | La partie n'est pas dotée d'une factory de joueurs. |
+| `INVALID_OPTION_VALUE` | Une clé de `values` ne correspond à aucune option de la factory (`details.reason` à `UNKNOWN_OPTION`), ou une valeur est de type incompatible (`INCOMPATIBLE_TYPE`) ou non valide (`INVALID_VALUE`) pour son option. |
+| `OPTION_VALUE_ALREADY_GIVEN` | Une valeur choisie pour une option unique est déjà portée par un autre joueur de la partie. Le champ `details` indique l'option (`option_id`) et la valeur concernées (`value`). |
+| `LACKING_OPTION` | Une option absente de `values` n'a plus de valeur possible, valeur proposée à `null` (`details.reason` à `NO_AVAILABLE_VALUE`). |
+
+Le détail des champs de `payload.details` est décrit au paragraphe "Détails des erreurs liées aux valeurs d'options".
+
+---
+
+#### Notification de mise à jour de la factory d'une partie
+
+**Direction :** Serveur → Client  
+**Diffusion :** Sessions abonnées à la factory de la partie  
+**Transport :** TCP  
+**Encodage :** JSON UTF-8  
+**Révision minimale :** 2.1 (fonctionnalité `player_factory`)
+
+Informe les clients qui préparent un formulaire de création de joueur que les valeurs déjà prises dans la partie ont changé, afin qu'ils puissent mettre à jour les choix présentés à l'utilisateur. Ainsi, lorsqu'un premier joueur choisit "blanc" dans une partie d'échecs, les autres utilisateurs en train de remplir le formulaire voient immédiatement que seul "noir" reste disponible.
+
+La notification est envoyée chaque fois qu'un joueur rejoint la partie (`GAME_JOIN` avec le rôle `PLAYER`, ou `GAME_FACTORY_JOIN`) ou la quitte (`GAME_LEAVE`, exclusion, suppression du compte utilisateur), lorsque la partie est dotée d'une factory de joueurs. L'arrivée ou le départ d'un observateur ne déclenche pas de notification.
+
+Une session est abonnée à la factory d'une partie dès qu'elle a consulté cette factory avec succès (`GAME_FACTORY_GET`). L'abonnement prend fin :
+- après une requête `GAME_FACTORY_JOIN` réussie sur cette partie ;
+- après une consultation réussie de la factory d'une autre partie (une session n'est abonnée qu'à une seule factory à la fois) ;
+- lorsque la partie quitte l'état `PENDING` (aucun nouveau joueur ne pouvant plus la rejoindre), ou est supprimée ;
+- à la fermeture de la session.
+
+Seules les exclusions sont transmises : les valeurs proposées dépendent du contexte de chaque session (constantes d'exécution) et ne sont pas recalculées par la notification. Si le client souhaite une nouvelle valeur proposée, il peut consulter à nouveau la factory avec `GAME_FACTORY_GET`.
+
+##### Exemple
+
+```json
+{
+  "type": "GAME_FACTORY_UPDATED",
+  "version": 2,
+  "payload": {
+    "game_id": "uuid_de_la_partie",
+    "options": [
+      {
+        "option_id": "uuid_option",
+        "exclusions": ["blanc"]
+      }
+    ]
+  }
+}
+```
+
+##### Champs (`GAME_FACTORY_UPDATED`)
+
+| Champ | Type JSON | Obligatoire | Description |
+|---|---|---:|---|
+| `type` | `string` | Oui | `"GAME_FACTORY_UPDATED"` |
+| `version` | `number` | Oui | `2` |
+| `payload.game_id` | `string` | Oui | UUID de la partie concernée. |
+| `payload.options` | `array` | Oui | Nouvelles exclusions des options uniques de la factory. Les options non uniques n'y figurent pas. |
+| `payload.options[].option_id` | `string` | Oui | UUID de l'option. |
+| `payload.options[].exclusions` | `array` | Oui | Valeurs désormais portées par les joueurs de la partie pour cette option. |
 
 ---
 
@@ -1997,6 +2426,400 @@ Permet de modifier l'ordre de passage des joueurs dans une partie configurée co
 | `INVALID_RANK` | Le rang spécifié est en dehors des limites (ex: négatif ou supérieur au nombre de joueurs). |
 | `INVALID_ACTION` | L'action spécifiée n'est pas reconnue. |
 | `INSUFFICIENT_PERMISSIONS` | Le client n'a pas les droits pour modifier l'ordre. |
+
+---
+
+## Messages de gestion des modèles de factory
+
+Cette section décrit les messages permettant de consulter et de gérer les modèles de factory de joueurs (`PlayerFactoryTemplate`) détenus par le serveur. Un modèle définit un ensemble d'options de personnalisation des joueurs. Il est choisi à la création d'une partie (champ `factory_template_id` de `GAME_CREATE`), qui reçoit alors une factory de joueurs construite à partir d'une copie de ses options.
+
+Les modèles sont communs à l'ensemble du serveur. Tout client de niveau `BASE` peut les consulter, mais seul un administrateur du serveur (niveau `ADMIN`) peut les créer, les modifier ou les supprimer. Lorsque la persistance est activée, les modèles sont sauvegardés et restaurés avec les autres données du serveur. Leur création, leur modification et leur suppression sont enregistrées dans le journal d'audit du serveur (actions `FACTORY_TEMPLATE_CREATE`, `FACTORY_TEMPLATE_UPDATE` et `FACTORY_TEMPLATE_DELETE`).
+
+Les options d'un modèle suivent la représentation décrite au paragraphe "Représentation d'une option" (voir les messages de création d'un joueur à partir de la factory d'une partie).
+
+### Liste des modèles de factory
+
+**Direction :** Client → Serveur  
+**Transport :** TCP  
+**Encodage :** JSON UTF-8  
+**Niveau d'accès minimal :** `BASE`  
+**Révision minimale :** 2.1 (fonctionnalité `player_factory`)
+
+Récupère la liste des modèles de factory disponibles sur le serveur, par exemple pour proposer à l'utilisateur le choix du modèle lors de la création d'une partie.
+
+#### Exemple
+
+```json
+{
+  "type": "FACTORY_TEMPLATE_LIST",
+  "version": 2,
+  "payload": {}
+}
+```
+
+#### Réponse (`FACTORY_TEMPLATE_LIST_RESPONSE`)
+
+```json
+{
+  "type": "FACTORY_TEMPLATE_LIST_RESPONSE",
+  "version": 2,
+  "payload": {
+    "success": true,
+    "templates": [
+      {
+        "template_id": "uuid_du_modele",
+        "name": "Échecs",
+        "options_count": 2
+      }
+    ],
+    "message": "Factory templates retrieved successfully"
+  }
+}
+```
+
+#### Champs (`FACTORY_TEMPLATE_LIST_RESPONSE`)
+
+| Champ | Type JSON | Obligatoire | Description |
+|---|---|---:|---|
+| `payload.success` | `boolean` | Oui | `true` si la requête a réussi. |
+| `payload.templates` | `array` | Non | Liste des modèles disponibles (en cas de succès). |
+| `payload.templates[].template_id` | `string` | - | UUID du modèle. |
+| `payload.templates[].name` | `string` | - | Nom du modèle. |
+| `payload.templates[].options_count` | `number` | - | Nombre d'options du modèle. |
+| `payload.error_code` | `string` | Non | Code d'erreur en cas d'échec. |
+| `payload.message` | `string` | Oui | Message d'information ou d'erreur. |
+
+#### Codes d'erreur (`FACTORY_TEMPLATE_LIST_RESPONSE`)
+
+| Code | Description |
+|---|---|
+| `INSUFFICIENT_PERMISSIONS` | Le niveau d'accès du client ne permet pas de lister les modèles. |
+
+---
+
+### Consultation d'un modèle de factory
+
+**Direction :** Client → Serveur  
+**Transport :** TCP  
+**Encodage :** JSON UTF-8  
+**Niveau d'accès minimal :** `BASE`  
+**Révision minimale :** 2.1 (fonctionnalité `player_factory`)
+
+Récupère la définition complète d'un modèle de factory, par exemple pour présenter à l'utilisateur un aperçu des options du modèle avant de l'appliquer à une nouvelle partie. Les valeurs par défaut sont fournies brutes : les constantes d'exécution ne sont évaluées qu'au niveau de la factory d'une partie (voir `GAME_FACTORY_GET`).
+
+#### Exemple
+
+```json
+{
+  "type": "FACTORY_TEMPLATE_GET",
+  "version": 2,
+  "payload": {
+    "template_id": "uuid_du_modele"
+  }
+}
+```
+
+#### Réponse (`FACTORY_TEMPLATE_GET_RESPONSE`)
+
+```json
+{
+  "type": "FACTORY_TEMPLATE_GET_RESPONSE",
+  "version": 2,
+  "payload": {
+    "success": true,
+    "template_id": "uuid_du_modele",
+    "name": "Échecs",
+    "options": [
+      {
+        "option_id": "uuid_option",
+        "type": "LIST",
+        "name": "Couleur",
+        "description": "Couleur des pièces",
+        "default": "%%RANDOM_CHOICE%%",
+        "min": null,
+        "max": null,
+        "step": 1,
+        "choices": ["blanc", "noir"],
+        "unicity": true,
+        "target": "STATIC",
+        "attribute": null,
+        "key": "Couleur"
+      }
+    ],
+    "message": "Factory template retrieved successfully"
+  }
+}
+```
+
+#### Champs (`FACTORY_TEMPLATE_GET`)
+
+| Champ | Type JSON | Obligatoire | Description |
+|---|---|---:|---|
+| `type` | `string` | Oui | `"FACTORY_TEMPLATE_GET"` |
+| `version` | `number` | Oui | `2` |
+| `payload.template_id` | `string` | Oui | UUID du modèle. |
+
+#### Champs (`FACTORY_TEMPLATE_GET_RESPONSE`)
+
+| Champ | Type JSON | Obligatoire | Description |
+|---|---|---:|---|
+| `payload.success` | `boolean` | Oui | `true` si la requête a réussi. |
+| `payload.template_id` | `string` | Non | UUID du modèle (en cas de succès). |
+| `payload.name` | `string` | Non | Nom du modèle (en cas de succès). |
+| `payload.options` | `array` | Non | Options du modèle, dans leur ordre de définition (en cas de succès). |
+| `payload.error_code` | `string` | Non | Code d'erreur en cas d'échec (voir tableau ci-dessous). |
+| `payload.message` | `string` | Oui | Message d'information ou d'erreur. |
+
+#### Codes d'erreur (`FACTORY_TEMPLATE_GET_RESPONSE`)
+
+| Code | Description |
+|---|---|
+| `FACTORY_TEMPLATE_NOT_FOUND` | Le modèle spécifié n'existe pas. |
+
+---
+
+### Création d'un modèle de factory
+
+**Direction :** Client → Serveur  
+**Transport :** TCP  
+**Encodage :** JSON UTF-8  
+**Niveau d'accès minimal :** `ADMIN`  
+**Révision minimale :** 2.1 (fonctionnalité `player_factory`)
+
+Crée un nouveau modèle de factory à partir d'une définition complète. Les options sont transmises sans `option_id` ni `key` : le serveur génère l'UUID de chaque option, et sa clé figée correspond au nom de l'option. Les options sont ajoutées au modèle dans l'ordre de la liste, selon les règles de la méthode `add_option` de la classe `PlayerFactoryTemplate` (contrôle de similitude, remplacement d'une option associée à l'attribut `name` par une option ultérieure de la liste associée au même attribut).
+
+La création est atomique : si l'une des options est rejetée, aucun modèle n'est créé.
+
+#### Exemple
+
+```json
+{
+  "type": "FACTORY_TEMPLATE_CREATE",
+  "version": 2,
+  "payload": {
+    "name": "Échecs",
+    "options": [
+      {
+        "type": "LIST",
+        "name": "Couleur",
+        "description": "Couleur des pièces",
+        "choices": ["blanc", "noir"],
+        "default": "%%RANDOM_CHOICE%%",
+        "unicity": true,
+        "target": "STATIC"
+      },
+      {
+        "type": "TEXT",
+        "name": "Pseudo",
+        "default": "%%USERNAME%%",
+        "unicity": true,
+        "target": "ATTRIBUTE",
+        "attribute": "name"
+      }
+    ]
+  }
+}
+```
+
+#### Réponse (`FACTORY_TEMPLATE_CREATE_RESPONSE`)
+
+```json
+{
+  "type": "FACTORY_TEMPLATE_CREATE_RESPONSE",
+  "version": 2,
+  "payload": {
+    "success": true,
+    "template_id": "uuid_du_modele",
+    "option_ids": ["uuid_option_couleur", "uuid_option_pseudo"],
+    "message": "Factory template created successfully"
+  }
+}
+```
+
+#### Champs (`FACTORY_TEMPLATE_CREATE`)
+
+| Champ | Type JSON | Obligatoire | Description |
+|---|---|---:|---|
+| `type` | `string` | Oui | `"FACTORY_TEMPLATE_CREATE"` |
+| `version` | `number` | Oui | `2` |
+| `payload.name` | `string` | Oui | Nom du modèle. Il est fortement recommandé qu'il soit unique sur le serveur. |
+| `payload.options` | `array` | Oui | Options du modèle, dans l'ordre souhaité. Peut être vide. |
+| `payload.options[].type` | `string` | Oui | Type de l'option : `CHECK`, `RANGE`, `LIST` ou `TEXT`. |
+| `payload.options[].name` | `string` | Oui | Nom de l'option. Il devient sa clé figée. |
+| `payload.options[].description` | `string` | Non | Description de l'option. Par défaut : chaîne vide. |
+| `payload.options[].default` | `boolean`\|`number`\|`string`\|`null` | Non | Valeur par défaut, pouvant contenir des constantes d'exécution. Par défaut : `null`, qui signifie "première valeur disponible" (voir le paragraphe "Représentation d'une option"). |
+| `payload.options[].min` | `number`\|`null` | Non | Valeur minimale (options `RANGE`). Par défaut : `null`. |
+| `payload.options[].max` | `number`\|`null` | Non | Valeur maximale (options `RANGE`). Par défaut : `null`. |
+| `payload.options[].step` | `number` | Non | Incrément (options `RANGE`). Par défaut : `1`. |
+| `payload.options[].choices` | `array` | Non | Choix possibles (options `LIST`). Par défaut : liste vide. |
+| `payload.options[].unicity` | `boolean` | Non | `true` si une valeur ne peut être portée que par un seul joueur de la partie. Par défaut : `false`. |
+| `payload.options[].target` | `string` | Oui | `ATTRIBUTE`, `STATIC` ou `DYNAMIC`. La valeur `ATTRIBUTE` n'est acceptée que pour les options de type `TEXT` ou `LIST`, l'attribut `name` du joueur étant une chaîne de caractères : pour une option `CHECK` ou `RANGE`, la requête échoue avec le code `INVALID_OPTION`. |
+| `payload.options[].attribute` | `string` | Non | Obligatoire si `target` vaut `ATTRIBUTE` (seule valeur possible pour l'instant : `"name"`). Ignoré sinon. |
+
+#### Champs (`FACTORY_TEMPLATE_CREATE_RESPONSE`)
+
+| Champ | Type JSON | Obligatoire | Description |
+|---|---|---:|---|
+| `payload.success` | `boolean` | Oui | `true` si le modèle a été créé. |
+| `payload.template_id` | `string` | Non | UUID du modèle créé (en cas de succès). |
+| `payload.option_ids` | `array` | Non | UUID des options du modèle, dans l'ordre de la liste transmise (en cas de succès). Une option remplacée par une option ultérieure associée à l'attribut `name` n'y figure pas. |
+| `payload.error_code` | `string` | Non | Code d'erreur en cas d'échec (voir tableau ci-dessous). |
+| `payload.details` | `object` | Non | Précisions sur l'erreur, pour les erreurs liées aux options : index de l'option dans la liste transmise (`option_index`) et raison (`reason`). |
+| `payload.message` | `string` | Oui | Message d'information ou d'erreur. |
+
+#### Codes d'erreur (`FACTORY_TEMPLATE_CREATE_RESPONSE`)
+
+| Code | Description |
+|---|---|
+| `INSUFFICIENT_PERMISSIONS` | Seul un administrateur du serveur peut créer un modèle. |
+| `INVALID_DATA` | La requête est mal formée (nom absent, `options` n'est pas une liste, etc.). |
+| `INVALID_OPTION` | Une option est invalide : type inconnu, paramètres incohérents, constante d'exécution inconnue ou mal utilisée, valeur de `target` ou `attribute` non reconnue, etc. Le champ `details` indique l'option concernée. |
+| `OPTION_ALREADY_EXISTS` | Le nom d'une option est identique à la clé figée d'une option précédente de la liste. Le champ `details` indique l'option concernée. |
+
+---
+
+### Modification d'un modèle de factory
+
+**Direction :** Client → Serveur  
+**Transport :** TCP  
+**Encodage :** JSON UTF-8  
+**Niveau d'accès minimal :** `ADMIN`  
+**Révision minimale :** 2.1 (fonctionnalité `player_factory`)
+
+Modifie le nom d'un modèle existant et/ou remplace l'intégralité de ses options. Le modèle conserve son UUID. Lorsque le champ `options` est fourni, toutes les options existantes du modèle sont retirées, puis les options transmises sont ajoutées selon les mêmes règles que pour `FACTORY_TEMPLATE_CREATE` : elles reçoivent de nouveaux UUID et de nouvelles clés figées.
+
+La modification est atomique : si l'une des options est rejetée, le modèle reste inchangé. Elle est sans effet sur les parties déjà dotées d'une factory construite à partir de ce modèle, dont les options sont des copies indépendantes.
+
+#### Exemple
+
+```json
+{
+  "type": "FACTORY_TEMPLATE_UPDATE",
+  "version": 2,
+  "payload": {
+    "template_id": "uuid_du_modele",
+    "name": "Échecs (variante)",
+    "options": [
+      {
+        "type": "LIST",
+        "name": "Couleur",
+        "choices": ["blanc", "noir"],
+        "default": "blanc",
+        "unicity": true,
+        "target": "STATIC"
+      }
+    ]
+  }
+}
+```
+
+#### Réponse (`FACTORY_TEMPLATE_UPDATE_RESPONSE`)
+
+```json
+{
+  "type": "FACTORY_TEMPLATE_UPDATE_RESPONSE",
+  "version": 2,
+  "payload": {
+    "success": true,
+    "template_id": "uuid_du_modele",
+    "option_ids": ["uuid_nouvelle_option_couleur"],
+    "message": "Factory template updated successfully"
+  }
+}
+```
+
+#### Champs (`FACTORY_TEMPLATE_UPDATE`)
+
+| Champ | Type JSON | Obligatoire | Description |
+|---|---|---:|---|
+| `type` | `string` | Oui | `"FACTORY_TEMPLATE_UPDATE"` |
+| `version` | `number` | Oui | `2` |
+| `payload.template_id` | `string` | Oui | UUID du modèle à modifier. |
+| `payload.name` | `string` | Non | Nouveau nom du modèle. S'il est absent, le nom est inchangé. |
+| `payload.options` | `array` | Non | Nouvelle liste complète des options, au même format que pour `FACTORY_TEMPLATE_CREATE`. Si elle est absente, les options sont inchangées. |
+
+Au moins l'un des champs `name` ou `options` doit être fourni.
+
+#### Champs (`FACTORY_TEMPLATE_UPDATE_RESPONSE`)
+
+| Champ | Type JSON | Obligatoire | Description |
+|---|---|---:|---|
+| `payload.success` | `boolean` | Oui | `true` si le modèle a été modifié. |
+| `payload.template_id` | `string` | Non | UUID du modèle (en cas de succès). |
+| `payload.option_ids` | `array` | Non | UUID des options du modèle après modification, dans leur ordre de définition (en cas de succès). |
+| `payload.error_code` | `string` | Non | Code d'erreur en cas d'échec (voir tableau ci-dessous). |
+| `payload.details` | `object` | Non | Précisions sur l'erreur, pour les erreurs liées aux options (`option_index`, `reason`). |
+| `payload.message` | `string` | Oui | Message d'information ou d'erreur. |
+
+#### Codes d'erreur (`FACTORY_TEMPLATE_UPDATE_RESPONSE`)
+
+| Code | Description |
+|---|---|
+| `INSUFFICIENT_PERMISSIONS` | Seul un administrateur du serveur peut modifier un modèle. |
+| `FACTORY_TEMPLATE_NOT_FOUND` | Le modèle spécifié n'existe pas. |
+| `INVALID_DATA` | La requête est mal formée, ou aucun des champs `name` et `options` n'est fourni. |
+| `INVALID_OPTION` | Une option est invalide. Le champ `details` indique l'option concernée. |
+| `OPTION_ALREADY_EXISTS` | Le nom d'une option est identique à la clé figée d'une option précédente de la liste. Le champ `details` indique l'option concernée. |
+
+---
+
+### Suppression d'un modèle de factory
+
+**Direction :** Client → Serveur  
+**Transport :** TCP  
+**Encodage :** JSON UTF-8  
+**Niveau d'accès minimal :** `ADMIN`  
+**Révision minimale :** 2.1 (fonctionnalité `player_factory`)
+
+Supprime un modèle de factory du serveur. La suppression est sans effet sur les parties déjà dotées d'une factory construite à partir de ce modèle. Le modèle ne peut plus être choisi lors de la création d'une partie.
+
+#### Exemple
+
+```json
+{
+  "type": "FACTORY_TEMPLATE_DELETE",
+  "version": 2,
+  "payload": {
+    "template_id": "uuid_du_modele"
+  }
+}
+```
+
+#### Réponse (`FACTORY_TEMPLATE_DELETE_RESPONSE`)
+
+```json
+{
+  "type": "FACTORY_TEMPLATE_DELETE_RESPONSE",
+  "version": 2,
+  "payload": {
+    "success": true,
+    "message": "Factory template deleted successfully"
+  }
+}
+```
+
+#### Champs (`FACTORY_TEMPLATE_DELETE`)
+
+| Champ | Type JSON | Obligatoire | Description |
+|---|---|---:|---|
+| `type` | `string` | Oui | `"FACTORY_TEMPLATE_DELETE"` |
+| `version` | `number` | Oui | `2` |
+| `payload.template_id` | `string` | Oui | UUID du modèle à supprimer. |
+
+#### Champs (`FACTORY_TEMPLATE_DELETE_RESPONSE`)
+
+| Champ | Type JSON | Obligatoire | Description |
+|---|---|---:|---|
+| `payload.success` | `boolean` | Oui | `true` si le modèle a été supprimé. |
+| `payload.error_code` | `string` | Non | Code d'erreur en cas d'échec (voir tableau ci-dessous). |
+| `payload.message` | `string` | Oui | Message d'information ou d'erreur. |
+
+#### Codes d'erreur (`FACTORY_TEMPLATE_DELETE_RESPONSE`)
+
+| Code | Description |
+|---|---|
+| `INSUFFICIENT_PERMISSIONS` | Seul un administrateur du serveur peut supprimer un modèle. |
+| `FACTORY_TEMPLATE_NOT_FOUND` | Le modèle spécifié n'existe pas. |
 
 ---
 
@@ -3840,6 +4663,12 @@ sequenceDiagram
     C->>S: DISCOVERY (UDP)
     S-->>C: DISCOVERY_RESPONSE (UDP)
     C->>S: TCP connect
+    C->>S: PROTOCOL_INFO
+    alt serveur de révision 2.1 ou supérieure
+        S-->>C: PROTOCOL_INFO_RESPONSE (revision, features)
+    else serveur de révision 2.0
+        S-->>C: ERROR (UNKNOWN_TYPE)
+    end
     opt password_required = true
         C->>S: SERVER_AUTH
         S-->>C: AUTH_RESPONSE
@@ -3904,6 +4733,37 @@ sequenceDiagram
     opt démarrage diffusé
         S-->>P: GAME_STATE_CHANGED (IN_PROGRESS)
     end
+```
+
+### Création d'une partie avec un modèle de factory
+
+```mermaid
+sequenceDiagram
+    participant A as Administrateur
+    participant C as Créateur
+    participant U1 as Utilisateur 1
+    participant U2 as Utilisateur 2
+    participant S as Serveur
+
+    A->>S: FACTORY_TEMPLATE_CREATE
+    S-->>A: FACTORY_TEMPLATE_CREATE_RESPONSE
+    C->>S: FACTORY_TEMPLATE_LIST
+    S-->>C: FACTORY_TEMPLATE_LIST_RESPONSE
+    opt aperçu du modèle
+        C->>S: FACTORY_TEMPLATE_GET
+        S-->>C: FACTORY_TEMPLATE_GET_RESPONSE
+    end
+    C->>S: GAME_CREATE (factory_template_id)
+    S-->>C: GAME_CREATE_RESPONSE
+    U1->>S: GAME_FACTORY_GET
+    S-->>U1: GAME_FACTORY_GET_RESPONSE
+    U2->>S: GAME_FACTORY_GET
+    S-->>U2: GAME_FACTORY_GET_RESPONSE
+    U1->>S: GAME_FACTORY_JOIN (values)
+    S-->>U1: GAME_FACTORY_JOIN_RESPONSE
+    S-->>U2: GAME_FACTORY_UPDATED (exclusions)
+    U2->>S: GAME_FACTORY_JOIN (values)
+    S-->>U2: GAME_FACTORY_JOIN_RESPONSE
 ```
 
 ### Évolution de la partie
@@ -3983,6 +4843,7 @@ Ce tableau regroupe l'ensemble des notifications envoyées par le serveur, class
 | `GAME_EVENT` | Notifie les participants d'une action effectuée par l'un d'entre eux ou par le serveur. | Clients connectés à la partie |
 | `GAME_STATE_CHANGED` | Informe les clients que l'état global ou personnalisé de la partie a été modifié. | Clients connectés à la partie |
 | `GAME_TURN_CHANGED` | Prévient les clients connectés qu'un nouveau tour commence et identifie le joueur actif. | Clients connectés à la partie |
+| `GAME_FACTORY_UPDATED` | Informe les clients préparant un formulaire de création de joueur que les valeurs déjà prises dans la partie ont changé. | Sessions abonnées à la factory de la partie (voir `GAME_FACTORY_GET`) |
 
 ---
 
@@ -3997,10 +4858,11 @@ Ce tableau regroupe l'ensemble des codes d'erreur définis dans le protocole, cl
 | `ALREADY_IN_GAME` | Le joueur participe déjà à cette partie ou à une autre partie (un objet **Joueur** ne peut participer qu'à une seule partie), ou son état ne peut être remis à zéro tant qu'il participe à une partie. | `GAME_JOIN_RESPONSE`, `PLAYER_UPDATE_RESPONSE` |
 | `ALREADY_SUBSCRIBED` | Le client est déjà abonné à ce groupe. | `GROUP_SUBSCRIBE_RESPONSE` |
 | `CANNOT_DELETE_SELF` | Un administrateur ne peut pas supprimer son propre compte via cette requête. | `USER_DELETE_RESPONSE` |
-| `GAME_ALREADY_STARTED` | La partie a déjà commencé (ou n'accepte plus de joueurs). | `GAME_JOIN_RESPONSE`, `GAME_CONTROL_RESPONSE` |
+| `FACTORY_TEMPLATE_NOT_FOUND` | Le modèle de factory spécifié n'existe pas. | `GAME_CREATE_RESPONSE`, `FACTORY_TEMPLATE_GET_RESPONSE`, `FACTORY_TEMPLATE_UPDATE_RESPONSE`, `FACTORY_TEMPLATE_DELETE_RESPONSE` |
+| `GAME_ALREADY_STARTED` | La partie a déjà commencé (ou n'accepte plus de joueurs). | `GAME_JOIN_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE`, `GAME_CONTROL_RESPONSE` |
 | `GAME_FINISHED` | La partie est déjà terminée. | `GAME_PLAYER_ORDER_RESPONSE` |
-| `GAME_FULL` | Le nombre maximum de joueurs ou d'observateurs est atteint. | `GAME_JOIN_RESPONSE` |
-| `GAME_NOT_FOUND` | La partie spécifiée n'existe pas. | `GAME_JOIN_RESPONSE`, `GAME_LEAVE_RESPONSE`, `GAME_CONTROL_RESPONSE`, `GAME_PLAYER_ORDER_RESPONSE`, `GAME_ACTION_RESPONSE`, `GAME_NEXT_TURN_RESPONSE`, `GROUP_ADD_GAME_RESPONSE`, `GAME_KICK_RESPONSE`, `GAME_PARTICIPANTS_LIST_RESPONSE` |
+| `GAME_FULL` | Le nombre maximum de joueurs ou d'observateurs est atteint. | `GAME_JOIN_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE` |
+| `GAME_NOT_FOUND` | La partie spécifiée n'existe pas. | `GAME_JOIN_RESPONSE`, `GAME_FACTORY_GET_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE`, `GAME_LEAVE_RESPONSE`, `GAME_CONTROL_RESPONSE`, `GAME_PLAYER_ORDER_RESPONSE`, `GAME_ACTION_RESPONSE`, `GAME_NEXT_TURN_RESPONSE`, `GROUP_ADD_GAME_RESPONSE`, `GAME_KICK_RESPONSE`, `GAME_PARTICIPANTS_LIST_RESPONSE` |
 | `GAME_NOT_STARTED` | La partie n'est pas dans l'état requis pour l'action. | `GAME_CONTROL_RESPONSE` |
 | `GAME_NOT_TURN_BASED` | La partie n'est pas configurée pour le tour par tour. | `GAME_PLAYER_ORDER_RESPONSE`, `GAME_NEXT_TURN_RESPONSE` |
 | `GAME_PAUSED` | L'action est refusée car la partie est en pause. | `GAME_ACTION_RESPONSE` |
@@ -4010,16 +4872,24 @@ Ce tableau regroupe l'ensemble des codes d'erreur définis dans le protocole, cl
 | `PERSISTENCE_ERROR` | Une erreur est survenue lors d'une opération de persistance. | `SERVER_PERSISTENCE_SAVE_RESPONSE`, `SERVER_PERSISTENCE_RELOAD_RESPONSE` |
 | `INVALID_ACTION` | L'action demandée n'est pas reconnue ou refusée par la logique. | `GAME_CONTROL_RESPONSE`, `GAME_PLAYER_ORDER_RESPONSE`, `GAME_ACTION_RESPONSE` |
 | `INVALID_CREDENTIALS` | Nom d'utilisateur ou mot de passe incorrect. | `AUTH_RESPONSE` |
-| `INVALID_DATA` | Données fournies invalides ou mal formées. | `USER_CREATE_RESPONSE`, `USER_UPDATE_RESPONSE`, `GAME_CREATE_RESPONSE`, `GROUP_CREATE_RESPONSE`, `SERVER_CONFIG_SET_RESPONSE`, `SERVER_AUDIT_LOG_GET_RESPONSE` |
+| `INVALID_DATA` | Données fournies invalides ou mal formées. | `USER_CREATE_RESPONSE`, `USER_UPDATE_RESPONSE`, `GAME_CREATE_RESPONSE`, `GROUP_CREATE_RESPONSE`, `SERVER_CONFIG_SET_RESPONSE`, `SERVER_AUDIT_LOG_GET_RESPONSE`, `PLAYER_CREATE_RESPONSE`, `FACTORY_TEMPLATE_CREATE_RESPONSE`, `FACTORY_TEMPLATE_UPDATE_RESPONSE` |
 | `INVALID_NAME` | Le nom fourni est invalide ou déjà utilisé. | `PLAYER_CREATE_RESPONSE`, `PLAYER_UPDATE_RESPONSE` |
-| `INVALID_PASSWORD` | Le mot de passe (serveur ou partie) est incorrect. | `AUTH_RESPONSE`, `GAME_JOIN_RESPONSE` |
+| `INVALID_OPTION` | Une option de la définition d'un modèle de factory est invalide. | `FACTORY_TEMPLATE_CREATE_RESPONSE`, `FACTORY_TEMPLATE_UPDATE_RESPONSE` |
+| `INVALID_OPTION_VALUE` | Une valeur d'option est inconnue, de type incompatible ou non valide pour la factory de la partie. | `GAME_JOIN_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE` |
+| `INVALID_PASSWORD` | Le mot de passe (serveur ou partie) est incorrect. | `AUTH_RESPONSE`, `GAME_JOIN_RESPONSE`, `GAME_FACTORY_GET_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE` |
 | `INVALID_RANK` | Le rang spécifié est en dehors des limites. | `GAME_PLAYER_ORDER_RESPONSE` |
+| `LACKING_OPTION` | Le joueur ne porte pas de valeur pour une option de la factory de la partie, ou une option n'a plus de valeur possible. | `GAME_JOIN_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE` |
 | `LIMIT_REACHED` | Le nombre maximum de parties sur le serveur est atteint. | `GAME_CREATE_RESPONSE` |
+| `NO_PLAYER_FACTORY` | La partie n'est pas dotée d'une factory de joueurs. | `GAME_FACTORY_GET_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE` |
 | `NOT_ENOUGH_PLAYERS` | La partie ne compte pas le nombre minimum de joueurs requis pour démarrer. | `GAME_CONTROL_RESPONSE` |
 | `NOT_IN_GAME` | Le joueur n'est pas présent dans cette partie. | `GAME_LEAVE_RESPONSE`, `GAME_KICK_RESPONSE` |
 | `NOT_SUBSCRIBED` | Le client n'est pas abonné à ce groupe. | `GROUP_UNSUBSCRIBE_RESPONSE` |
 | `NOT_YOUR_TURN` | Ce n'est pas le tour de ce joueur. | `GAME_ACTION_RESPONSE`, `GAME_NEXT_TURN_RESPONSE` |
+| `OPTION_ALREADY_EXISTS` | Le nom d'une option est identique à la clé figée d'une option précédente du modèle. | `FACTORY_TEMPLATE_CREATE_RESPONSE`, `FACTORY_TEMPLATE_UPDATE_RESPONSE` |
+| `OPTION_VALUE_ALREADY_GIVEN` | Une valeur choisie pour une option unique est déjà portée par un autre joueur de la partie. | `GAME_JOIN_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE` |
 | `PLAYER_NOT_FOUND` | Le joueur spécifié n'existe pas ou n'est pas trouvé. | `PLAYER_UPDATE_RESPONSE`, `GAME_JOIN_RESPONSE`, `GAME_LEAVE_RESPONSE`, `GAME_CONTROL_RESPONSE`, `GAME_PLAYER_ORDER_RESPONSE`, `GAME_ACTION_RESPONSE`, `GAME_KICK_RESPONSE` |
 | `REGISTRATION_DISABLED` | La création de compte est désactivée pour ce niveau d'accès. | `USER_CREATE_RESPONSE` |
+| `UNKNOWN_TYPE` | Le type de message n'est pas reconnu par le serveur, par exemple un message introduit par une révision du protocole que le serveur ne prend pas en charge. | `ERROR` |
+| `UNSUPPORTED_VERSION` | La version majeure du protocole indiquée dans le champ `version` n'est pas prise en charge. | `ERROR` |
 | `USER_ALREADY_EXISTS` | Un utilisateur avec ce nom existe déjà. | `USER_CREATE_RESPONSE` |
 | `USER_NOT_FOUND` | L'utilisateur spécifié n'existe pas. | `AUTH_RESPONSE`, `USER_UPDATE_RESPONSE`, `USER_DELETE_RESPONSE` |

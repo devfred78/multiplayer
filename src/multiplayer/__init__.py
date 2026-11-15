@@ -23,3 +23,14 @@ class SaveFormat(Enum):
     """Enumeration for the supported persistence formats of a save file."""
     JSON = "json"
     SQLITE = "sqlite"
+
+class OptionType(Enum):
+    """Enumeration for the types of the player customization options.
+
+    These types are typically used by a client process to build the widgets
+    of a player customization form.
+    """
+    CHECK = "check"
+    RANGE = "range"
+    LIST = "list"
+    TEXT = "text"

@@ -2,7 +2,9 @@
 
 This module provides the :class:`Save` class, which is responsible for
 serializing and restoring the core domain objects (``Player``, ``User``,
-``Game`` and ``GameGroup``) to and from a save file. Two storage formats are
+``Game``, ``GameGroup`` and ``PlayerFactoryTemplate``) to and from a save file.
+``Option`` and ``PlayerFactory`` objects are saved within the object that
+contains them. Two storage formats are
 supported: a single JSON document or an SQLite database.
 
 The objects are first stored in an in-memory buffer through the
@@ -12,12 +14,13 @@ The objects are first stored in an in-memory buffer through the
 import json
 import logging
 import sqlite3
+import threading
 from pathlib import Path
 from typing import Any, Dict, List, Union
 
 from . import SaveFormat, UserRole, GameState
-from .exceptions import SaveError
-from .game import Player, User, Game, GameGroup
+from .exceptions import OptionError, SaveError
+from .game import Player, User, Game, GameGroup, PlayerFactory, PlayerFactoryTemplate
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +31,11 @@ _SUPPORTED_CLASSES: Dict[str, type] = {
     "User": User,
     "Game": Game,
     "GameGroup": GameGroup,
+    "PlayerFactoryTemplate": PlayerFactoryTemplate,
 }
+
+# Classes that a save file produced by an older version may not contain.
+_OPTIONAL_CLASSES = frozenset({"PlayerFactoryTemplate"})
 
 # Name of the table used for the SQLite storage format.
 _SQLITE_TABLE = "objects"
@@ -141,6 +148,9 @@ def _game_to_dict(game: Game) -> Dict[str, Any]:
         "game_state": game.game_state.value,
         "static_state": game.static_state,
         "dynamic_state": game.dynamic_state,
+        "player_factory": (
+            game.player_factory.to_dict() if game.player_factory is not None else None
+        ),
     }
 
 
@@ -183,6 +193,14 @@ def _game_from_dict(data: Dict[str, Any]) -> Game:
     game._game_state = GameState(data["game_state"])
     game.static_state = data.get("static_state", {})
     game.dynamic_state = data.get("dynamic_state", {})
+    game._lock = threading.RLock()
+    factory_data = data.get("player_factory")
+    try:
+        game._player_factory = (
+            PlayerFactory.from_dict(factory_data, game._id) if factory_data is not None else None
+        )
+    except (TypeError, ValueError, OptionError) as exc:
+        raise SaveError(f"Invalid player factory in saved game {game._id}") from exc
     # Restored games must be found by their ID, like newly created ones.
     Game._registry[game._id] = game
     return game
@@ -226,12 +244,43 @@ def _group_from_dict(data: Dict[str, Any]) -> GameGroup:
     return group
 
 
+def _template_to_dict(template: PlayerFactoryTemplate) -> Dict[str, Any]:
+    """Serializes a PlayerFactoryTemplate instance into a JSON-compatible dictionary.
+
+    Args:
+        template (PlayerFactoryTemplate): The template instance to serialize.
+
+    Returns:
+        Dict[str, Any]: The serialized representation of the template.
+    """
+    return template.to_dict()
+
+
+def _template_from_dict(data: Dict[str, Any]) -> PlayerFactoryTemplate:
+    """Rebuilds a PlayerFactoryTemplate instance from its serialized dictionary.
+
+    Args:
+        data (Dict[str, Any]): The serialized representation of the template.
+
+    Returns:
+        PlayerFactoryTemplate: The reconstructed template instance.
+
+    Raises:
+        SaveError: If the serialized template is inconsistent.
+    """
+    try:
+        return PlayerFactoryTemplate.from_dict(data)
+    except (TypeError, ValueError, OptionError) as exc:
+        raise SaveError(f"Invalid saved factory template: {data.get('template_id')}") from exc
+
+
 # Mapping between a class name and the pair of (serializer, deserializer).
 _SERIALIZERS = {
     "Player": (_player_to_dict, _player_from_dict),
     "User": (_user_to_dict, _user_from_dict),
     "Game": (_game_to_dict, _game_from_dict),
     "GameGroup": (_group_to_dict, _group_from_dict),
+    "PlayerFactoryTemplate": (_template_to_dict, _template_from_dict),
 }
 
 
@@ -327,11 +376,17 @@ class Save:
             raise SaveError(f"Cannot read save file: {self.file_path}") from exc
 
         expected = set(_SUPPORTED_CLASSES)
-        if not isinstance(content, dict) or not expected.issubset(content) or set(content) - expected - {_SERVER_CONFIG_CLASS}:
+        required = expected - _OPTIONAL_CLASSES
+        if (
+            not isinstance(content, dict)
+            or not required.issubset(content)
+            or set(content) - expected - {_SERVER_CONFIG_CLASS}
+        ):
             raise SaveError(f"Incompatible save file structure: {self.file_path}")
 
         for name in _SUPPORTED_CLASSES:
-            section = content[name]
+            # Older save files do not contain the optional classes.
+            section = content.get(name, {})
             if not isinstance(section, dict):
                 raise SaveError(f"Incompatible save file structure: {self.file_path}")
             self._data[name] = dict(section)
@@ -376,14 +431,17 @@ class Save:
             if connection is not None:
                 connection.close()
 
-    def save(self, obj: Union[Player, User, Game, GameGroup]) -> None:
+    def save(self, obj: Union[Player, User, Game, GameGroup, PlayerFactoryTemplate]) -> None:
         """Saves or updates an object in the in-memory buffer.
 
         If an object with the same ID and class already exists, it is replaced.
-        The change is not persisted until :meth:`flush` is called.
+        The change is not persisted until :meth:`flush` is called. ``Option``
+        and ``PlayerFactory`` objects are not supported on their own: they are
+        saved within the template or the game that contains them.
 
         Args:
-            obj (Player | User | Game | GameGroup): The instance to save.
+            obj (Player | User | Game | GameGroup | PlayerFactoryTemplate): The
+                instance to save.
 
         Before a ``User`` is saved, its ``players_id`` list is cleaned of the
         players that are no longer associated with any unfinished game (see
@@ -448,7 +506,9 @@ class Save:
             or any(state != finished for state in states[player_id])
         ]
 
-    def load(self, target: Union[str, type]) -> List[Union[Player, User, Game, GameGroup]]:
+    def load(
+        self, target: Union[str, type]
+    ) -> List[Union[Player, User, Game, GameGroup, PlayerFactoryTemplate]]:
         """Loads all stored instances of a given class.
 
         Loading ``Game`` also returns the games only embedded in the groups of
@@ -456,13 +516,15 @@ class Save:
 
         Args:
             target (str | type): The class or class name to load (one of
-                ``Player``, ``User``, ``Game`` or ``GameGroup``).
+                ``Player``, ``User``, ``Game``, ``GameGroup`` or
+                ``PlayerFactoryTemplate``).
 
         Returns:
             List: The list of reconstructed instances for the requested class.
 
         Raises:
-            SaveError: If the target does not match a supported class.
+            SaveError: If the target does not match a supported class, or if
+                a stored option, template or factory is inconsistent.
         """
         name = self._resolve_class_name(target)
         deserializer = _SERIALIZERS[name][1]

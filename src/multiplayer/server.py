@@ -36,13 +36,19 @@ from .exceptions import (
     GameNotPausedError,
     GameNotStartedError,
     GameNotTurnBasedError,
+    InvalidOptionValueError,
+    LackingOptionError,
     MultiplayerError,
     NotEnoughPlayersError,
+    OptionAlreadyExistsError,
+    OptionError,
+    OptionValueAlreadyGivenError,
     PasswordError,
+    PlayerFactoryNotDefinedError,
     PlayerNotFoundInGameError,
     UserAlreadyExistsError,
 )
-from .game import Game, GameGroup, Player, User
+from .game import Game, GameGroup, OptionEntry, Player, PlayerFactoryTemplate, User
 from .save import Save
 
 try:
@@ -55,8 +61,11 @@ except ImportError:  # pragma: no cover - optional dependency
 
 logger = logging.getLogger(__name__)
 
-# Protocol-wide constants.
+# Protocol-wide constants. The major version is sent in every message, while
+# the revision and the optional features are announced by the server.
 PROTOCOL_VERSION = 2
+PROTOCOL_REVISION = "2.1"
+PROTOCOL_FEATURES: Tuple[str, ...] = ("player_factory",)
 SERVICE_NAME = "multiplayer_server"
 LENGTH_HEADER_SIZE = 4
 
@@ -155,6 +164,8 @@ class ClientSession:
         self.subscribed_groups: Set[str] = set()
         self.authorized_groups: Set[str] = set()
         self.joined_games: Set[str] = set()
+        # ID of the game whose player factory the session is subscribed to.
+        self.factory_game_id: Optional[str] = None
 
     @property
     def writer(self) -> "asyncio.StreamWriter":
@@ -271,6 +282,7 @@ class GameServer:
 
     # Minimal access level required for each request type.
     _MIN_ACCESS: Dict[str, AccessLevel] = {
+        "PROTOCOL_INFO": AccessLevel.OPEN,
         "SERVER_AUTH": AccessLevel.OPEN,
         "PLAYER_CREATE": AccessLevel.BASE,
         "PLAYER_LIST": AccessLevel.BASE,
@@ -295,6 +307,13 @@ class GameServer:
         "GAME_STATE_GET": AccessLevel.BASE,
         "GAME_NEXT_TURN": AccessLevel.BASE,
         "GAME_KICK": AccessLevel.GROUP_ADMIN,
+        "GAME_FACTORY_GET": AccessLevel.BASE,
+        "GAME_FACTORY_JOIN": AccessLevel.PLAYER,
+        "FACTORY_TEMPLATE_LIST": AccessLevel.BASE,
+        "FACTORY_TEMPLATE_GET": AccessLevel.BASE,
+        "FACTORY_TEMPLATE_CREATE": AccessLevel.ADMIN,
+        "FACTORY_TEMPLATE_UPDATE": AccessLevel.ADMIN,
+        "FACTORY_TEMPLATE_DELETE": AccessLevel.ADMIN,
         "GROUP_CREATE": AccessLevel.ADMIN,
         "GROUP_LIST": AccessLevel.BASE,
         "GROUP_SUBSCRIBE": AccessLevel.BASE,
@@ -315,6 +334,7 @@ class GameServer:
 
     # Mapping between a request type and the type used for its response.
     _RESPONSE_TYPES: Dict[str, str] = {
+        "PROTOCOL_INFO": "PROTOCOL_INFO_RESPONSE",
         "SERVER_AUTH": "AUTH_RESPONSE",
         "USER_LOGIN": "AUTH_RESPONSE",
         "USER_LOGOUT": "USER_LOGOUT_RESPONSE",
@@ -339,6 +359,13 @@ class GameServer:
         "GAME_STATE_GET": "GAME_STATE_GET_RESPONSE",
         "GAME_NEXT_TURN": "GAME_NEXT_TURN_RESPONSE",
         "GAME_KICK": "GAME_KICK_RESPONSE",
+        "GAME_FACTORY_GET": "GAME_FACTORY_GET_RESPONSE",
+        "GAME_FACTORY_JOIN": "GAME_FACTORY_JOIN_RESPONSE",
+        "FACTORY_TEMPLATE_LIST": "FACTORY_TEMPLATE_LIST_RESPONSE",
+        "FACTORY_TEMPLATE_GET": "FACTORY_TEMPLATE_GET_RESPONSE",
+        "FACTORY_TEMPLATE_CREATE": "FACTORY_TEMPLATE_CREATE_RESPONSE",
+        "FACTORY_TEMPLATE_UPDATE": "FACTORY_TEMPLATE_UPDATE_RESPONSE",
+        "FACTORY_TEMPLATE_DELETE": "FACTORY_TEMPLATE_DELETE_RESPONSE",
         "GROUP_CREATE": "GROUP_CREATE_RESPONSE",
         "GROUP_LIST": "GROUP_LIST_RESPONSE",
         "GROUP_SUBSCRIBE": "GROUP_SUBSCRIBE_RESPONSE",
@@ -470,6 +497,7 @@ class GameServer:
         self._games: Dict[str, Game] = {}
         self._groups: Dict[str, GameGroup] = {}
         self._players: Dict[str, Player] = {}
+        self._factory_templates: Dict[str, PlayerFactoryTemplate] = {}
         self._game_custom_state: Dict[str, Dict[str, Any]] = {}
         self._game_roles: Dict[str, Dict[str, str]] = {}
         self._game_creator_session: Dict[str, str] = {}
@@ -506,6 +534,7 @@ class GameServer:
             "type": "DISCOVERY_RESPONSE",
             "service_name": SERVICE_NAME,
             "version": PROTOCOL_VERSION,
+            "revision": PROTOCOL_REVISION,
             "service_host": self.host,
             "service_port": self._actual_port,
             "unencrypted_port": self.unencrypted_port,
@@ -780,6 +809,8 @@ class GameServer:
                 self._players[player.ID] = player
             for user in self._save.load(User):
                 self._users[user.username] = user
+            for template in self._save.load(PlayerFactoryTemplate):
+                self._factory_templates[template.ID] = template
             self._restore_game_participants()
             creators = config.get("game_creators")
             if isinstance(creators, dict):
@@ -868,6 +899,8 @@ class GameServer:
                 self._save.save(game)
             for group in self._groups.values():
                 self._save.save(group)
+            for template in self._factory_templates.values():
+                self._save.save(template)
             # The users are saved before the players: saving a user cleans its
             # list of players, which then gives the players worth persisting.
             for user in self._users.values():
@@ -1164,6 +1197,7 @@ class GameServer:
         """
         for game_id in list(session.joined_games):
             self._remove_session_players_from_game(session, game_id)
+        session.factory_game_id = None
         try:
             session.writer.close()
         except Exception:  # pragma: no cover - defensive
@@ -1187,6 +1221,7 @@ class GameServer:
             return
         roles = self._game_roles.get(game_id, {})
         persistent_ids = self._persistent_player_ids()
+        player_left = False
         for player_id in list(session.players):
             if player_id not in roles or player_id in persistent_ids:
                 continue
@@ -1195,10 +1230,13 @@ class GameServer:
                     game.remove_observer(player_id)
                 else:
                     game.remove_player(player_id)
+                    player_left = True
             except PlayerNotFoundInGameError:
                 pass
             roles.pop(player_id, None)
         session.joined_games.discard(game_id)
+        if player_left:
+            self._schedule_factory_update(game_id)
 
     def _persistent_player_ids(self) -> Set[str]:
         """Returns the IDs of the players listed by a user account.
@@ -1212,12 +1250,17 @@ class GameServer:
             for player_id in user.players_id
         }
 
-    def _remove_player_from_games(self, player_id: str) -> None:
+    def _remove_player_from_games(self, player_id: str) -> Set[str]:
         """Removes a player from every game it takes part in.
 
         Args:
             player_id (str): The ID of the player to remove.
+
+        Returns:
+            Set[str]: The IDs of the games the player left as a player (not as
+            an observer).
         """
+        left: Set[str] = set()
         for game_id, roles in self._game_roles.items():
             role = roles.pop(player_id, None)
             game = self._games.get(game_id)
@@ -1228,8 +1271,10 @@ class GameServer:
                     game.remove_observer(player_id)
                 else:
                     game.remove_player(player_id)
+                    left.add(game_id)
             except PlayerNotFoundInGameError:
                 pass
+        return left
 
     # ------------------------------------------------------------------ #
     # Broadcasting and notifications
@@ -1285,6 +1330,71 @@ class GameServer:
             "payload": {"delay": 0, "message": "The server is shutting down."},
         }
         await self._broadcast(set(self._sessions), message)
+
+    def _factory_exclusions(self, game: Game) -> List[Dict[str, Any]]:
+        """Computes the exclusions of the unique options of a game factory.
+
+        Args:
+            game (Game): The game concerned.
+
+        Returns:
+            List[Dict[str, Any]]: One ``{option_id, exclusions}`` entry per
+            unique option, in their order of definition.
+        """
+        factory = game.player_factory
+        if factory is None:
+            return []
+        result = []
+        for option_id, _ in factory.options:
+            entry = factory._find(option_id)
+            if entry.unicity:
+                result.append({"option_id": option_id, "exclusions": factory._exclusions(entry)})
+        return result
+
+    async def _notify_factory_update(self, game_id: str) -> None:
+        """Sends ``GAME_FACTORY_UPDATED`` to the sessions subscribed to a game.
+
+        Args:
+            game_id (str): The ID of the game whose players changed.
+        """
+        game = self._games.get(game_id)
+        if game is None or game.player_factory is None:
+            return
+        targets = {
+            session.session_id
+            for session in self._sessions.values()
+            if session.factory_game_id == game_id
+        }
+        if not targets:
+            return
+        message = {
+            "type": "GAME_FACTORY_UPDATED",
+            "version": PROTOCOL_VERSION,
+            "payload": {"game_id": game_id, "options": self._factory_exclusions(game)},
+        }
+        await self._broadcast(targets, message)
+
+    def _schedule_factory_update(self, game_id: str) -> None:
+        """Schedules a ``GAME_FACTORY_UPDATED`` notification from synchronous code.
+
+        Args:
+            game_id (str): The ID of the game whose players changed.
+        """
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        loop.create_task(self._notify_factory_update(game_id))
+
+    def _unsubscribe_factory(self, game_id: str) -> None:
+        """Ends every subscription to the player factory of a game.
+
+        Args:
+            game_id (str): The ID of the game concerned.
+        """
+        for session in self._sessions.values():
+            if session.factory_game_id == game_id:
+                session.factory_game_id = None
 
     async def _garbage_collection_loop(self) -> None:
         """Periodically removes the players that are no longer needed."""
@@ -1355,6 +1465,26 @@ class GameServer:
     # ------------------------------------------------------------------ #
     # Connection and access handlers
     # ------------------------------------------------------------------ #
+    def _handle_protocol_info(
+        self, session: ClientSession, payload: Dict[str, Any]
+    ) -> Tuple[str, Dict[str, Any]]:
+        """Handles a ``PROTOCOL_INFO`` request (version, revision and features).
+
+        Args:
+            session (ClientSession): The originating session.
+            payload (Dict[str, Any]): The request payload.
+
+        Returns:
+            Tuple[str, Dict[str, Any]]: The response type and payload.
+        """
+        return "PROTOCOL_INFO_RESPONSE", {
+            "success": True,
+            "version": PROTOCOL_VERSION,
+            "revision": PROTOCOL_REVISION,
+            "features": list(PROTOCOL_FEATURES),
+            "message": "Protocol information retrieved successfully",
+        }
+
     def _handle_server_auth(
         self, session: ClientSession, payload: Dict[str, Any]
     ) -> Tuple[str, Dict[str, Any]]:
@@ -1498,10 +1628,27 @@ class GameServer:
                 "message": "Invalid player name.",
             }
         is_default = payload.get("is_default")
-        attributes = payload.get("attributes")
+        sections: Dict[str, Dict[str, Any]] = {}
+        for field in ("static_attributes", "dynamic_attributes", "attributes"):
+            value = payload.get(field)
+            if value is not None and not isinstance(value, dict):
+                return "PLAYER_CREATE_RESPONSE", {
+                    "success": False,
+                    "error_code": "INVALID_DATA",
+                    "message": f"{field} must be an object.",
+                }
+            sections[field] = value or {}
+        # ``attributes`` is kept for compatibility and equals ``dynamic_attributes``.
+        if set(sections["attributes"]).intersection(sections["dynamic_attributes"]):
+            return "PLAYER_CREATE_RESPONSE", {
+                "success": False,
+                "error_code": "INVALID_DATA",
+                "message": "A key cannot appear in both attributes and dynamic_attributes.",
+            }
         player = Player(name=name)
-        if isinstance(attributes, dict):
-            player.dynamic_state.update(attributes)
+        player.static_state.update(sections["static_attributes"])
+        player.dynamic_state.update(sections["attributes"])
+        player.dynamic_state.update(sections["dynamic_attributes"])
         session.players[player.ID] = player
         self._players[player.ID] = player
         if session.user is not None:
@@ -1761,7 +1908,7 @@ class GameServer:
             "message": "User account updated successfully",
         }
 
-    def _handle_user_delete(
+    async def _handle_user_delete(
         self, session: ClientSession, payload: Dict[str, Any]
     ) -> Tuple[str, Dict[str, Any]]:
         """Handles a ``USER_DELETE`` request (account deletion).
@@ -1791,15 +1938,18 @@ class GameServer:
         # The players of an account outlive its connections in their games, so
         # they must leave them with the account.
         account_players = set(user.players_id)
+        left_games: Set[str] = set()
         for player_id in account_players:
             self._players.pop(player_id, None)
-            self._remove_player_from_games(player_id)
+            left_games.update(self._remove_player_from_games(player_id))
         for client in self._sessions.values():
             client.detach_players(account_players)
         for game_id, creator in list(self._game_creator_user.items()):
             if creator == username:
                 self._game_creator_user.pop(game_id, None)
         User._existing_usernames.discard(username)
+        for game_id in left_games:
+            await self._notify_factory_update(game_id)
         self._audit("USER_DELETE", session, username)
         return "USER_DELETE_RESPONSE", {
             "success": True,
@@ -1872,6 +2022,7 @@ class GameServer:
             "observers_count": len(game.observers),
             "max_observers": getattr(game, "_max_observers", None),
             "requires_password": game.hash is not None,
+            "has_player_factory": game.player_factory is not None,
         }
 
     def _resolve_player(
@@ -1986,6 +2137,17 @@ class GameServer:
                     "success": False, "error_code": "INVALID_GROUP_PASSWORD",
                     "message": "Invalid group password.",
                 }
+        template_id = payload.get("factory_template_id")
+        template = None
+        if template_id is not None:
+            if isinstance(template_id, str):
+                template = self._factory_templates.get(template_id)
+            if template is None:
+                return "GAME_CREATE_RESPONSE", {
+                    "success": False,
+                    "error_code": "FACTORY_TEMPLATE_NOT_FOUND",
+                    "message": "Factory template not found.",
+                }
         game = Game(
             name=name,
             max_players=payload.get("max_players"),
@@ -1994,6 +2156,9 @@ class GameServer:
             turn_based=bool(payload.get("turn_based", False)),
             min_players=min_players,
         )
+        if template is not None:
+            # The game has just been created: it is pending and has no player.
+            game.create_player_factory(template)
         attributes = payload.get("attributes")
         if isinstance(attributes, dict):
             game.dynamic_state.update(attributes)
@@ -2203,9 +2368,13 @@ class GameServer:
                 "error_code": "GAME_FULL",
                 "message": "Game is full.",
             }
+        except OptionError as exc:
+            return "GAME_JOIN_RESPONSE", self._option_error_payload(exc)
         roles[player.ID] = role
         session.joined_games.add(game.ID)
         await self._notify_game_update(game, ["players_count", "observers_count"])
+        if role == "PLAYER":
+            await self._notify_factory_update(game.ID)
         return "GAME_JOIN_RESPONSE", {"success": True, "message": "Joined game successfully"}
 
     async def _handle_game_leave(
@@ -2241,8 +2410,9 @@ class GameServer:
                 "error_code": "NOT_IN_GAME",
                 "message": "Player is not in this game.",
             }
+        left_role = roles[player_id]
         try:
-            if roles[player_id] == "OBSERVER":
+            if left_role == "OBSERVER":
                 game.remove_observer(player_id)
             else:
                 game.remove_player(player_id)
@@ -2252,6 +2422,8 @@ class GameServer:
         if not any(pid in roles for pid in session.players):
             session.joined_games.discard(game.ID)
         await self._notify_game_update(game, ["players_count", "observers_count"])
+        if left_role == "PLAYER":
+            await self._notify_factory_update(game.ID)
         return "GAME_LEAVE_RESPONSE", {"success": True, "message": "Left game successfully"}
 
     async def _handle_game_control(
@@ -2313,6 +2485,9 @@ class GameServer:
                 "error_code": "GAME_NOT_STARTED",
                 "message": "Game is not in the required state.",
             }
+        if game.game_state != GameState.PENDING:
+            # No new player can join the game any more.
+            self._unsubscribe_factory(game.ID)
         await self._broadcast_game(
             game.ID,
             {
@@ -2634,8 +2809,9 @@ class GameServer:
                 "error_code": "NOT_IN_GAME",
                 "message": "Target is not in this game.",
             }
+        kicked_role = roles[target_id]
         try:
-            if roles[target_id] == "OBSERVER":
+            if kicked_role == "OBSERVER":
                 game.remove_observer(target_id)
             else:
                 game.remove_player(target_id)
@@ -2643,11 +2819,485 @@ class GameServer:
             pass
         roles.pop(target_id, None)
         await self._notify_game_update(game, ["players_count", "observers_count"])
+        if kicked_role == "PLAYER":
+            await self._notify_factory_update(game.ID)
         return "GAME_KICK_RESPONSE", {
             "success": True,
             "game_id": game.ID,
             "target_id": target_id,
             "message": "Player kicked successfully",
+        }
+
+    # ------------------------------------------------------------------ #
+    # Player factory handlers
+    # ------------------------------------------------------------------ #
+    @staticmethod
+    def _option_error_payload(exc: OptionError) -> Dict[str, Any]:
+        """Translates an option value error into a protocol error payload.
+
+        Args:
+            exc (OptionError): The exception raised by the library.
+
+        Returns:
+            Dict[str, Any]: The error payload, with its ``details`` field.
+        """
+        if isinstance(exc, InvalidOptionValueError):
+            code = "INVALID_OPTION_VALUE"
+            details = {"option_id": exc.option_id, "value": exc.value, "reason": exc.reason}
+        elif isinstance(exc, OptionValueAlreadyGivenError):
+            code = "OPTION_VALUE_ALREADY_GIVEN"
+            details = {"option_id": exc.option_id, "value": exc.value}
+        elif isinstance(exc, LackingOptionError):
+            code = "LACKING_OPTION"
+            details = {"option_id": exc.option_id, "reason": exc.reason}
+        else:  # pragma: no cover - defensive
+            return {"success": False, "error_code": "INVALID_DATA", "message": str(exc)}
+        return {"success": False, "error_code": code, "details": details, "message": str(exc)}
+
+    def _factory_context(self, session: ClientSession) -> Dict[str, str]:
+        """Builds the runtime constants context of a session.
+
+        The context is always built by the server, never accepted from the
+        client.
+
+        Args:
+            session (ClientSession): The session concerned.
+
+        Returns:
+            Dict[str, str]: The ``USERNAME`` (if authenticated),
+            ``CLIENTADDRESS``, ``SERVERNAME`` and ``SERVERADDRESS`` values.
+        """
+        context: Dict[str, str] = {"SERVERNAME": self.name}
+        if session.user is not None:
+            context["USERNAME"] = session.user.username
+        peer = session.peername
+        if isinstance(peer, (tuple, list)) and peer:
+            context["CLIENTADDRESS"] = str(peer[0])
+        try:
+            sockname = session.writer.get_extra_info("sockname")
+        except Exception:  # pragma: no cover - defensive
+            sockname = None
+        if isinstance(sockname, (tuple, list)) and sockname:
+            context["SERVERADDRESS"] = str(sockname[0])
+        return context
+
+    def _check_game_access(
+        self,
+        session: ClientSession,
+        game: Game,
+        payload: Dict[str, Any],
+        response_type: str,
+    ) -> Optional[Tuple[str, Dict[str, Any]]]:
+        """Checks the group password giving access to a game.
+
+        Args:
+            session (ClientSession): The originating session.
+            game (Game): The game concerned.
+            payload (Dict[str, Any]): The request payload.
+            response_type (str): The type of the response to build on failure.
+
+        Returns:
+            Tuple[str, Dict[str, Any]] | None: The error response, or ``None``
+            if access is granted.
+        """
+        group_password = payload.get("group_password")
+        for group in self._groups.values():
+            if game.ID in group.games and not self._authorize_group(session, group, group_password):
+                return response_type, {
+                    "success": False,
+                    "error_code": "INVALID_GROUP_PASSWORD",
+                    "message": "Invalid group password.",
+                }
+        return None
+
+    def _handle_game_factory_get(
+        self, session: ClientSession, payload: Dict[str, Any]
+    ) -> Tuple[str, Dict[str, Any]]:
+        """Handles a ``GAME_FACTORY_GET`` request (player factory of a game).
+
+        A successful request subscribes the session to the
+        ``GAME_FACTORY_UPDATED`` notifications of the game while it is pending.
+
+        Args:
+            session (ClientSession): The originating session.
+            payload (Dict[str, Any]): The request payload.
+
+        Returns:
+            Tuple[str, Dict[str, Any]]: The response type and payload.
+        """
+        response_type = "GAME_FACTORY_GET_RESPONSE"
+        game_id = payload.get("game_id")
+        game = self._games.get(game_id) if isinstance(game_id, str) else None
+        if game is None:
+            return response_type, {
+                "success": False,
+                "error_code": "GAME_NOT_FOUND",
+                "message": "Game not found.",
+            }
+        denied = self._check_game_access(session, game, payload, response_type)
+        if denied is not None:
+            return denied
+        if not _check_password(payload.get("password"), game.hash):
+            return response_type, {
+                "success": False,
+                "error_code": "INVALID_PASSWORD",
+                "message": "Invalid game password.",
+            }
+        factory = game.player_factory
+        if factory is None:
+            return response_type, {
+                "success": False,
+                "error_code": "NO_PLAYER_FACTORY",
+                "message": "The game has no player factory.",
+            }
+        context = self._factory_context(session)
+        options = []
+        for option_id, _ in factory.options:
+            described = factory.get_option(option_id, context)
+            option = described["entry"].to_dict()
+            option["exclusions"] = described["exclusions"]
+            option["proposed_value"] = described["proposed_value"]
+            options.append(option)
+        if game.game_state == GameState.PENDING:
+            session.factory_game_id = game.ID
+        return response_type, {
+            "success": True,
+            "game_id": game.ID,
+            "factory_id": factory.ID,
+            "options": options,
+            "message": "Player factory retrieved successfully",
+        }
+
+    async def _handle_game_factory_join(
+        self, session: ClientSession, payload: Dict[str, Any]
+    ) -> Tuple[str, Dict[str, Any]]:
+        """Handles a ``GAME_FACTORY_JOIN`` request.
+
+        Creates a player from the player factory of a game and makes it join
+        the game as a player, in a single operation.
+
+        Args:
+            session (ClientSession): The originating session.
+            payload (Dict[str, Any]): The request payload.
+
+        Returns:
+            Tuple[str, Dict[str, Any]]: The response type and payload.
+        """
+        response_type = "GAME_FACTORY_JOIN_RESPONSE"
+        game_id = payload.get("game_id")
+        game = self._games.get(game_id) if isinstance(game_id, str) else None
+        if game is None:
+            return response_type, {
+                "success": False,
+                "error_code": "GAME_NOT_FOUND",
+                "message": "Game not found.",
+            }
+        denied = self._check_game_access(session, game, payload, response_type)
+        if denied is not None:
+            return denied
+        values = payload.get("values")
+        if values is None:
+            values = {}
+        if not isinstance(values, dict):
+            return response_type, {
+                "success": False,
+                "error_code": "INVALID_DATA",
+                "message": "values must be an object.",
+            }
+        if game.player_factory is None:
+            return response_type, {
+                "success": False,
+                "error_code": "NO_PLAYER_FACTORY",
+                "message": "The game has no player factory.",
+            }
+        if game.game_state != GameState.PENDING:
+            return response_type, {
+                "success": False,
+                "error_code": "GAME_ALREADY_STARTED",
+                "message": "Game already started.",
+            }
+        try:
+            player = game.create_and_join_player(
+                values,
+                password=payload.get("password"),
+                context=self._factory_context(session),
+            )
+        except PlayerFactoryNotDefinedError:
+            return response_type, {
+                "success": False,
+                "error_code": "NO_PLAYER_FACTORY",
+                "message": "The game has no player factory.",
+            }
+        except PasswordError:
+            return response_type, {
+                "success": False,
+                "error_code": "INVALID_PASSWORD",
+                "message": "Invalid game password.",
+            }
+        except GameIsFullError:
+            return response_type, {
+                "success": False,
+                "error_code": "GAME_FULL",
+                "message": "Game is full.",
+            }
+        except OptionError as exc:
+            return response_type, self._option_error_payload(exc)
+
+        # The player is attached to the session as with PLAYER_CREATE.
+        self._players[player.ID] = player
+        session.players[player.ID] = player
+        if session.user is not None:
+            session.user.players_id.append(player.ID)
+        is_default = payload.get("is_default")
+        if is_default or session.resolve_default_player_id() is None:
+            session.set_default_player(player.ID)
+        self._game_roles.setdefault(game.ID, {})[player.ID] = "PLAYER"
+        session.joined_games.add(game.ID)
+        if session.factory_game_id == game.ID:
+            session.factory_game_id = None
+        await self._notify_game_update(game, ["players_count"])
+        await self._notify_factory_update(game.ID)
+        return response_type, {
+            "success": True,
+            "player_id": player.ID,
+            "name": player.name,
+            "static_attributes": dict(player.static_state),
+            "dynamic_attributes": dict(player.dynamic_state),
+            "message": "Player created and joined game successfully",
+        }
+
+    # ------------------------------------------------------------------ #
+    # Factory template handlers
+    # ------------------------------------------------------------------ #
+    @staticmethod
+    def _build_template(
+        name: str,
+        options: List[Any],
+        template_id: Optional[str] = None,
+        keep_identity: bool = False,
+    ) -> Tuple[Optional[PlayerFactoryTemplate], Optional[Dict[str, Any]]]:
+        """Builds a template from option definitions sent by a client.
+
+        Unless ``keep_identity`` is set, the IDs and keys provided are ignored:
+        the options receive new IDs, and their frozen key is their name.
+
+        Args:
+            name (str): The name of the template.
+            options (List[Any]): The option definitions, in order.
+            template_id (str | None): The ID to give to the template.
+            keep_identity (bool): Whether to keep the IDs and keys provided.
+
+        Returns:
+            Tuple: The built template and ``None``, or ``None`` and the error
+            payload.
+        """
+        template = PlayerFactoryTemplate(name)
+        if template_id is not None:
+            template._id = template_id
+        for index, definition in enumerate(options):
+            if not isinstance(definition, dict):
+                return None, {
+                    "success": False,
+                    "error_code": "INVALID_OPTION",
+                    "details": {"option_index": index, "reason": "Option must be an object."},
+                    "message": f"Invalid option at index {index}.",
+                }
+            data = dict(definition)
+            if not keep_identity:
+                data.pop("option_id", None)
+                data.pop("key", None)
+            try:
+                entry = OptionEntry.from_dict(data)
+            except (TypeError, ValueError) as exc:
+                return None, {
+                    "success": False,
+                    "error_code": "INVALID_OPTION",
+                    "details": {"option_index": index, "reason": str(exc)},
+                    "message": f"Invalid option at index {index}: {exc}",
+                }
+            try:
+                template._add_entry(entry)
+            except OptionAlreadyExistsError as exc:
+                return None, {
+                    "success": False,
+                    "error_code": "OPTION_ALREADY_EXISTS",
+                    "details": {"option_index": index, "reason": str(exc)},
+                    "message": f"Option at index {index} already exists.",
+                }
+        return template, None
+
+    def _handle_factory_template_list(
+        self, session: ClientSession, payload: Dict[str, Any]
+    ) -> Tuple[str, Dict[str, Any]]:
+        """Handles a ``FACTORY_TEMPLATE_LIST`` request.
+
+        Args:
+            session (ClientSession): The originating session.
+            payload (Dict[str, Any]): The request payload.
+
+        Returns:
+            Tuple[str, Dict[str, Any]]: The response type and payload.
+        """
+        templates = [
+            {
+                "template_id": template.ID,
+                "name": template.name,
+                "options_count": len(template.options),
+            }
+            for template in self._factory_templates.values()
+        ]
+        return "FACTORY_TEMPLATE_LIST_RESPONSE", {
+            "success": True,
+            "templates": templates,
+            "message": "Factory templates retrieved successfully",
+        }
+
+    def _handle_factory_template_get(
+        self, session: ClientSession, payload: Dict[str, Any]
+    ) -> Tuple[str, Dict[str, Any]]:
+        """Handles a ``FACTORY_TEMPLATE_GET`` request.
+
+        Args:
+            session (ClientSession): The originating session.
+            payload (Dict[str, Any]): The request payload.
+
+        Returns:
+            Tuple[str, Dict[str, Any]]: The response type and payload.
+        """
+        template_id = payload.get("template_id")
+        template = (
+            self._factory_templates.get(template_id) if isinstance(template_id, str) else None
+        )
+        if template is None:
+            return "FACTORY_TEMPLATE_GET_RESPONSE", {
+                "success": False,
+                "error_code": "FACTORY_TEMPLATE_NOT_FOUND",
+                "message": "Factory template not found.",
+            }
+        response = {"success": True}
+        response.update(template.to_dict())
+        response["message"] = "Factory template retrieved successfully"
+        return "FACTORY_TEMPLATE_GET_RESPONSE", response
+
+    def _handle_factory_template_create(
+        self, session: ClientSession, payload: Dict[str, Any]
+    ) -> Tuple[str, Dict[str, Any]]:
+        """Handles a ``FACTORY_TEMPLATE_CREATE`` request (administrator).
+
+        Args:
+            session (ClientSession): The originating session.
+            payload (Dict[str, Any]): The request payload.
+
+        Returns:
+            Tuple[str, Dict[str, Any]]: The response type and payload.
+        """
+        response_type = "FACTORY_TEMPLATE_CREATE_RESPONSE"
+        name = payload.get("name")
+        options = payload.get("options")
+        if not isinstance(name, str) or not name or not isinstance(options, list):
+            return response_type, {
+                "success": False,
+                "error_code": "INVALID_DATA",
+                "message": "A template name and a list of options are required.",
+            }
+        template, error = self._build_template(name, options)
+        if template is None:
+            return response_type, error  # type: ignore[return-value]
+        self._factory_templates[template.ID] = template
+        self._audit("FACTORY_TEMPLATE_CREATE", session, template.ID)
+        return response_type, {
+            "success": True,
+            "template_id": template.ID,
+            "option_ids": [option_id for option_id, _ in template.options],
+            "message": "Factory template created successfully",
+        }
+
+    def _handle_factory_template_update(
+        self, session: ClientSession, payload: Dict[str, Any]
+    ) -> Tuple[str, Dict[str, Any]]:
+        """Handles a ``FACTORY_TEMPLATE_UPDATE`` request (administrator).
+
+        The update is atomic: a new template is built, then replaces the
+        existing one in the registry.
+
+        Args:
+            session (ClientSession): The originating session.
+            payload (Dict[str, Any]): The request payload.
+
+        Returns:
+            Tuple[str, Dict[str, Any]]: The response type and payload.
+        """
+        response_type = "FACTORY_TEMPLATE_UPDATE_RESPONSE"
+        template_id = payload.get("template_id")
+        current = (
+            self._factory_templates.get(template_id) if isinstance(template_id, str) else None
+        )
+        if current is None:
+            return response_type, {
+                "success": False,
+                "error_code": "FACTORY_TEMPLATE_NOT_FOUND",
+                "message": "Factory template not found.",
+            }
+        name = payload.get("name")
+        options = payload.get("options")
+        if name is None and options is None:
+            return response_type, {
+                "success": False,
+                "error_code": "INVALID_DATA",
+                "message": "A new name or a new list of options is required.",
+            }
+        if (name is not None and (not isinstance(name, str) or not name)) or (
+            options is not None and not isinstance(options, list)
+        ):
+            return response_type, {
+                "success": False,
+                "error_code": "INVALID_DATA",
+                "message": "Invalid template name or options.",
+            }
+        keep_identity = options is None
+        if options is None:
+            options = current.to_dict()["options"]
+        template, error = self._build_template(
+            name if name is not None else current.name,
+            options,
+            template_id=current.ID,
+            keep_identity=keep_identity,
+        )
+        if template is None:
+            return response_type, error  # type: ignore[return-value]
+        self._factory_templates[template.ID] = template
+        self._audit("FACTORY_TEMPLATE_UPDATE", session, template.ID)
+        return response_type, {
+            "success": True,
+            "template_id": template.ID,
+            "option_ids": [option_id for option_id, _ in template.options],
+            "message": "Factory template updated successfully",
+        }
+
+    def _handle_factory_template_delete(
+        self, session: ClientSession, payload: Dict[str, Any]
+    ) -> Tuple[str, Dict[str, Any]]:
+        """Handles a ``FACTORY_TEMPLATE_DELETE`` request (administrator).
+
+        Args:
+            session (ClientSession): The originating session.
+            payload (Dict[str, Any]): The request payload.
+
+        Returns:
+            Tuple[str, Dict[str, Any]]: The response type and payload.
+        """
+        template_id = payload.get("template_id")
+        if not isinstance(template_id, str) or template_id not in self._factory_templates:
+            return "FACTORY_TEMPLATE_DELETE_RESPONSE", {
+                "success": False,
+                "error_code": "FACTORY_TEMPLATE_NOT_FOUND",
+                "message": "Factory template not found.",
+            }
+        self._factory_templates.pop(template_id)
+        self._audit("FACTORY_TEMPLATE_DELETE", session, template_id)
+        return "FACTORY_TEMPLATE_DELETE_RESPONSE", {
+            "success": True,
+            "message": "Factory template deleted successfully",
         }
 
     # ------------------------------------------------------------------ #

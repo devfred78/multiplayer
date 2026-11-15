@@ -20,10 +20,15 @@ import struct
 import threading
 import uuid
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from . import UserRole
-from .exceptions import MultiplayerError, PasswordError, UserNotFoundError
+from .exceptions import (
+    MultiplayerError,
+    PasswordError,
+    UnsupportedFeatureError,
+    UserNotFoundError,
+)
 from .game import Player, User
 
 try:
@@ -36,6 +41,10 @@ except ImportError:  # pragma: no cover - optional dependency
 
 # Protocol-wide constants (kept in sync with the server implementation).
 PROTOCOL_VERSION = 2
+# Revision assumed for a server that does not announce its revision.
+BASE_REVISION = "2.0"
+# Optional protocol feature used by the player factory methods.
+FEATURE_PLAYER_FACTORY = "player_factory"
 SERVICE_NAME = "multiplayer_server"
 LENGTH_HEADER_SIZE = 4
 
@@ -58,6 +67,7 @@ NOTIFICATION_TYPES = frozenset(
         "GAME_EVENT",
         "GAME_STATE_CHANGED",
         "GAME_TURN_CHANGED",
+        "GAME_FACTORY_UPDATED",
     }
 )
 
@@ -107,6 +117,10 @@ class GameClient:
         is_connected (bool): Whether the client is currently connected.
         session_user (User | None): The user associated with the current
             session, updated when the user authenticates.
+        server_revision (str | None): The protocol revision announced by the
+            server, ``None`` while not connected.
+        server_features (tuple[str, ...]): The optional protocol features
+            offered by the server.
     """
 
     def __init__(
@@ -150,10 +164,31 @@ class GameClient:
         self.__running: bool = False
         self.__is_connected: bool = False
         self.__session_user: Optional[User] = None
+        self.__server_revision: Optional[str] = None
+        self.__server_features: Tuple[str, ...] = ()
 
     # ------------------------------------------------------------------ #
     # Read-only properties
     # ------------------------------------------------------------------ #
+    @property
+    def server_revision(self) -> Optional[str]:
+        """The protocol revision announced by the server.
+
+        Returns:
+            str | None: The revision (e.g. ``"2.1"``), ``"2.0"`` if the server
+            does not support ``PROTOCOL_INFO``, or ``None`` while not connected.
+        """
+        return self.__server_revision
+
+    @property
+    def server_features(self) -> Tuple[str, ...]:
+        """The optional protocol features offered by the server.
+
+        Returns:
+            tuple[str, ...]: The features (e.g. ``("player_factory",)``).
+        """
+        return self.__server_features
+
     @property
     def tls_ca_path(self) -> Optional[Path]:
         """The path to the TLS validation certificate.
@@ -324,6 +359,7 @@ class GameClient:
                     "unencrypted_port": message.get("unencrypted_port"),
                     "use_tls": message.get("use_tls", False),
                     "password_required": message.get("password_required", False),
+                    "revision": message.get("revision") or BASE_REVISION,
                 }
                 key = (info["host"], info["port"])
                 if key in seen:
@@ -343,7 +379,9 @@ class GameClient:
         Uses ``host``, ``port`` and ``use_tls`` (together with ``tls_ca_path``
         when provided, otherwise the system root certificates) to establish the
         connection, then starts the background receiver used to dispatch
-        notifications.
+        notifications. Finally sends a ``PROTOCOL_INFO`` request to fill in
+        :attr:`server_revision` and :attr:`server_features`; a revision 2.0
+        server answering ``UNKNOWN_TYPE`` does not make the connection fail.
 
         Raises:
             ConnectionError: If the connection cannot be established.
@@ -371,6 +409,43 @@ class GameClient:
             target=self._receive_loop, name="GameClientReceiver", daemon=True
         )
         self.__receiver_thread.start()
+        self._fetch_protocol_info()
+
+    def _fetch_protocol_info(self) -> None:
+        """Retrieves the protocol revision and features of the server.
+
+        Raises:
+            ConnectionError: If the server does not answer.
+        """
+        try:
+            payload = self._exchange("PROTOCOL_INFO", {})
+        except ConnectionError:
+            self.disconnect()
+            raise
+        revision = payload.get("revision")
+        features = payload.get("features")
+        if payload.get("success") is True and isinstance(revision, str):
+            self.__server_revision = revision
+            self.__server_features = tuple(
+                feature for feature in (features if isinstance(features, list) else [])
+                if isinstance(feature, str)
+            )
+        else:
+            # A revision 2.0 server does not know PROTOCOL_INFO (UNKNOWN_TYPE).
+            self.__server_revision = BASE_REVISION
+            self.__server_features = ()
+
+    def _require_feature(self, feature: str) -> None:
+        """Checks that the server offers a protocol feature.
+
+        Args:
+            feature (str): The name of the feature.
+
+        Raises:
+            UnsupportedFeatureError: If the server does not offer the feature.
+        """
+        if feature not in self.__server_features:
+            raise UnsupportedFeatureError(feature, self.__server_revision)
 
     def _build_tls_context(self) -> ssl.SSLContext:
         """Builds the TLS client context used to secure the connection.
@@ -393,6 +468,8 @@ class GameClient:
         self.__running = False
         self.__is_connected = False
         self.__session_user = None
+        self.__server_revision = None
+        self.__server_features = ()
         sock = self.__socket
         self.__socket = None
         if sock is not None:
@@ -643,7 +720,13 @@ class GameClient:
             raise exc
         raise MultiplayerError(message)
 
-    def create_player(self, name: str, is_default: bool = True) -> Player:
+    def create_player(
+        self,
+        name: str,
+        is_default: bool = True,
+        static_attributes: Optional[Dict[str, Any]] = None,
+        dynamic_attributes: Optional[Dict[str, Any]] = None,
+    ) -> Player:
         """Creates a session player on the server.
 
         Sends a ``PLAYER_CREATE`` request and, on success, mirrors the created
@@ -652,23 +735,45 @@ class GameClient:
         server adds the new player to its ``players_id`` list, and so does the
         local mirror held by :attr:`session_user`.
 
+        With a revision 2.0 server, the dynamic attributes are sent in the
+        ``attributes`` field, and static attributes cannot be sent.
+
         Args:
             name (str): The name of the player to create.
             is_default (bool): Whether the created player becomes the default
                 player of the session. Defaults to ``True``.
+            static_attributes (dict | None): Custom attributes stored in the
+                ``static_state`` dictionary of the player. Defaults to ``None``.
+            dynamic_attributes (dict | None): Custom attributes stored in the
+                ``dynamic_state`` dictionary of the player. Defaults to ``None``.
 
         Returns:
             Player: The locally mirrored created player.
 
         Raises:
+            UnsupportedFeatureError: If static attributes are provided to a
+                revision 2.0 server (the request is not sent).
             MultiplayerError: If the server rejects the creation.
             ConnectionError: If the client is not connected.
         """
-        payload = self.send_request("PLAYER_CREATE", name=name, is_default=is_default)
+        arguments: Dict[str, Any] = {"name": name, "is_default": is_default}
+        if self.__server_revision == BASE_REVISION:
+            if static_attributes:
+                raise UnsupportedFeatureError("static_attributes", self.__server_revision)
+            if dynamic_attributes:
+                arguments["attributes"] = dict(dynamic_attributes)
+        else:
+            if static_attributes:
+                arguments["static_attributes"] = dict(static_attributes)
+            if dynamic_attributes:
+                arguments["dynamic_attributes"] = dict(dynamic_attributes)
+        payload = self.send_request("PLAYER_CREATE", **arguments)
         player = Player(name=name)
         player_id = payload.get("player_id")
         if isinstance(player_id, str):
             player._id = player_id
+        player.static_state.update(static_attributes or {})
+        player.dynamic_state.update(dynamic_attributes or {})
         if self.__session_user is not None:
             self.__session_user.players_id.append(player.ID)
         return player
@@ -709,6 +814,229 @@ class GameClient:
         if reset_state:
             arguments["reset_state"] = True
         return self.send_request("PLAYER_UPDATE", **arguments)
+
+    def create_game(
+        self,
+        name: str,
+        min_players: int = 0,
+        max_players: Optional[int] = None,
+        max_observers: Optional[int] = None,
+        turn_based: bool = False,
+        password: Optional[str] = None,
+        group_id: Optional[str] = None,
+        group_password: Optional[str] = None,
+        factory_template_id: Optional[str] = None,
+        attributes: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        """Creates a game on the server.
+
+        Sends a ``GAME_CREATE`` request. A player factory can be given to the
+        game from a template held by the server (``factory_template_id``).
+
+        Args:
+            name (str): The name of the game.
+            min_players (int): The minimum number of players. Defaults to 0.
+            max_players (int | None): The maximum number of players (``None``
+                for unlimited). Defaults to ``None``.
+            max_observers (int | None): The maximum number of observers
+                (``None`` for unlimited). Defaults to ``None``.
+            turn_based (bool): Whether the game is turn-based. Defaults to False.
+            password (str | None): The password of the game. Defaults to ``None``.
+            group_id (str | None): The group of the game. Defaults to ``None``.
+            group_password (str | None): The password of the group. Defaults
+                to ``None``.
+            factory_template_id (str | None): The ID of the factory template
+                to apply to the game. Defaults to ``None``.
+            attributes (dict | None): The custom attributes of the game.
+                Defaults to ``None``.
+
+        Returns:
+            str: The ID of the created game.
+
+        Raises:
+            UnsupportedFeatureError: If a factory template is requested from a
+                server without the ``player_factory`` feature (the request is
+                not sent).
+            MultiplayerError: If the server rejects the creation.
+            ConnectionError: If the client is not connected.
+        """
+        if factory_template_id is not None:
+            self._require_feature(FEATURE_PLAYER_FACTORY)
+        arguments: Dict[str, Any] = {
+            "name": name,
+            "min_players": min_players,
+            "max_players": max_players,
+            "max_observers": max_observers,
+            "turn_based": turn_based,
+        }
+        optional = {
+            "password": password,
+            "group_id": group_id,
+            "group_password": group_password,
+            "factory_template_id": factory_template_id,
+            "attributes": attributes,
+        }
+        arguments.update({key: value for key, value in optional.items() if value is not None})
+        payload = self.send_request("GAME_CREATE", **arguments)
+        return payload.get("game_id", "")
+
+    # ------------------------------------------------------------------ #
+    # Player factories
+    # ------------------------------------------------------------------ #
+    def _factory_request(self, command: str, **kwargs: Any) -> Dict[str, Any]:
+        """Sends a request requiring the ``player_factory`` feature.
+
+        Args:
+            command (str): The command to send.
+            **kwargs: The arguments of the command.
+
+        Returns:
+            Dict[str, Any]: The payload of the server response.
+
+        Raises:
+            UnsupportedFeatureError: If the server does not offer the feature.
+            MultiplayerError: If the server returns an error.
+            ConnectionError: If the client is not connected.
+        """
+        self._require_feature(FEATURE_PLAYER_FACTORY)
+        return self.send_request(command, **kwargs)
+
+    def list_factory_templates(self) -> Dict[str, Any]:
+        """Retrieves the factory templates available on the server.
+
+        Returns:
+            Dict[str, Any]: The ``FACTORY_TEMPLATE_LIST_RESPONSE`` payload.
+        """
+        return self._factory_request("FACTORY_TEMPLATE_LIST")
+
+    def get_factory_template(self, template_id: str) -> Dict[str, Any]:
+        """Retrieves the full definition of a factory template.
+
+        Args:
+            template_id (str): The ID of the template.
+
+        Returns:
+            Dict[str, Any]: The ``FACTORY_TEMPLATE_GET_RESPONSE`` payload.
+        """
+        return self._factory_request("FACTORY_TEMPLATE_GET", template_id=template_id)
+
+    def create_factory_template(self, name: str, options: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Creates a factory template on the server (administrator).
+
+        Args:
+            name (str): The name of the template.
+            options (list[dict]): The definitions of the options.
+
+        Returns:
+            Dict[str, Any]: The ``FACTORY_TEMPLATE_CREATE_RESPONSE`` payload.
+        """
+        return self._factory_request("FACTORY_TEMPLATE_CREATE", name=name, options=options)
+
+    def update_factory_template(
+        self,
+        template_id: str,
+        name: Optional[str] = None,
+        options: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
+        """Updates a factory template on the server (administrator).
+
+        Args:
+            template_id (str): The ID of the template.
+            name (str | None): The new name. Defaults to ``None`` (unchanged).
+            options (list[dict] | None): The new complete list of options.
+                Defaults to ``None`` (unchanged).
+
+        Returns:
+            Dict[str, Any]: The ``FACTORY_TEMPLATE_UPDATE_RESPONSE`` payload.
+
+        Raises:
+            ValueError: If neither a name nor options are provided.
+        """
+        if name is None and options is None:
+            raise ValueError("A new name or a new list of options is required.")
+        self._require_feature(FEATURE_PLAYER_FACTORY)
+        arguments: Dict[str, Any] = {"template_id": template_id}
+        if name is not None:
+            arguments["name"] = name
+        if options is not None:
+            arguments["options"] = options
+        return self.send_request("FACTORY_TEMPLATE_UPDATE", **arguments)
+
+    def delete_factory_template(self, template_id: str) -> Dict[str, Any]:
+        """Deletes a factory template from the server (administrator).
+
+        Args:
+            template_id (str): The ID of the template.
+
+        Returns:
+            Dict[str, Any]: The ``FACTORY_TEMPLATE_DELETE_RESPONSE`` payload.
+        """
+        return self._factory_request("FACTORY_TEMPLATE_DELETE", template_id=template_id)
+
+    def get_game_factory(
+        self,
+        game_id: str,
+        password: Optional[str] = None,
+        group_password: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Retrieves the player factory of a game.
+
+        A successful request subscribes the session to the
+        ``GAME_FACTORY_UPDATED`` notifications of the game.
+
+        Args:
+            game_id (str): The ID of the game.
+            password (str | None): The password of the game. Defaults to ``None``.
+            group_password (str | None): The password of a protected group
+                containing the game. Defaults to ``None``.
+
+        Returns:
+            Dict[str, Any]: The ``GAME_FACTORY_GET_RESPONSE`` payload.
+        """
+        arguments: Dict[str, Any] = {"game_id": game_id}
+        if password is not None:
+            arguments["password"] = password
+        if group_password is not None:
+            arguments["group_password"] = group_password
+        return self._factory_request("GAME_FACTORY_GET", **arguments)
+
+    def join_game_with_factory(
+        self,
+        game_id: str,
+        values: Optional[Dict[str, Any]] = None,
+        password: Optional[str] = None,
+        group_password: Optional[str] = None,
+        is_default: Optional[bool] = None,
+    ) -> Dict[str, Any]:
+        """Creates a player from the factory of a game and makes it join the game.
+
+        Args:
+            game_id (str): The ID of the game.
+            values (dict | None): The chosen values, indexed by the IDs of the
+                options of the factory. Defaults to ``None``.
+            password (str | None): The password of the game. Defaults to ``None``.
+            group_password (str | None): The password of a protected group
+                containing the game. Defaults to ``None``.
+            is_default (bool | None): Whether the created player becomes the
+                default player of the session. ``None`` lets the server rule
+                apply. Defaults to ``None``.
+
+        Returns:
+            Dict[str, Any]: The ``GAME_FACTORY_JOIN_RESPONSE`` payload.
+        """
+        arguments: Dict[str, Any] = {"game_id": game_id}
+        optional = {
+            "values": values,
+            "password": password,
+            "group_password": group_password,
+            "is_default": is_default,
+        }
+        arguments.update({key: value for key, value in optional.items() if value is not None})
+        payload = self._factory_request("GAME_FACTORY_JOIN", **arguments)
+        player_id = payload.get("player_id")
+        if self.__session_user is not None and isinstance(player_id, str):
+            self.__session_user.players_id.append(player_id)
+        return payload
 
     def save_persistence(self) -> Dict[str, Any]:
         """Requests an immediate persistence save on the server.

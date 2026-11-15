@@ -1313,3 +1313,271 @@ def test_player_list_all_reports_the_players_of_the_accounts_as_persistent():
         assert persistence == {owned: True, guest: False}
     finally:
         User._existing_usernames.discard("persistent_user")
+
+
+# ---------------------------------------------------------------------- #
+# Protocol revision 2.1: protocol information and player factories
+# ---------------------------------------------------------------------- #
+_CHESS_OPTIONS = [
+    {
+        "type": "LIST", "name": "Color", "choices": ["white", "black"],
+        "default": "%%RANDOM_CHOICE%%", "unicity": True, "target": "STATIC",
+    },
+    {
+        "type": "TEXT", "name": "Nickname", "default": "%%USERNAME%%",
+        "unicity": True, "target": "ATTRIBUTE", "attribute": "name",
+    },
+]
+
+
+def _create_chess_template(server):
+    admin = _make_named_session(server, "template-admin", AccessLevel.ADMIN)
+    created = _dispatch(
+        server, admin, "FACTORY_TEMPLATE_CREATE", {"name": "Chess", "options": _CHESS_OPTIONS}
+    )
+    assert created["payload"]["success"] is True
+    return created["payload"]["template_id"]
+
+
+def test_protocol_info_is_available_at_open_level():
+    server = GameServer(password="secret")
+    session, _ = _make_session(server, AccessLevel.OPEN)
+    response = _dispatch(server, session, "PROTOCOL_INFO")
+    assert response["type"] == "PROTOCOL_INFO_RESPONSE"
+    assert response["payload"]["success"] is True
+    assert response["payload"]["version"] == 2
+    assert response["payload"]["revision"] == "2.1"
+    assert response["payload"]["features"] == ["player_factory"]
+
+
+def test_discovery_response_announces_the_revision():
+    assert GameServer().build_discovery_response()["revision"] == "2.1"
+
+
+def test_player_create_with_static_and_dynamic_attributes():
+    server = GameServer()
+    session, _ = _make_session(server)
+    created = _dispatch(server, session, "PLAYER_CREATE", {
+        "name": "Alice",
+        "static_attributes": {"color": "blue"},
+        "dynamic_attributes": {"score": 0},
+        "attributes": {"lives": 3},
+    })
+    player = server._players[created["payload"]["player_id"]]
+    assert player.static_state == {"color": "blue"}
+    assert player.dynamic_state == {"score": 0, "lives": 3}
+    conflict = _dispatch(server, session, "PLAYER_CREATE", {
+        "name": "Bob", "dynamic_attributes": {"score": 0}, "attributes": {"score": 1},
+    })
+    assert conflict["payload"]["error_code"] == "INVALID_DATA"
+    malformed = _dispatch(server, session, "PLAYER_CREATE", {"name": "Bob", "static_attributes": []})
+    assert malformed["payload"]["error_code"] == "INVALID_DATA"
+
+
+def test_factory_template_management_requires_admin():
+    server = GameServer()
+    session, _ = _make_session(server)
+    denied = _dispatch(
+        server, session, "FACTORY_TEMPLATE_CREATE", {"name": "Chess", "options": []}
+    )
+    assert denied["payload"]["error_code"] == "INSUFFICIENT_PERMISSIONS"
+
+
+def test_factory_template_crud():
+    server = GameServer()
+    template_id = _create_chess_template(server)
+    session, _ = _make_session(server)
+    listed = _dispatch(server, session, "FACTORY_TEMPLATE_LIST")
+    assert listed["payload"]["templates"] == [
+        {"template_id": template_id, "name": "Chess", "options_count": 2}
+    ]
+    details = _dispatch(server, session, "FACTORY_TEMPLATE_GET", {"template_id": template_id})
+    assert details["payload"]["name"] == "Chess"
+    assert details["payload"]["options"][1]["default"] == "%%USERNAME%%"
+    assert details["payload"]["options"][1]["key"] == "Nickname"
+
+    admin = _make_named_session(server, "crud-admin", AccessLevel.ADMIN)
+    renamed = _dispatch(
+        server, admin, "FACTORY_TEMPLATE_UPDATE", {"template_id": template_id, "name": "Chess 2"}
+    )
+    assert renamed["payload"]["success"] is True
+    assert renamed["payload"]["option_ids"] == [
+        option["option_id"] for option in details["payload"]["options"]
+    ]
+    replaced = _dispatch(server, admin, "FACTORY_TEMPLATE_UPDATE", {
+        "template_id": template_id, "options": _CHESS_OPTIONS[:1],
+    })
+    assert len(replaced["payload"]["option_ids"]) == 1
+    assert replaced["payload"]["option_ids"][0] != details["payload"]["options"][0]["option_id"]
+    empty = _dispatch(server, admin, "FACTORY_TEMPLATE_UPDATE", {"template_id": template_id})
+    assert empty["payload"]["error_code"] == "INVALID_DATA"
+
+    deleted = _dispatch(server, admin, "FACTORY_TEMPLATE_DELETE", {"template_id": template_id})
+    assert deleted["payload"]["success"] is True
+    missing = _dispatch(server, session, "FACTORY_TEMPLATE_GET", {"template_id": template_id})
+    assert missing["payload"]["error_code"] == "FACTORY_TEMPLATE_NOT_FOUND"
+    actions = [entry["action"] for entry in server._audit_log]
+    assert actions == [
+        "FACTORY_TEMPLATE_CREATE",
+        "FACTORY_TEMPLATE_UPDATE",
+        "FACTORY_TEMPLATE_UPDATE",
+        "FACTORY_TEMPLATE_DELETE",
+    ]
+
+
+def test_factory_template_create_reports_the_invalid_option():
+    server = GameServer()
+    admin, _ = _make_session(server, AccessLevel.ADMIN)
+    invalid = _dispatch(server, admin, "FACTORY_TEMPLATE_CREATE", {"name": "Bad", "options": [
+        _CHESS_OPTIONS[0],
+        {"type": "RANGE", "name": "Level", "target": "ATTRIBUTE", "attribute": "name"},
+    ]})
+    assert invalid["payload"]["error_code"] == "INVALID_OPTION"
+    assert invalid["payload"]["details"]["option_index"] == 1
+    duplicate = _dispatch(server, admin, "FACTORY_TEMPLATE_CREATE", {
+        "name": "Bad", "options": [_CHESS_OPTIONS[0], _CHESS_OPTIONS[0]],
+    })
+    assert duplicate["payload"]["error_code"] == "OPTION_ALREADY_EXISTS"
+    assert duplicate["payload"]["details"]["option_index"] == 1
+    assert server._factory_templates == {}
+
+
+def test_game_create_with_unknown_template_creates_no_game():
+    server = GameServer()
+    session, _ = _make_session(server)
+    response = _dispatch(
+        server, session, "GAME_CREATE", {"name": "Chess", "factory_template_id": "unknown"}
+    )
+    assert response["payload"]["error_code"] == "FACTORY_TEMPLATE_NOT_FOUND"
+    assert server._games == {}
+
+
+def test_game_factory_get_and_join_with_notifications():
+    server = GameServer(name="srv")
+    try:
+        template_id = _create_chess_template(server)
+        _register_user(server, "factory_alice")
+        _register_user(server, "factory_bob")
+        alice = _login(server, "alice-session", "factory_alice")
+        bob = _login(server, "bob-session", "factory_bob")
+        created = _dispatch(
+            server, alice, "GAME_CREATE", {"name": "Chess", "factory_template_id": template_id}
+        )
+        game_id = created["payload"]["game_id"]
+        listed = _dispatch(server, alice, "GAME_LIST")
+        assert listed["payload"]["games"][0]["has_player_factory"] is True
+
+        form = _dispatch(server, bob, "GAME_FACTORY_GET", {"game_id": game_id})
+        assert form["payload"]["success"] is True
+        nickname = form["payload"]["options"][1]
+        assert nickname["proposed_value"] == "factory_bob" and nickname["exclusions"] == []
+        assert bob.factory_game_id == game_id
+
+        color_id = form["payload"]["options"][0]["option_id"]
+        joined = _dispatch(server, alice, "GAME_FACTORY_JOIN", {
+            "game_id": game_id, "values": {color_id: "white"},
+        })
+        assert joined["payload"]["success"] is True
+        assert joined["payload"]["name"] == "factory_alice"
+        assert joined["payload"]["static_attributes"] == {"Color": "white"}
+        player_id = joined["payload"]["player_id"]
+        assert player_id in server._users["factory_alice"].players_id
+        assert server._game_roles[game_id][player_id] == "PLAYER"
+
+        notifications = [
+            message for message in _decode_messages(bob.writer.buffer)
+            if message["type"] == "GAME_FACTORY_UPDATED"
+        ]
+        assert notifications[-1]["payload"] == {
+            "game_id": game_id,
+            "options": [
+                {"option_id": color_id, "exclusions": ["white"]},
+                {"option_id": nickname["option_id"], "exclusions": ["factory_alice"]},
+            ],
+        }
+
+        taken = _dispatch(server, bob, "GAME_FACTORY_JOIN", {
+            "game_id": game_id, "values": {color_id: "white"},
+        })
+        assert taken["payload"]["error_code"] == "OPTION_VALUE_ALREADY_GIVEN"
+        assert taken["payload"]["details"] == {"option_id": color_id, "value": "white"}
+        unknown = _dispatch(
+            server, bob, "GAME_FACTORY_JOIN", {"game_id": game_id, "values": {"x": 1}}
+        )
+        assert unknown["payload"]["error_code"] == "INVALID_OPTION_VALUE"
+        assert unknown["payload"]["details"]["reason"] == "UNKNOWN_OPTION"
+
+        second = _dispatch(server, bob, "GAME_FACTORY_JOIN", {"game_id": game_id})
+        assert second["payload"]["static_attributes"] == {"Color": "black"}
+        assert bob.factory_game_id is None
+    finally:
+        User._existing_usernames.discard("factory_alice")
+        User._existing_usernames.discard("factory_bob")
+
+
+def test_game_factory_requests_errors():
+    server = GameServer()
+    session, _ = _make_session(server)
+    plain = _dispatch(server, session, "GAME_CREATE", {"name": "Plain"})["payload"]["game_id"]
+    missing = _dispatch(server, session, "GAME_FACTORY_GET", {"game_id": "nope"})
+    assert missing["payload"]["error_code"] == "GAME_NOT_FOUND"
+    no_factory = _dispatch(server, session, "GAME_FACTORY_GET", {"game_id": plain})
+    assert no_factory["payload"]["error_code"] == "NO_PLAYER_FACTORY"
+    template_id = _create_chess_template(server)
+    private = _dispatch(server, session, "GAME_CREATE", {
+        "name": "Private", "password": "pw", "factory_template_id": template_id,
+    })["payload"]["game_id"]
+    wrong = _dispatch(server, session, "GAME_FACTORY_GET", {"game_id": private})
+    assert wrong["payload"]["error_code"] == "INVALID_PASSWORD"
+    right = _dispatch(server, session, "GAME_FACTORY_GET", {"game_id": private, "password": "pw"})
+    assert right["payload"]["success"] is True
+    guest_join = _dispatch(server, session, "GAME_FACTORY_JOIN", {"game_id": private})
+    assert guest_join["payload"]["error_code"] == "INSUFFICIENT_PERMISSIONS"
+
+
+def test_game_start_ends_the_factory_subscriptions():
+    server = GameServer()
+    template_id = _create_chess_template(server)
+    session, _ = _make_session(server)
+    game_id = _dispatch(server, session, "GAME_CREATE", {
+        "name": "Chess", "factory_template_id": template_id,
+    })["payload"]["game_id"]
+    _dispatch(server, session, "GAME_FACTORY_GET", {"game_id": game_id})
+    assert session.factory_game_id == game_id
+    _dispatch(server, session, "GAME_CONTROL", {"game_id": game_id, "action": "START"})
+    assert session.factory_game_id is None
+
+
+def test_game_join_checks_the_player_factory():
+    server = GameServer()
+    template_id = _create_chess_template(server)
+    session, _ = _make_session(server)
+    game_id = _dispatch(server, session, "GAME_CREATE", {
+        "name": "Chess", "factory_template_id": template_id,
+    })["payload"]["game_id"]
+    _dispatch(server, session, "PLAYER_CREATE", {"name": "Plain", "is_default": True})
+    lacking = _dispatch(server, session, "GAME_JOIN", {"game_id": game_id, "role": "PLAYER"})
+    assert lacking["payload"]["error_code"] == "LACKING_OPTION"
+    assert lacking["payload"]["details"]["reason"] == "ABSENT_FROM_PLAYER"
+    _dispatch(server, session, "PLAYER_CREATE", {
+        "name": "Fit", "is_default": True, "static_attributes": {"Color": "white"},
+    })
+    joined = _dispatch(server, session, "GAME_JOIN", {"game_id": game_id, "role": "PLAYER"})
+    assert joined["payload"]["success"] is True
+
+
+def test_factory_templates_survive_a_restart(tmp_path):
+    path = tmp_path / "data.json"
+    server = GameServer(persistence_mode=SaveFormat.JSON, persistence_path=path)
+    template_id = _create_chess_template(server)
+    session, _ = _make_session(server)
+    game_id = _dispatch(server, session, "GAME_CREATE", {
+        "name": "Chess", "factory_template_id": template_id,
+    })["payload"]["game_id"]
+    factory_id = server._games[game_id].player_factory.ID
+    server.save_persistence()
+
+    restored = GameServer(persistence_mode=SaveFormat.JSON, persistence_path=path)
+    restored._load_persistence()
+    assert restored._factory_templates[template_id].name == "Chess"
+    assert restored._games[game_id].player_factory.ID == factory_id

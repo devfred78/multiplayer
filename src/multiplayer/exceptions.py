@@ -92,3 +92,76 @@ class GameNotFoundInGroupError(GameNotFoundError):
             self.args = (f"Game {game_id} not found in group",)
         else:
             self.args = ("Game not found in group",)
+
+class GameHasPlayersError(MultiplayerError):
+    """Raised when an operation requires a game without any player.
+
+    Observers are not taken into account.
+    """
+    def __init__(self, game_id: str | None = None):
+        self.game_id = game_id
+        super().__init__(f"Game {game_id} already has players")
+
+class PlayerFactoryNotDefinedError(MultiplayerError):
+    """Raised when the player factory of a game without factory is used."""
+    def __init__(self, game_id: str | None = None):
+        self.game_id = game_id
+        super().__init__(f"Game {game_id} has no player factory")
+
+class UnsupportedFeatureError(MultiplayerError):
+    """Raised when a protocol feature not offered by the server is used."""
+    def __init__(self, feature: str, revision: str | None = None):
+        self.feature = feature
+        self.revision = revision
+        super().__init__(
+            f"Feature '{feature}' is not supported by the server (revision {revision})"
+        )
+
+class OptionError(MultiplayerError):
+    """Common base class of the errors related to player customization options."""
+    pass
+
+class OptionValueAlreadyGivenError(OptionError):
+    """Raised when a unique option value is already carried by another player.
+
+    Attributes:
+        option_id (str): The ID of the option concerned.
+        value (Any): The value already used.
+    """
+    def __init__(self, option_id: str, value: object):
+        self.option_id = option_id
+        self.value = value
+        super().__init__(f"Value {value!r} of option {option_id} is already given")
+
+class LackingOptionError(OptionError):
+    """Raised when no value is available for a mandatory option.
+
+    Attributes:
+        option_id (str): The ID of the option concerned.
+        reason (str): ``"ABSENT_FROM_PLAYER"`` or ``"NO_AVAILABLE_VALUE"``.
+    """
+    def __init__(self, option_id: str, reason: str):
+        self.option_id = option_id
+        self.reason = reason
+        super().__init__(f"No value for option {option_id} ({reason})")
+
+class InvalidOptionValueError(OptionError, ValueError):
+    """Raised when an option value is unknown, of an incompatible type or invalid.
+
+    Attributes:
+        option_id (str): The ID of the option concerned (or the key provided).
+        value (Any): The offending value.
+        reason (str): ``"UNKNOWN_OPTION"``, ``"INCOMPATIBLE_TYPE"`` or
+            ``"INVALID_VALUE"``.
+    """
+    def __init__(self, option_id: str, value: object, reason: str):
+        self.option_id = option_id
+        self.value = value
+        self.reason = reason
+        super().__init__(f"Invalid value {value!r} for option {option_id} ({reason})")
+
+class OptionAlreadyExistsError(OptionError):
+    """Raised when an identical or similar option is already present."""
+    def __init__(self, option_id: str | None = None):
+        self.option_id = option_id
+        super().__init__(f"Option already exists: {option_id}")

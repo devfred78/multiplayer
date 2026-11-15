@@ -343,3 +343,92 @@ def test_incompatible_sqlite_file(tmp_path):
     connection.close()
     with pytest.raises(SaveError):
         Save(file_path, SaveFormat.SQLITE)
+
+
+def _chess_template():
+    from multiplayer import OptionType
+    from multiplayer.game import Option, PlayerFactoryTemplate
+
+    template = PlayerFactoryTemplate("Chess")
+    template.add_option(
+        Option("Color", OptionType.LIST, choices=["white", "black"], default="%%RANDOM_CHOICE%%"),
+        ParameterFamily.STATIC,
+        True,
+    )
+    template.add_option(Option("Nick", OptionType.TEXT, default="Player_%%RANDOM_NUMBER%%"), "name")
+    return template
+
+
+def test_save_and_load_factory_template(tmp_path, save_format):
+    from multiplayer.game import PlayerFactoryTemplate
+
+    file_path = tmp_path / "save.dat"
+    save = Save(file_path, save_format)
+    template = _chess_template()
+    save.save(template)
+    save.flush()
+
+    loaded = Save(file_path, save_format).load(PlayerFactoryTemplate)
+    assert len(loaded) == 1
+    assert loaded[0].ID == template.ID
+    assert loaded[0].to_dict() == template.to_dict()
+    assert loaded[0].to_dict()["options"][1]["default"] == "Player_%%RANDOM_NUMBER%%"
+
+
+def test_save_and_load_game_with_player_factory(tmp_path, save_format):
+    file_path = tmp_path / "save.dat"
+    save = Save(file_path, save_format)
+    game = Game("Chess")
+    game.create_player_factory(_chess_template())
+    plain = Game("Plain")
+    save.save(game)
+    save.save(plain)
+    save.flush()
+
+    loaded = {g.ID: g for g in Save(file_path, save_format).load(Game)}
+    assert loaded[plain.ID].player_factory is None
+    restored = loaded[game.ID].player_factory
+    assert restored is not None
+    assert restored.to_dict() == game.player_factory.to_dict()
+    assert restored.game_id == game.ID
+
+
+def test_saving_options_or_factories_directly_is_not_supported(tmp_path):
+    from multiplayer import OptionType
+    from multiplayer.game import Option
+
+    save = Save(tmp_path / "save.json", SaveFormat.JSON)
+    game = Game("Chess")
+    game.create_player_factory(_chess_template())
+    with pytest.raises(SaveError):
+        save.save(Option("x", OptionType.TEXT))
+    with pytest.raises(SaveError):
+        save.save(game.player_factory)
+
+
+def test_older_save_file_without_templates(tmp_path):
+    from multiplayer.game import PlayerFactoryTemplate
+
+    file_path = tmp_path / "old.json"
+    game_id = str(uuid.uuid4())
+    file_path.write_text(json.dumps({
+        "Player": {}, "User": {}, "GameGroup": {},
+        "Game": {game_id: {"id": game_id, "name": "Old", "game_state": "pending"}},
+    }), encoding="utf-8")
+    save = Save(file_path, SaveFormat.JSON)
+    assert save.load(PlayerFactoryTemplate) == []
+    assert save.load(Game)[0].player_factory is None
+
+
+def test_inconsistent_saved_template_raises_save_error(tmp_path):
+    from multiplayer.game import PlayerFactoryTemplate
+
+    file_path = tmp_path / "bad.json"
+    file_path.write_text(json.dumps({
+        "Player": {}, "User": {}, "Game": {}, "GameGroup": {},
+        "PlayerFactoryTemplate": {"t": {"template_id": "t", "name": "Bad", "options": [
+            {"name": "x", "type": "UNKNOWN", "target": "STATIC"}
+        ]}},
+    }), encoding="utf-8")
+    with pytest.raises(SaveError):
+        Save(file_path, SaveFormat.JSON).load(PlayerFactoryTemplate)

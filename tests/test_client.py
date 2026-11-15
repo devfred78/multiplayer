@@ -11,7 +11,12 @@ from multiplayer.client import (
     _build_user_from_payload,
 )
 from multiplayer import UserRole
-from multiplayer.exceptions import MultiplayerError, PasswordError, UserNotFoundError
+from multiplayer.exceptions import (
+    MultiplayerError,
+    PasswordError,
+    UnsupportedFeatureError,
+    UserNotFoundError,
+)
 from multiplayer.game import User
 from multiplayer.server import GameServer
 
@@ -322,3 +327,106 @@ def test_client_update_player_resets_its_state(server):
             client.update_player(player.ID)
     finally:
         client.disconnect()
+
+
+# --------------------------------------------------------------------------- #
+# Protocol revision 2.1
+# --------------------------------------------------------------------------- #
+_COLOR_OPTION = {
+    "type": "LIST", "name": "Color", "choices": ["white", "black"],
+    "unicity": True, "target": "STATIC",
+}
+
+
+def test_connect_retrieves_the_protocol_revision(server):
+    client = GameClient(host="127.0.0.1", port=server.port)
+    assert client.server_revision is None and client.server_features == ()
+    client.connect()
+    try:
+        assert client.server_revision == "2.1"
+        assert client.server_features == ("player_factory",)
+    finally:
+        client.disconnect()
+    assert client.server_revision is None and client.server_features == ()
+
+
+def test_connect_to_a_revision_2_0_server():
+    runner = ServerRunner()
+    # A revision 2.0 server does not know the PROTOCOL_INFO request.
+    runner.server._MIN_ACCESS = {
+        key: value for key, value in GameServer._MIN_ACCESS.items() if key != "PROTOCOL_INFO"
+    }
+    runner.start()
+    try:
+        client = GameClient(host="127.0.0.1", port=runner.port)
+        client.connect()
+        try:
+            assert client.is_connected
+            assert client.server_revision == "2.0"
+            assert client.server_features == ()
+            with pytest.raises(UnsupportedFeatureError):
+                client.list_factory_templates()
+            with pytest.raises(UnsupportedFeatureError):
+                client.create_game("Chess", factory_template_id="template")
+            with pytest.raises(UnsupportedFeatureError):
+                client.create_player("Alice", static_attributes={"color": "blue"})
+            player = client.create_player("Bob", dynamic_attributes={"score": 1})
+            assert runner.server._players[player.ID].dynamic_state == {"score": 1}
+        finally:
+            client.disconnect()
+    finally:
+        runner.stop()
+
+
+def test_create_player_with_attributes(server):
+    client = GameClient(host="127.0.0.1", port=server.port)
+    client.connect()
+    try:
+        player = client.create_player(
+            "Alice", static_attributes={"color": "blue"}, dynamic_attributes={"score": 0}
+        )
+        stored = server.server._players[player.ID]
+        assert stored.static_state == {"color": "blue"}
+        assert stored.dynamic_state == {"score": 0}
+        assert player.static_state == {"color": "blue"}
+    finally:
+        client.disconnect()
+
+
+def test_factory_template_and_game_factory_workflow(server):
+    admin = GameClient(host="127.0.0.1", port=server.port)
+    player_client = GameClient(host="127.0.0.1", port=server.port)
+    admin.connect()
+    player_client.connect()
+    username = "client_factory_user"
+    try:
+        admin.login("admin", "admin")
+        created = admin.create_factory_template("Chess", [_COLOR_OPTION])
+        template_id = created["template_id"]
+        assert admin.list_factory_templates()["templates"][0]["template_id"] == template_id
+        assert admin.get_factory_template(template_id)["name"] == "Chess"
+        assert admin.update_factory_template(template_id, name="Chess 2")["success"] is True
+        with pytest.raises(ValueError):
+            admin.update_factory_template(template_id)
+
+        player_client.send_request("USER_CREATE", username=username, password="pw")
+        player_client.login(username, "pw")
+        game_id = player_client.create_game("Chess", max_players=2, factory_template_id=template_id)
+        assert isinstance(game_id, str) and game_id
+
+        updates = []
+        player_client.on_notification("GAME_FACTORY_UPDATED", updates.append)
+        form = player_client.get_game_factory(game_id)
+        option_id = form["options"][0]["option_id"]
+        assert form["options"][0]["proposed_value"] == "white"
+        joined = player_client.join_game_with_factory(game_id, values={option_id: "black"})
+        assert joined["static_attributes"] == {"Color": "black"}
+        assert joined["player_id"] in player_client.session_user.players_id
+
+        assert admin.delete_factory_template(template_id)["success"] is True
+        with pytest.raises(MultiplayerError):
+            admin.get_factory_template(template_id)
+    finally:
+        admin.disconnect()
+        player_client.disconnect()
+        User._existing_usernames.discard(username)

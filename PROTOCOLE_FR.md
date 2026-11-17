@@ -1767,6 +1767,10 @@ d'un groupe contenant la partie (niveau `GROUP_ADMIN`) et au créateur de la
 partie, c'est-à-dire la session qui l'a créée ou, si cette session était
 authentifiée, le même utilisateur depuis n'importe quelle session.
 
+Lorsque la partie possède un formulaire de création de joueur, chaque
+participant ayant le rôle `PLAYER` porte également les valeurs choisies pour
+les options du formulaire, dans leur ordre de définition.
+
 #### Exemple
 ```json
 {
@@ -1789,7 +1793,14 @@ authentifiée, le même utilisateur depuis n'importe quelle session.
       {
         "player_id": "player_uuid",
         "name": "Alice",
-        "role": "PLAYER"
+        "role": "PLAYER",
+        "options": [
+          {
+            "option_id": "option_uuid",
+            "name": "Colour",
+            "value": "white"
+          }
+        ]
       }
     ]
   }
@@ -1815,6 +1826,10 @@ authentifiée, le même utilisateur depuis n'importe quelle session.
 | `payload.participants[].player_id` | `string` | - | UUID du joueur. |
 | `payload.participants[].name` | `string` | - | Nom du joueur. |
 | `payload.participants[].role` | `string` | - | Rôle du joueur dans la partie (`PLAYER` ou `OBSERVER`). |
+| `payload.participants[].options` | `array` | Non | Valeurs choisies dans le formulaire de création de joueur, pour un joueur d'une partie qui en possède un. |
+| `payload.participants[].options[].option_id` | `string` | - | Identifiant de l'option. |
+| `payload.participants[].options[].name` | `string` | - | Nom de l'option. |
+| `payload.participants[].options[].value` | `any` | - | Valeur choisie par le joueur pour l'option. |
 | `payload.error_code` | `string` | Non | Code d'erreur en cas d'échec (voir tableau ci-dessous). |
 | `payload.message` | `string` | Non | Message d'information ou d'erreur. |
 

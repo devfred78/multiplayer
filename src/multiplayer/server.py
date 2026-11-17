@@ -2245,11 +2245,15 @@ class GameServer:
                 "message": "The participants of this game are not visible.",
             }
         participants = []
+        factory = game.player_factory
         for player_id, role in self._game_roles.get(game.ID, {}).items():
             player = self._players.get(player_id)
             if player is None:
                 continue
-            participants.append({"player_id": player.ID, "name": player.name, "role": role})
+            participant = {"player_id": player.ID, "name": player.name, "role": role}
+            if role == "PLAYER" and factory is not None:
+                participant["options"] = factory.player_values(player)
+            participants.append(participant)
         return "GAME_PARTICIPANTS_LIST_RESPONSE", {
             "success": True,
             "game_id": game.ID,

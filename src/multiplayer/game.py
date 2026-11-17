@@ -1462,6 +1462,31 @@ class PlayerFactory:
             "proposed_value": self._proposed_value(entry, context, exclusions),
         }
 
+    def player_values(self, player: Player) -> List[Dict[str, Any]]:
+        """Provides the values a player holds for the options of the factory.
+
+        Args:
+            player (Player): The player to inspect.
+
+        Returns:
+            list[dict]: One ``option_id``, ``name`` and ``value`` entry per
+            option, in their order of definition. Options whose value is
+            absent from the player are left out.
+        """
+        values = []
+        for entry in self._entries:
+            present, value = self._read_value(player, entry)
+            if not present:
+                continue
+            values.append(
+                {
+                    "option_id": entry._option_id,
+                    "name": entry._option.name,
+                    "value": value,
+                }
+            )
+        return values
+
     def create_player(
         self,
         values: Dict[str, Any] | None = None,

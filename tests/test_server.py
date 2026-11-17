@@ -879,6 +879,46 @@ def test_participants_list_unknown_game():
     assert missing["payload"]["error_code"] == "GAME_NOT_FOUND"
 
 
+def test_participants_carry_the_values_of_the_player_creation_form():
+    server = GameServer()
+    template_id = _create_chess_template(server)
+    _register_user(server, "options_alice")
+    _register_user(server, "options_bob")
+    try:
+        alice = _login(server, "options-alice-session", "options_alice")
+        bob = _login(server, "options-bob-session", "options_bob")
+        game_id = _dispatch(
+            server,
+            alice,
+            "GAME_CREATE",
+            {"name": "Chess", "factory_template_id": template_id},
+        )["payload"]["game_id"]
+        form = _dispatch(server, bob, "GAME_FACTORY_GET", {"game_id": game_id})
+        colour_id = form["payload"]["options"][0]["option_id"]
+        for session, colour in ((alice, "white"), (bob, "black")):
+            joined = _dispatch(
+                server,
+                session,
+                "GAME_FACTORY_JOIN",
+                {"game_id": game_id, "values": {colour_id: colour}},
+            )
+            assert joined["payload"]["success"] is True
+
+        listed = _dispatch(
+            server, alice, "GAME_PARTICIPANTS_LIST", {"game_id": game_id}
+        )
+        assert [
+            [(option["name"], option["value"]) for option in participant["options"]]
+            for participant in listed["payload"]["participants"]
+        ] == [
+            [("Color", "white"), ("Nickname", "options_alice")],
+            [("Color", "black"), ("Nickname", "options_bob")],
+        ]
+    finally:
+        User._existing_usernames.discard("options_alice")
+        User._existing_usernames.discard("options_bob")
+
+
 def test_participants_visibility_persists_across_restart(tmp_path):
     path = tmp_path / "server_participants_visibility.json"
 

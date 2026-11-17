@@ -1704,6 +1704,10 @@ group holding the game (`GROUP_ADMIN` level), and to the creator of the game,
 that is to say the session which created it or, when that session was
 authenticated, the same user from any session.
 
+When the game has a player creation form, each participant holding the
+`PLAYER` role also carries the values chosen for the options of the form, in
+their order of definition.
+
 #### Example
 ```json
 {
@@ -1726,7 +1730,14 @@ authenticated, the same user from any session.
       {
         "player_id": "player_uuid",
         "name": "Alice",
-        "role": "PLAYER"
+        "role": "PLAYER",
+        "options": [
+          {
+            "option_id": "option_uuid",
+            "name": "Colour",
+            "value": "white"
+          }
+        ]
       }
     ]
   }
@@ -1752,6 +1763,10 @@ authenticated, the same user from any session.
 | `payload.participants[].player_id` | `string` | - | Player UUID. |
 | `payload.participants[].name` | `string` | - | Player name. |
 | `payload.participants[].role` | `string` | - | Role of the player in the game (`PLAYER` or `OBSERVER`). |
+| `payload.participants[].options` | `array` | No | Values chosen in the player creation form, for a player of a game that has one. |
+| `payload.participants[].options[].option_id` | `string` | - | Identifier of the option. |
+| `payload.participants[].options[].name` | `string` | - | Name of the option. |
+| `payload.participants[].options[].value` | `any` | - | Value chosen by the player for the option. |
 | `payload.error_code` | `string` | No | Error code in case of failure (see table below). |
 | `payload.message` | `string` | No | Information or error message. |
 

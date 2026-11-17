@@ -39,7 +39,7 @@ A player customization option, whose value is chosen when a player is created by
 ### OptionEntry
 `multiplayer.game.OptionEntry`
 
-Immutable description of an option registered in a template or a factory: `option` (copy keeping the ID), `unicity`, `player_attribute` (`"name"` or a `ParameterFamily`) and `key` (frozen key). Provides `to_dict` (option representation plus `unicity`, `target`, `attribute`, `key`) and `from_dict`.
+Immutable description of an option registered in a template or a factory: `option` (copy keeping the ID), `unicity`, `hide`, `player_attribute` (`"name"` or a `ParameterFamily`) and `key` (frozen key). Provides `to_dict` (option representation plus `unicity`, `target`, `attribute`, `key`, `hide`) and `from_dict`.
 
 ---
 
@@ -54,7 +54,7 @@ Set of options defining how the players of a game are customized. Independent of
 
 | Method | Description | Parameters | Raises |
 |--------|-------------|------------|--------|
-| `add_option` | Adds a copy of an option. An option associated with `"name"` replaces the previous one. | `option (Option)`, `player_attribute (str\|ParameterFamily)`, `unicity (bool = False)` | `TypeError`, `ValueError`, `OptionAlreadyExistsError` |
+| `add_option` | Adds a copy of an option. An option associated with `"name"` replaces the previous one. | `option (Option)`, `player_attribute (str\|ParameterFamily)`, `hide (bool = False)`, `unicity (bool = False)` | `TypeError`, `ValueError`, `OptionAlreadyExistsError` |
 | `get_option` | Returns the `OptionEntry` of an option. | `option_id (str)` | `KeyError` |
 | `del_option` | Removes an option. | `option_id (str)` | `KeyError` |
 | `to_dict` / `from_dict` | Dictionary representation (`template_id`, `name`, `options`). | - / `data (dict)` | `TypeError`, `ValueError`, `OptionAlreadyExistsError` |

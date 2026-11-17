@@ -144,17 +144,24 @@ def test_option_dict_roundtrip():
 # ---------------------------------------------------------------------- #
 def test_option_entry_is_immutable_and_copies_the_option():
     option = Option("Color", OptionType.LIST, choices=["w", "b"])
-    entry = OptionEntry(option, ParameterFamily.STATIC, unicity=True)
+    entry = OptionEntry(option, ParameterFamily.STATIC, unicity=True, hide=True)
     with pytest.raises(AttributeError):
         entry.unicity = False
+    with pytest.raises(AttributeError):
+        entry.hide = False
     copy = entry.option
     copy.name = "changed"
     assert entry.option.name == "Color"
     assert entry.option.ID == option.ID
     data = entry.to_dict()
     assert data["target"] == "STATIC" and data["attribute"] is None and data["key"] == "Color"
+    assert data["hide"] is True
     restored = OptionEntry.from_dict(data)
     assert restored.player_attribute == ParameterFamily.STATIC and restored.unicity is True
+    assert restored.hide is True
+    assert OptionEntry.from_dict({**data, "hide": None}).hide is False
+    with pytest.raises(TypeError):
+        OptionEntry.from_dict({**data, "hide": "yes"})
     with pytest.raises(ValueError):
         OptionEntry.from_dict({**data, "target": "OTHER"})
     with pytest.raises(ValueError):
@@ -164,11 +171,11 @@ def test_option_entry_is_immutable_and_copies_the_option():
 def test_template_add_get_del_options():
     template = PlayerFactoryTemplate("Chess")
     option = Option("Color", OptionType.LIST, choices=["w", "b"])
-    template.add_option(option, ParameterFamily.STATIC, unicity=True)
+    template.add_option(option, ParameterFamily.STATIC, hide=True, unicity=True)
     option.name = "Renamed"
     assert template.options == [(option.ID, "Color")]
     entry = template.get_option(option.ID)
-    assert entry.key == "Color" and entry.unicity
+    assert entry.key == "Color" and entry.unicity and entry.hide
     with pytest.raises(OptionAlreadyExistsError):
         template.add_option(option, ParameterFamily.DYNAMIC)
     with pytest.raises(OptionAlreadyExistsError):
@@ -187,6 +194,8 @@ def test_template_add_option_checks():
         template.add_option("not an option", ParameterFamily.STATIC)
     with pytest.raises(TypeError):
         template.add_option(Option("x", OptionType.TEXT), 3)
+    with pytest.raises(TypeError):
+        template.add_option(Option("x", OptionType.TEXT), ParameterFamily.STATIC, hide="yes")
     with pytest.raises(ValueError):
         template.add_option(Option("x", OptionType.TEXT), "score")
     with pytest.raises(TypeError):
@@ -205,7 +214,9 @@ def test_template_silently_replaces_the_name_option():
 def test_template_dict_roundtrip_is_atomic():
     template = PlayerFactoryTemplate("Chess")
     template.add_option(Option("Color", OptionType.LIST, choices=["w", "b"]), ParameterFamily.STATIC)
-    template.add_option(Option("Nick", OptionType.TEXT, default="%%USERNAME%%"), "name", True)
+    template.add_option(
+        Option("Nick", OptionType.TEXT, default="%%USERNAME%%"), "name", unicity=True
+    )
     data = template.to_dict()
     restored = PlayerFactoryTemplate.from_dict(data)
     assert restored.ID == template.ID and restored.to_dict() == data
@@ -220,13 +231,17 @@ def test_template_dict_roundtrip_is_atomic():
 def _chess_game(max_players=None):
     template = PlayerFactoryTemplate("Chess")
     template.add_option(
-        Option("Color", OptionType.LIST, choices=["white", "black"]), ParameterFamily.STATIC, True
+        Option("Color", OptionType.LIST, choices=["white", "black"]),
+        ParameterFamily.STATIC,
+        unicity=True,
     )
-    template.add_option(Option("Nick", OptionType.TEXT, default="%%USERNAME%%"), "name", True)
+    template.add_option(
+        Option("Nick", OptionType.TEXT, default="%%USERNAME%%"), "name", unicity=True
+    )
     template.add_option(
         Option("Level", OptionType.RANGE, min_value=1, max_value=3, default=2),
         ParameterFamily.DYNAMIC,
-        True,
+        unicity=True,
     )
     game = Game("chess", max_players=max_players)
     game.create_player_factory(template)
@@ -241,6 +256,21 @@ def test_factory_copies_the_template_with_new_ids():
     assert {i for i, _ in factory.options}.isdisjoint({i for i, _ in template.options})
     template.del_option(template.options[0][0])
     assert len(factory.options) == 3
+
+
+def test_factory_keeps_the_hide_flag_and_creates_hidden_options():
+    template = PlayerFactoryTemplate("Hidden")
+    template.add_option(
+        Option("Secret", OptionType.TEXT, default="hidden"),
+        ParameterFamily.STATIC,
+        hide=True,
+    )
+    game = Game("hidden")
+    game.create_player_factory(template)
+    factory = game.player_factory
+    factory_id = factory.options[0][0]
+    assert factory.get_option(factory_id)["entry"].hide is True
+    assert factory.create_player().static_state["Secret"] == "hidden"
 
 
 def test_factory_proposed_values_follow_exclusions():

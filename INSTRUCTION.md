@@ -1,4 +1,4 @@
-﻿# Instructions for developing version 3 of multiplayer
+# Instructions for developing version 3 of multiplayer
 
 This document provides instructions for developing version 3 of the multiplayer module. It describes the coding conventions, dependencies, and technical specifications needed to ensure compatibility and consistency between the different modules of the package.
 
@@ -385,6 +385,7 @@ It has the following attributes:
 |-----|------|-------------|------------|----------------------------|
 | `option` | `Option` | The option concerned. | No | This is a copy of the `Option` object held by the template or the factory: modifying it has no effect on the template or the factory. This copy represents the same option, not a new option: it therefore keeps the ID of the original option (see the ID convention). In this respect it differs from the copies made when a factory is created, which constitute new options and receive a new ID. |
 | `unicity` | bool | The value of the `unicity` parameter associated with the option. | No | - |
+| `hide` | bool | The value of the `hide` parameter associated with the option. | No | - |
 | `player_attribute` | str\|`ParameterFamily` | The value of the `player_attribute` parameter associated with the option. | No | - |
 | `key` | str | The frozen key of the option. | No | - |
 
@@ -397,13 +398,14 @@ The `OptionEntry` class has the following methods:
     | Key | Value |
     |-----|--------|
     | `unicity` | The value of the `unicity` attribute. |
+    | `hide` | The value of the `hide` attribute. |
     | `target` | `"ATTRIBUTE"` if `player_attribute` is a string, `"STATIC"` if it is `ParameterFamily.STATIC`, `"DYNAMIC"` if it is `ParameterFamily.DYNAMIC`. |
     | `attribute` | The value of `player_attribute` when `target` is `"ATTRIBUTE"` (e.g. `"name"`), `None` otherwise. |
     | `key` | The frozen key of the option. |
 
 - `from_dict` (class method): creates an `OptionEntry` object from a dictionary representation, in the format returned by the `to_dict` method. This method is mainly used by the `from_dict` methods of the `PlayerFactoryTemplate` and `PlayerFactory` classes.
   - Parameters:
-    - `data` (dict): the representation of the registered option. The elements of the option itself are processed by the `from_dict` method of the `Option` class. The `target` key is mandatory, as is the `attribute` key when `target` is `"ATTRIBUTE"`. The `unicity` key is optional (`False` if absent). The `key` key is optional: if it is absent, the frozen key is the name of the option. Mandatory.
+    - `data` (dict): the representation of the registered option. The elements of the option itself are processed by the `from_dict` method of the `Option` class. The `target` key is mandatory, as is the `attribute` key when `target` is `"ATTRIBUTE"`. The `unicity` key is optional (`False` if absent). The `hide` key is optional (`False` if absent). The `key` key is optional: if it is absent, the frozen key is the name of the option. Mandatory.
   - Implementation details: the `player_attribute` parameter is rebuilt from `target` and `attribute` (`"STATIC"` gives `ParameterFamily.STATIC`, `"DYNAMIC"` gives `ParameterFamily.DYNAMIC`, `"ATTRIBUTE"` gives the value of `attribute`). The checks applied to `player_attribute` by the `add_option` method of the `PlayerFactoryTemplate` class apply. The dictionary provided is not modified.
   - Exceptions raised:
     - `TypeError` or `ValueError`: in the same cases as the `from_dict` method of the `Option` class and as the `player_attribute` checks of the `add_option` method, as well as if `target` is missing or is not `"ATTRIBUTE"`, `"STATIC"` or `"DYNAMIC"` (`ValueError`).
@@ -494,7 +496,7 @@ The `PlayerFactoryTemplate` class has the following methods:
     - `option_id` (str): the ID of the option to get. Mandatory.
   - Exceptions raised:
     - `KeyError` if the option does not exist in the template.
-  - Return value: an `OptionEntry` object describing the requested option, with its `unicity` and `player_attribute` parameters and its frozen key.
+  - Return value: an `OptionEntry` object describing the requested option, with its `unicity`, `hide` and `player_attribute` parameters and its frozen key.
 
 - `del_option`: removes an option from the template.
   - Parameters:
@@ -528,7 +530,7 @@ This class creates `Player` objects from predefined options. It is particularly 
 
 A `PlayerFactory` object is typically used to create `Player` objects only in the context of a particular game. Thus, a `PlayerFactory` object should only be instantiated in the namespace of a `Game` object, and never in the global namespace. In practice, the `PlayerFactory` object should only be created with the `create_player_factory` method of the `Game` object in which it is to be integrated.
 
-The user accesses the options through the `options` attribute (to get the IDs and names of the options) and through the `get_option` method (to get the full option, with its `unicity` and `player_attribute` parameters, its frozen key, its exclusion list and the proposed value). This allows the user to choose a value for each option. The chosen values are then passed all at once, as a parameter of the `create_player` method, which creates the corresponding `Player` object.
+The user accesses the options through the `options` attribute (to get the IDs and names of the options) and through the `get_option` method (to get the full option, with its `unicity`, `hide` and `player_attribute` parameters, its frozen key, its exclusion list and the proposed value). This allows the user to choose a value for each option. The chosen values are then passed all at once, as a parameter of the `create_player` method, which creates the corresponding `Player` object.
 
 The factory does not keep any value being entered: each call to `create_player` is independent of the others. Several users can thus prepare their player simultaneously from the same factory, without their choices interfering.
 
@@ -540,12 +542,12 @@ The `PlayerFactory` class is instantiated with the following parameters:
 
 | Name | Type | Description | Mandatory | Default |
 |------------|------|------------------|-------------|-------------------|
-| `template` | `PlayerFactoryTemplate` | The template from which the factory copies the options, as well as their `unicity` and `player_attribute` parameters, and their frozen keys. | Yes | - |
+| `template` | `PlayerFactoryTemplate` | The template from which the factory copies the options, as well as their `unicity`, `hide` and `player_attribute` parameters, and their frozen keys. | Yes | - |
 | `game_id` | str | The ID of the `Game` object the factory is associated with. The game is retrieved through the `Game.get_by_id` class method. | Yes | - |
 
 These parameters are provided by the `create_player_factory` method of the `Game` class, which is the only intended way to create a `PlayerFactory` object.
 
-> Implementation details: at instantiation, the `Option` objects of the template are copied into the factory (they are not shared), as are their `unicity` and `player_attribute` parameters and their frozen keys. A later modification of the template (addition, removal or replacement of an option) or of the `Option` objects it contains is not reflected in the factory, and vice versa. Each copied option receives a new ID, generated with `uuid.uuid4()`: the IDs of the factory's options are therefore distinct from those of the template's options, and must be obtained through the `options` attribute of the factory.
+> Implementation details: at instantiation, the `Option` objects of the template are copied into the factory (they are not shared), as are their `unicity`, `hide` and `player_attribute` parameters and their frozen keys. A later modification of the template (addition, removal or replacement of an option) or of the `Option` objects it contains is not reflected in the factory, and vice versa. Each copied option receives a new ID, generated with `uuid.uuid4()`: the IDs of the factory's options are therefore distinct from those of the template's options, and must be obtained through the `options` attribute of the factory.
 
 It has the following attributes:
 
@@ -566,7 +568,7 @@ The `PlayerFactory` class has the following methods:
 
     | Key | Value |
     |--------|---------|
-    | `entry`| an `OptionEntry` object describing the requested option, with its `unicity` and `player_attribute` parameters and its frozen key. |
+    | `entry`| an `OptionEntry` object describing the requested option, with its `unicity`, `hide` and `player_attribute` parameters and its frozen key. |
     | `exclusions`| the list of excluded values for this option, computed at the time of the call from the players present in the game. Empty list for an option created with `unicity` set to `False`. |
     | `proposed_value`| the proposed value for this option, computed at the time of the call (see below). It can be used to pre-fill an input form, and it is the value used by `create_player` if no value is provided for this option. |
 
@@ -1007,7 +1009,7 @@ The `Save` class has the following methods:
 
 **`Option` objects**: they are never saved on their own, but only within the template or factory that contains them. Within a template or a factory, each option is serialized with the parameters that were associated with it when it was added to the template, in the form returned by the `to_dict` method of the `OptionEntry` class:
 - the elements of the option itself (`option_id`, `type`, `name`, `description`, `default`, `min`, `max`, `step`, `choices`), as returned by the `to_dict` method of the `Option` class. The default value is saved raw, without evaluation of any runtime constants (e.g. `"Player_%%RANDOM_NUMBER%%"`). The value `None` is represented by `null` in JSON and `NULL` in SQLite;
-- the associated parameters: `unicity`, `target` and `attribute` (representation of the `player_attribute` parameter, which makes it possible to distinguish unambiguously between an attribute of the `Player` object and a `ParameterFamily` family), and `key` (frozen key).
+- the associated parameters: `unicity`, `hide`, `target` and `attribute` (representation of the `player_attribute` parameter, which makes it possible to distinguish unambiguously between an attribute of the `Player` object and a `ParameterFamily` family), and `key` (frozen key).
 
 This representation is identical to the one used in network exchanges (see the [Client-server exchange protocol](PROTOCOLE.md), "Option representation" paragraph).
 

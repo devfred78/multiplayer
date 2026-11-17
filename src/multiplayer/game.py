@@ -710,15 +710,16 @@ class OptionEntry:
     """Describes an option registered in a template or in a factory.
 
     An entry gathers the option and the parameters associated with it when it
-    was added to a template: uniqueness, associated player attribute and
-    frozen key. Entries are immutable.
+    was added to a template: uniqueness, associated player attribute, hidden
+    flag and frozen key. Entries are immutable.
     """
 
-    __slots__ = ("_option", "_unicity", "_player_attribute", "_key")
+    __slots__ = ("_option", "_unicity", "_player_attribute", "_key", "_hide")
     _option: Option
     _unicity: bool
     _player_attribute: str | ParameterFamily
     _key: str
+    _hide: bool
 
     def __init__(
         self,
@@ -726,6 +727,7 @@ class OptionEntry:
         player_attribute: str | ParameterFamily,
         unicity: bool = False,
         key: str | None = None,
+        hide: bool = False,
     ):
         """Initializes a new entry.
 
@@ -741,6 +743,9 @@ class OptionEntry:
                 single player of a game. Defaults to False.
             key (str, optional): The frozen key. Defaults to the name of the
                 option.
+            hide (bool, optional): Whether the option must be hidden in the
+                player creation form. Only meaningful for options associated
+                with a parameter family. Defaults to False.
 
         Raises:
             TypeError: If a parameter has an unexpected type.
@@ -751,6 +756,8 @@ class OptionEntry:
         _check_player_attribute(option, player_attribute)
         if not isinstance(unicity, bool):
             raise TypeError(f"unicity must be a boolean, got {unicity!r}.")
+        if not isinstance(hide, bool):
+            raise TypeError(f"hide must be a boolean, got {hide!r}.")
         if key is None:
             key = option.name
         if not isinstance(key, str):
@@ -759,6 +766,7 @@ class OptionEntry:
         object.__setattr__(self, "_unicity", unicity)
         object.__setattr__(self, "_player_attribute", player_attribute)
         object.__setattr__(self, "_key", key)
+        object.__setattr__(self, "_hide", hide)
 
     def __setattr__(self, name: str, value: Any) -> None:
         """Forbids any modification of the entry.
@@ -813,6 +821,15 @@ class OptionEntry:
         return self._key
 
     @property
+    def hide(self) -> bool:
+        """Whether the option must be hidden in the player creation form.
+
+        Returns:
+            bool: The hidden flag.
+        """
+        return self._hide
+
+    @property
     def _option_id(self) -> str:
         """The ID of the registered option.
 
@@ -826,7 +843,8 @@ class OptionEntry:
 
         Returns:
             dict: The representation of the option, supplemented by the
-            ``unicity``, ``target``, ``attribute`` and ``key`` elements.
+            ``unicity``, ``target``, ``attribute``, ``key`` and ``hide``
+            elements.
         """
         data = self._option.to_dict()
         if isinstance(self._player_attribute, ParameterFamily):
@@ -834,7 +852,13 @@ class OptionEntry:
         else:
             target, attribute = _TARGET_ATTRIBUTE, self._player_attribute
         data.update(
-            {"unicity": self._unicity, "target": target, "attribute": attribute, "key": self._key}
+            {
+                "unicity": self._unicity,
+                "target": target,
+                "attribute": attribute,
+                "key": self._key,
+                "hide": self._hide,
+            }
         )
         return data
 
@@ -865,11 +889,13 @@ class OptionEntry:
         else:
             raise ValueError(f"Unknown option target: {target!r}.")
         unicity = data.get("unicity")
+        hide = data.get("hide")
         return cls(
             option,
             player_attribute,
             unicity=False if unicity is None else unicity,
             key=data.get("key"),
+            hide=False if hide is None else hide,
         )
 
 
@@ -1009,6 +1035,7 @@ class PlayerFactoryTemplate:
         self,
         option: Option,
         player_attribute: str | ParameterFamily,
+        hide: bool = False,
         unicity: bool = False,
     ) -> None:
         """Adds a copy of an option to the template.
@@ -1020,6 +1047,10 @@ class PlayerFactoryTemplate:
             option (Option): The option to add.
             player_attribute (str | ParameterFamily): The attribute of the
                 Player object associated with the option.
+            hide (bool, optional): Whether the option must be hidden in the
+                player creation form in the user interface. Only meaningful for
+                options associated with a parameter family, ignored otherwise.
+                Defaults to False.
             unicity (bool, optional): Whether a value can only be carried by a
                 single player of a game. Defaults to False.
 
@@ -1030,7 +1061,7 @@ class PlayerFactoryTemplate:
         """
         if not isinstance(option, Option):
             raise TypeError(f"An Option instance is required, got {option!r}.")
-        self._add_entry(OptionEntry(option, player_attribute, unicity))
+        self._add_entry(OptionEntry(option, player_attribute, unicity, hide=hide))
 
     def _add_entry(self, entry: OptionEntry) -> None:
         """Adds an entry according to the rules of :meth:`add_option`.
@@ -1182,6 +1213,7 @@ class PlayerFactory:
                 entry.player_attribute,
                 entry.unicity,
                 entry.key,
+                entry.hide,
             )
             for entry in template._entries
         ]

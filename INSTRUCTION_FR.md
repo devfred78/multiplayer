@@ -385,6 +385,7 @@ Elle présente les attributs suivants:
 |-----|------|-------------|------------|----------------------------|
 | `option` | `Option` | L'option concernée. | Non | Il s'agit d'une copie de l'objet `Option` détenu par le modèle ou la factory : sa modification est sans effet sur le modèle ou la factory. Cette copie représente la même option, et non une option nouvelle : elle conserve donc l'ID de l'option d'origine (voir la convention sur les ID). Elle se distingue en cela des copies effectuées lors de la création d'une factory, qui constituent de nouvelles options et reçoivent un nouvel ID. |
 | `unicity` | bool | La valeur du paramètre `unicity` associé à l'option. | Non | - |
+| `hide` | bool | La valeur du paramètre `hide` associé à l'option. | Non | - |
 | `player_attribute` | str\|`ParameterFamily` | La valeur du paramètre `player_attribute` associé à l'option. | Non | - |
 | `key` | str | La clé figée de l'option. | Non | - |
 
@@ -397,13 +398,14 @@ La classe `OptionEntry` présente les méthodes suivantes:
     | Clé | Valeur |
     |-----|--------|
     | `unicity` | La valeur de l'attribut `unicity`. |
+    | `hide` | La valeur de l'attribut `hide`. |
     | `target` | `"ATTRIBUTE"` si `player_attribute` est une chaîne de caractères, `"STATIC"` s'il vaut `ParameterFamily.STATIC`, `"DYNAMIC"` s'il vaut `ParameterFamily.DYNAMIC`. |
     | `attribute` | La valeur de `player_attribute` lorsque `target` vaut `"ATTRIBUTE"` (ex: `"name"`), `None` sinon. |
     | `key` | La clé figée de l'option. |
 
 - `from_dict` (méthode de classe): crée un objet `OptionEntry` à partir d'une représentation sous forme de dictionnaire, au format retourné par la méthode `to_dict`. Cette méthode est principalement utilisée par les méthodes `from_dict` des classes `PlayerFactoryTemplate` et `PlayerFactory`.
   - Paramètres:
-    - `data` (dict): la représentation de l'option enregistrée. Les éléments de l'option elle-même sont traités par la méthode `from_dict` de la classe `Option`. La clé `target` est obligatoire, ainsi que la clé `attribute` lorsque `target` vaut `"ATTRIBUTE"`. La clé `unicity` est optionnelle (`False` si absente). La clé `key` est optionnelle : si elle est absente, la clé figée est le nom de l'option. Obligatoire.
+    - `data` (dict): la représentation de l'option enregistrée. Les éléments de l'option elle-même sont traités par la méthode `from_dict` de la classe `Option`. La clé `target` est obligatoire, ainsi que la clé `attribute` lorsque `target` vaut `"ATTRIBUTE"`. La clé `unicity` est optionnelle (`False` si absente). La clé `hide` est optionnelle (`False` si absente). La clé `key` est optionnelle : si elle est absente, la clé figée est le nom de l'option. Obligatoire.
   - Précision d'implémentation: le paramètre `player_attribute` est reconstruit à partir de `target` et `attribute` (`"STATIC"` donne `ParameterFamily.STATIC`, `"DYNAMIC"` donne `ParameterFamily.DYNAMIC`, `"ATTRIBUTE"` donne la valeur de `attribute`). Les contrôles appliqués par la méthode `add_option` de la classe `PlayerFactoryTemplate` à `player_attribute` s'appliquent. Le dictionnaire fourni n'est pas modifié.
   - Exceptions émises:
     - `TypeError` ou `ValueError`: dans les mêmes cas que la méthode `from_dict` de la classe `Option` et que les contrôles de `player_attribute` de la méthode `add_option`, ainsi que si `target` est absent ou ne vaut pas `"ATTRIBUTE"`, `"STATIC"` ou `"DYNAMIC"` (`ValueError`).
@@ -494,7 +496,7 @@ La classe `PlayerFactoryTemplate` présente les méthodes suivantes:
     - `option_id` (str): l'ID de l'option à obtenir. Obligatoire.
   - Exceptions émises:
     - `KeyError` si l'option n'existe pas dans le modèle.
-  - Valeur de retour: un objet `OptionEntry` décrivant l'option demandée, avec ses paramètres `unicity` et `player_attribute` et sa clé figée.
+  - Valeur de retour: un objet `OptionEntry` décrivant l'option demandée, avec ses paramètres `unicity`, `hide` et `player_attribute` et sa clé figée.
 
 - `del_option`: supprime une option du modèle.
   - Paramètres:
@@ -528,7 +530,7 @@ Cette classe permet de créer des objets `Player` à partir d'options pré-étab
 
 Un objet `PlayerFactory` n'est typiquement utilisé pour créer des objets `Player` que dans le cadre d'une partie en particulier. Ainsi, un objet `PlayerFactory` ne devrait s'instancier que dans l'espace de nom d'un objet `Game`, et jamais dans l'espace de nom global. En réalité, l'objet `PlayerFactory` ne devrait être créé qu'avec la méthode `create_player_factory` de l'objet `Game` dans lequel on souhaite l'intégrer.
 
-L'utilisateur y accède aux options au travers de l'attribut `options` (pour obtenir les ID et noms des options) et par la méthode `get_option` (pour obtenir l'option dans son intégralité, avec ses paramètres `unicity` et `player_attribute`, sa clé figée, sa liste d'exclusion et la valeur proposée). Cela permet à l'utilisateur de choisir une valeur pour chaque option. Les valeurs choisies sont ensuite transmises en une seule fois, en paramètre de la méthode `create_player`, qui crée l'objet `Player` correspondant.
+L'utilisateur y accède aux options au travers de l'attribut `options` (pour obtenir les ID et noms des options) et par la méthode `get_option` (pour obtenir l'option dans son intégralité, avec ses paramètres `unicity`, `hide` et `player_attribute`, sa clé figée, sa liste d'exclusion et la valeur proposée). Cela permet à l'utilisateur de choisir une valeur pour chaque option. Les valeurs choisies sont ensuite transmises en une seule fois, en paramètre de la méthode `create_player`, qui crée l'objet `Player` correspondant.
 
 La factory ne conserve aucune valeur en cours de saisie : chaque appel à `create_player` est indépendant des autres. Plusieurs utilisateurs peuvent ainsi préparer simultanément leur joueur à partir de la même factory, sans que leurs choix n'interfèrent.
 
@@ -540,12 +542,12 @@ La classe `PlayerFactory` s'instancie avec les paramètres suivants:
 
 | Nom        | Type | Description      | Obligatoire | Valeur par défaut |
 |------------|------|------------------|-------------|-------------------|
-| `template` | `PlayerFactoryTemplate` | Le modèle dont la factory copie les options, ainsi que leurs paramètres `unicity` et `player_attribute`, et leurs clés figées. | Oui | - |
+| `template` | `PlayerFactoryTemplate` | Le modèle dont la factory copie les options, ainsi que leurs paramètres `unicity`, `hide` et `player_attribute`, et leurs clés figées. | Oui | - |
 | `game_id`  | str  | L'ID de l'objet `Game` auquel la factory est associée. La partie est retrouvée au travers de la méthode de classe `Game.get_by_id`. | Oui | - |
 
 Ces paramètres sont fournis par la méthode `create_player_factory` de la classe `Game`, qui est le seul moyen prévu pour créer un objet `PlayerFactory`.
 
-> Précision d'implémentation: à l'instanciation, les objets `Option` du modèle sont copiés dans la factory (ils ne sont pas partagés), de même que leurs paramètres `unicity` et `player_attribute` et leurs clés figées. Une modification ultérieure du modèle (ajout, suppression ou remplacement d'option) ou des objets `Option` qu'il contient n'est pas répercutée sur la factory, et inversement. Chaque option copiée reçoit un nouvel ID, généré avec `uuid.uuid4()` : les ID des options de la factory sont donc distincts de ceux des options du modèle, et doivent être obtenus au travers de l'attribut `options` de la factory.
+> Précision d'implémentation: à l'instanciation, les objets `Option` du modèle sont copiés dans la factory (ils ne sont pas partagés), de même que leurs paramètres `unicity`, `hide` et `player_attribute` et leurs clés figées. Une modification ultérieure du modèle (ajout, suppression ou remplacement d'option) ou des objets `Option` qu'il contient n'est pas répercutée sur la factory, et inversement. Chaque option copiée reçoit un nouvel ID, généré avec `uuid.uuid4()` : les ID des options de la factory sont donc distincts de ceux des options du modèle, et doivent être obtenus au travers de l'attribut `options` de la factory.
 
 Elle présente les attributs suivants:
 
@@ -566,7 +568,7 @@ La classe `PlayerFactory` présente les méthodes suivantes:
 
     | Clé    | Valeur  |
     |--------|---------|
-    | `entry`| un objet `OptionEntry` décrivant l'option demandée, avec ses paramètres `unicity` et `player_attribute` et sa clé figée. |
+    | `entry`| un objet `OptionEntry` décrivant l'option demandée, avec ses paramètres `unicity`, `hide` et `player_attribute` et sa clé figée. |
     | `exclusions`| la liste des valeurs exclues pour cette option, calculée au moment de l'appel à partir des joueurs présents dans la partie. Liste vide pour une option créée avec `unicity` à `False`. |
     | `proposed_value`| la valeur proposée pour cette option, calculée au moment de l'appel (voir ci-dessous). Elle peut servir à pré-remplir un formulaire de saisie, et c'est elle qui est utilisée par `create_player` si aucune valeur n'est fournie pour cette option. |
 
@@ -1007,7 +1009,7 @@ Les objets `Option`, `PlayerFactoryTemplate` et `PlayerFactory` sont sauvegardé
 
 **Objets `Option`**: ils ne sont jamais sauvegardés de manière autonome, mais uniquement au sein du modèle ou de la factory qui les contient. Au sein d'un modèle ou d'une factory, chaque option est sérialisée avec les paramètres qui lui ont été associés lors de son ajout au modèle, sous la forme retournée par la méthode `to_dict` de la classe `OptionEntry`:
 - les éléments de l'option elle-même (`option_id`, `type`, `name`, `description`, `default`, `min`, `max`, `step`, `choices`), tels que retournés par la méthode `to_dict` de la classe `Option`. La valeur par défaut est sauvegardée brute, sans évaluation des éventuelles constantes d'exécution (ex: `"Joueur_%%RANDOM_NUMBER%%"`). La valeur `None` est représentée par `null` en JSON et `NULL` en SQLite ;
-- les paramètres associés : `unicity`, `target` et `attribute` (représentation du paramètre `player_attribute`, qui permet de distinguer sans ambiguïté un attribut de l'objet `Player` d'une famille `ParameterFamily`), et `key` (clé figée).
+- les paramètres associés : `unicity`, `hide`, `target` et `attribute` (représentation du paramètre `player_attribute`, qui permet de distinguer sans ambiguïté un attribut de l'objet `Player` d'une famille `ParameterFamily`), et `key` (clé figée).
 
 Cette représentation est identique à celle utilisée dans les échanges réseau (voir le [Protocole d'échanges entre le client et le serveur](PROTOCOLE_FR.md), paragraphe "Représentation d'une option").
 

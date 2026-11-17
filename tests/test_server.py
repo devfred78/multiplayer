@@ -1366,7 +1366,7 @@ def test_player_list_all_reports_the_players_of_the_accounts_as_persistent():
 _CHESS_OPTIONS = [
     {
         "type": "LIST", "name": "Color", "choices": ["white", "black"],
-        "default": "%%RANDOM_CHOICE%%", "unicity": True, "target": "STATIC",
+        "default": "%%RANDOM_CHOICE%%", "unicity": True, "hide": True, "target": "STATIC",
     },
     {
         "type": "TEXT", "name": "Nickname", "default": "%%USERNAME%%",
@@ -1440,6 +1440,8 @@ def test_factory_template_crud():
     assert details["payload"]["name"] == "Chess"
     assert details["payload"]["options"][1]["default"] == "%%USERNAME%%"
     assert details["payload"]["options"][1]["key"] == "Nickname"
+    assert details["payload"]["options"][0]["hide"] is True
+    assert details["payload"]["options"][1]["hide"] is False
 
     admin = _make_named_session(server, "crud-admin", AccessLevel.ADMIN)
     renamed = _dispatch(
@@ -1516,6 +1518,8 @@ def test_game_factory_get_and_join_with_notifications():
         assert form["payload"]["success"] is True
         nickname = form["payload"]["options"][1]
         assert nickname["proposed_value"] == "factory_bob" and nickname["exclusions"] == []
+        assert form["payload"]["options"][0]["hide"] is True
+        assert nickname["hide"] is False
         assert bob.factory_game_id == game_id
 
         color_id = form["payload"]["options"][0]["option_id"]

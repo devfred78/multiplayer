@@ -1880,6 +1880,7 @@ The options of a player factory, like those of a template (see the factory templ
   "step": 1,
   "choices": ["white", "black"],
   "unicity": true,
+  "hide": false,
   "target": "STATIC",
   "attribute": null,
   "key": "Color"
@@ -1898,6 +1899,7 @@ The options of a player factory, like those of a template (see the factory templ
 | `step` | `number` | Increment between two possible values (`RANGE` options). |
 | `choices` | `array` | List of possible choices (`LIST` options). |
 | `unicity` | `boolean` | `true` if a value can only be carried by a single player of the game. |
+| `hide` | `boolean` | `true` if the option must be hidden in the player creation form. It is then used by the game logic but does not have to be initialized by the user. Only meaningful for options whose `target` is `STATIC` or `DYNAMIC`: for `ATTRIBUTE` options, the field is ignored. |
 | `target` | `string` | Location of the value in the **Player** object: `ATTRIBUTE` (attribute of the player designated by the `attribute` field), `STATIC` (`static_state` dictionary) or `DYNAMIC` (`dynamic_state` dictionary). |
 | `attribute` | `string`\|`null` | Name of the player attribute when `target` is `ATTRIBUTE` (only possible value for now: `"name"`). `null` otherwise. |
 | `key` | `string` | Frozen key of the option: key under which the value is stored in `static_state` or `dynamic_state`. Read-only. |
@@ -1938,6 +1940,8 @@ Since the form is used to join the game, the request is subject to the same pass
 
 A successful consultation subscribes the session to the `GAME_FACTORY_UPDATED` notifications of this game (see the corresponding notification).
 
+Options whose `hide` field is `true` must not be displayed in the player creation form: their proposed value is used as is, which allows the game logic to rely on attributes that the user does not have to initialize.
+
 ##### Example
 ```json
 {
@@ -1970,6 +1974,7 @@ A successful consultation subscribes the session to the `GAME_FACTORY_UPDATED` n
         "step": 1,
         "choices": ["white", "black"],
         "unicity": true,
+        "hide": false,
         "target": "STATIC",
         "attribute": null,
         "key": "Color",
@@ -2462,6 +2467,7 @@ Retrieves the full definition of a factory template, for example to present the 
         "step": 1,
         "choices": ["white", "black"],
         "unicity": true,
+        "hide": false,
         "target": "STATIC",
         "attribute": null,
         "key": "Color"
@@ -2525,6 +2531,7 @@ The creation is atomic: if one of the options is rejected, no template is create
         "choices": ["white", "black"],
         "default": "%%RANDOM_CHOICE%%",
         "unicity": true,
+        "hide": false,
         "target": "STATIC"
       },
       {
@@ -2532,6 +2539,7 @@ The creation is atomic: if one of the options is rejected, no template is create
         "name": "Nickname",
         "default": "%%USERNAME%%",
         "unicity": true,
+        "hide": false,
         "target": "ATTRIBUTE",
         "attribute": "name"
       }
@@ -2569,6 +2577,7 @@ The creation is atomic: if one of the options is rejected, no template is create
 | `payload.options[].step` | `number` | No | Increment (`RANGE` options). Default: `1`. |
 | `payload.options[].choices` | `array` | No | Possible choices (`LIST` options). Default: empty list. |
 | `payload.options[].unicity` | `boolean` | No | `true` if a value can only be carried by a single player of the game. Default: `false`. |
+| `payload.options[].hide` | `boolean` | No | `true` if the option must be hidden in the player creation form. It is then used by the game logic but does not have to be initialized by the user. Only meaningful for `STATIC` and `DYNAMIC` targets, ignored otherwise. Default: `false`. |
 | `payload.options[].target` | `string` | Yes | `ATTRIBUTE`, `STATIC` or `DYNAMIC`. The value `ATTRIBUTE` is only accepted for options of type `TEXT` or `LIST`, since the `name` attribute of the player is a character string: for a `CHECK` or `RANGE` option, the request fails with the `INVALID_OPTION` code. |
 | `payload.options[].attribute` | `string` | No | Mandatory if `target` is `ATTRIBUTE` (only possible value for now: `"name"`). Ignored otherwise. |
 
@@ -2621,6 +2630,7 @@ The update is atomic: if one of the options is rejected, the template remains un
         "choices": ["white", "black"],
         "default": "white",
         "unicity": true,
+        "hide": false,
         "target": "STATIC"
       }
     ]

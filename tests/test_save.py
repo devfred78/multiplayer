@@ -353,7 +353,8 @@ def _chess_template():
     template.add_option(
         Option("Color", OptionType.LIST, choices=["white", "black"], default="%%RANDOM_CHOICE%%"),
         ParameterFamily.STATIC,
-        True,
+        hide=True,
+        unicity=True,
     )
     template.add_option(Option("Nick", OptionType.TEXT, default="Player_%%RANDOM_NUMBER%%"), "name")
     return template
@@ -372,6 +373,7 @@ def test_save_and_load_factory_template(tmp_path, save_format):
     assert len(loaded) == 1
     assert loaded[0].ID == template.ID
     assert loaded[0].to_dict() == template.to_dict()
+    assert loaded[0].to_dict()["options"][0]["hide"] is True
     assert loaded[0].to_dict()["options"][1]["default"] == "Player_%%RANDOM_NUMBER%%"
 
 

@@ -1947,6 +1947,7 @@ Les options d'une factory de joueurs, comme celles d'un modèle (voir les messag
   "step": 1,
   "choices": ["blanc", "noir"],
   "unicity": true,
+  "hide": false,
   "target": "STATIC",
   "attribute": null,
   "key": "Couleur"
@@ -1965,6 +1966,7 @@ Les options d'une factory de joueurs, comme celles d'un modèle (voir les messag
 | `step` | `number` | Incrément entre deux valeurs possibles (options `RANGE`). |
 | `choices` | `array` | Liste des choix possibles (options `LIST`). |
 | `unicity` | `boolean` | `true` si une valeur ne peut être portée que par un seul joueur de la partie. |
+| `hide` | `boolean` | `true` si l'option doit être masquée dans le formulaire de création du joueur. Elle est alors utilisée par la partie logique du jeu, mais n'a pas à être initialisée par l'utilisateur. N'est significatif que pour les options dont `target` vaut `STATIC` ou `DYNAMIC` : pour les options `ATTRIBUTE`, le champ est ignoré. |
 | `target` | `string` | Emplacement de la valeur dans l'objet **Joueur** : `ATTRIBUTE` (attribut du joueur désigné par le champ `attribute`), `STATIC` (dictionnaire `static_state`) ou `DYNAMIC` (dictionnaire `dynamic_state`). |
 | `attribute` | `string`\|`null` | Nom de l'attribut du joueur lorsque `target` vaut `ATTRIBUTE` (seule valeur possible pour l'instant : `"name"`). `null` sinon. |
 | `key` | `string` | Clé figée de l'option : clé sous laquelle la valeur est rangée dans `static_state` ou `dynamic_state`. Lecture seule. |
@@ -2005,6 +2007,8 @@ Le formulaire servant à rejoindre la partie, la requête est soumise aux mêmes
 
 Une consultation réussie abonne la session aux notifications `GAME_FACTORY_UPDATED` de cette partie (voir la notification correspondante).
 
+Les options dont le champ `hide` vaut `true` ne doivent pas être affichées dans le formulaire de création du joueur : leur valeur proposée est utilisée telle quelle, ce qui permet à la partie logique du jeu de s'appuyer sur des attributs que l'utilisateur n'a pas à initialiser.
+
 ##### Exemple
 
 ```json
@@ -2040,6 +2044,7 @@ Une consultation réussie abonne la session aux notifications `GAME_FACTORY_UPDA
         "step": 1,
         "choices": ["blanc", "noir"],
         "unicity": true,
+        "hide": false,
         "target": "STATIC",
         "attribute": null,
         "key": "Couleur",
@@ -2560,6 +2565,7 @@ Récupère la définition complète d'un modèle de factory, par exemple pour pr
         "step": 1,
         "choices": ["blanc", "noir"],
         "unicity": true,
+        "hide": false,
         "target": "STATIC",
         "attribute": null,
         "key": "Couleur"
@@ -2625,6 +2631,7 @@ La création est atomique : si l'une des options est rejetée, aucun modèle n'e
         "choices": ["blanc", "noir"],
         "default": "%%RANDOM_CHOICE%%",
         "unicity": true,
+        "hide": false,
         "target": "STATIC"
       },
       {
@@ -2632,6 +2639,7 @@ La création est atomique : si l'une des options est rejetée, aucun modèle n'e
         "name": "Pseudo",
         "default": "%%USERNAME%%",
         "unicity": true,
+        "hide": false,
         "target": "ATTRIBUTE",
         "attribute": "name"
       }
@@ -2672,6 +2680,7 @@ La création est atomique : si l'une des options est rejetée, aucun modèle n'e
 | `payload.options[].step` | `number` | Non | Incrément (options `RANGE`). Par défaut : `1`. |
 | `payload.options[].choices` | `array` | Non | Choix possibles (options `LIST`). Par défaut : liste vide. |
 | `payload.options[].unicity` | `boolean` | Non | `true` si une valeur ne peut être portée que par un seul joueur de la partie. Par défaut : `false`. |
+| `payload.options[].hide` | `boolean` | Non | `true` si l'option doit être masquée dans le formulaire de création du joueur. Elle est alors utilisée par la partie logique du jeu, mais n'a pas à être initialisée par l'utilisateur. N'est significatif que pour les cibles `STATIC` et `DYNAMIC`, ignoré sinon. Par défaut : `false`. |
 | `payload.options[].target` | `string` | Oui | `ATTRIBUTE`, `STATIC` ou `DYNAMIC`. La valeur `ATTRIBUTE` n'est acceptée que pour les options de type `TEXT` ou `LIST`, l'attribut `name` du joueur étant une chaîne de caractères : pour une option `CHECK` ou `RANGE`, la requête échoue avec le code `INVALID_OPTION`. |
 | `payload.options[].attribute` | `string` | Non | Obligatoire si `target` vaut `ATTRIBUTE` (seule valeur possible pour l'instant : `"name"`). Ignoré sinon. |
 
@@ -2725,6 +2734,7 @@ La modification est atomique : si l'une des options est rejetée, le modèle res
         "choices": ["blanc", "noir"],
         "default": "blanc",
         "unicity": true,
+        "hide": false,
         "target": "STATIC"
       }
     ]

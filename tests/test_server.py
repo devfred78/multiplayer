@@ -914,6 +914,11 @@ def test_participants_carry_the_values_of_the_player_creation_form():
             [("Color", "white"), ("Nickname", "options_alice")],
             [("Color", "black"), ("Nickname", "options_bob")],
         ]
+        first_options = listed["payload"]["participants"][0]["options"]
+        assert first_options[0]["target"] == "STATIC"
+        assert first_options[0]["attribute"] is None
+        assert first_options[1]["target"] == "ATTRIBUTE"
+        assert first_options[1]["attribute"] == "name"
     finally:
         User._existing_usernames.discard("options_alice")
         User._existing_usernames.discard("options_bob")

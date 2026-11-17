@@ -1735,7 +1735,9 @@ their order of definition.
           {
             "option_id": "option_uuid",
             "name": "Colour",
-            "value": "white"
+            "value": "white",
+            "target": "STATIC",
+            "attribute": null
           }
         ]
       }
@@ -1767,6 +1769,8 @@ their order of definition.
 | `payload.participants[].options[].option_id` | `string` | - | Identifier of the option. |
 | `payload.participants[].options[].name` | `string` | - | Name of the option. |
 | `payload.participants[].options[].value` | `any` | - | Value chosen by the player for the option. |
+| `payload.participants[].options[].target` | `string` | - | Where the value is stored in the player (`ATTRIBUTE`, `STATIC` or `DYNAMIC`). |
+| `payload.participants[].options[].attribute` | `string` | No | Attribute of the player receiving the value, or `null` when the target is not `ATTRIBUTE`. |
 | `payload.error_code` | `string` | No | Error code in case of failure (see table below). |
 | `payload.message` | `string` | No | Information or error message. |
 

@@ -1798,7 +1798,9 @@ les options du formulaire, dans leur ordre de définition.
           {
             "option_id": "option_uuid",
             "name": "Colour",
-            "value": "white"
+            "value": "white",
+            "target": "STATIC",
+            "attribute": null
           }
         ]
       }
@@ -1830,6 +1832,8 @@ les options du formulaire, dans leur ordre de définition.
 | `payload.participants[].options[].option_id` | `string` | - | Identifiant de l'option. |
 | `payload.participants[].options[].name` | `string` | - | Nom de l'option. |
 | `payload.participants[].options[].value` | `any` | - | Valeur choisie par le joueur pour l'option. |
+| `payload.participants[].options[].target` | `string` | - | Emplacement de la valeur dans le joueur (`ATTRIBUTE`, `STATIC` ou `DYNAMIC`). |
+| `payload.participants[].options[].attribute` | `string` | Non | Attribut du joueur recevant la valeur, ou `null` lorsque la cible n'est pas `ATTRIBUTE`. |
 | `payload.error_code` | `string` | Non | Code d'erreur en cas d'échec (voir tableau ci-dessous). |
 | `payload.message` | `string` | Non | Message d'information ou d'erreur. |
 

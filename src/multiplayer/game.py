@@ -1469,20 +1469,27 @@ class PlayerFactory:
             player (Player): The player to inspect.
 
         Returns:
-            list[dict]: One ``option_id``, ``name`` and ``value`` entry per
-            option, in their order of definition. Options whose value is
-            absent from the player are left out.
+            list[dict]: One ``option_id``, ``name``, ``value``, ``target`` and
+            ``attribute`` entry per option, in their order of definition.
+            Options whose value is absent from the player are left out.
         """
         values = []
         for entry in self._entries:
             present, value = self._read_value(player, entry)
             if not present:
                 continue
+            attribute = entry.player_attribute
+            if isinstance(attribute, ParameterFamily):
+                target, attribute_name = _TARGET_BY_FAMILY[attribute], None
+            else:
+                target, attribute_name = _TARGET_ATTRIBUTE, attribute
             values.append(
                 {
                     "option_id": entry._option_id,
                     "name": entry._option.name,
                     "value": value,
+                    "target": target,
+                    "attribute": attribute_name,
                 }
             )
         return values

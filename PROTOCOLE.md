@@ -1737,7 +1737,8 @@ their order of definition.
             "name": "Colour",
             "value": "white",
             "target": "STATIC",
-            "attribute": null
+            "attribute": null,
+            "hide": false
           }
         ]
       }
@@ -1771,6 +1772,7 @@ their order of definition.
 | `payload.participants[].options[].value` | `any` | - | Value chosen by the player for the option. |
 | `payload.participants[].options[].target` | `string` | - | Where the value is stored in the player (`ATTRIBUTE`, `STATIC` or `DYNAMIC`). |
 | `payload.participants[].options[].attribute` | `string` | No | Attribute of the player receiving the value, or `null` when the target is not `ATTRIBUTE`. |
+| `payload.participants[].options[].hide` | `boolean` | No | `true` if the option is hidden from the player creation form. Defaults to `false`. |
 | `payload.error_code` | `string` | No | Error code in case of failure (see table below). |
 | `payload.message` | `string` | No | Information or error message. |
 
@@ -4683,4 +4685,4 @@ This table groups together all the error codes defined in the protocol, classifi
 | `UNKNOWN_TYPE` | The message type is not recognized by the server, for example a message introduced by a protocol revision that the server does not support. | `ERROR` |
 | `UNSUPPORTED_VERSION` | The major protocol version indicated in the `version` field is not supported. | `ERROR` |
 | `USER_ALREADY_EXISTS` | A user with this name already exists. | `USER_CREATE_RESPONSE` |
-| `USER_NOT_FOUND` | The specified user does not exist. | `AUTH_RESPONSE`, `USER_UPDATE_RESPONSE`, `USER_DELETE_RESPONSE` |
+| `USER_NOT_FOUND` | The specified user does not exist. | `AUTH_RESPONSE`, `USER_UPDATE_RESPONSE`

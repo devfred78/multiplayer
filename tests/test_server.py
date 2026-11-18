@@ -919,6 +919,8 @@ def test_participants_carry_the_values_of_the_player_creation_form():
         assert first_options[0]["attribute"] is None
         assert first_options[1]["target"] == "ATTRIBUTE"
         assert first_options[1]["attribute"] == "name"
+        assert first_options[0]["hide"] is True
+        assert first_options[1]["hide"] is False
     finally:
         User._existing_usernames.discard("options_alice")
         User._existing_usernames.discard("options_bob")

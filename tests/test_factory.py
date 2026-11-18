@@ -270,7 +270,10 @@ def test_factory_keeps_the_hide_flag_and_creates_hidden_options():
     factory = game.player_factory
     factory_id = factory.options[0][0]
     assert factory.get_option(factory_id)["entry"].hide is True
-    assert factory.create_player().static_state["Secret"] == "hidden"
+    player = factory.create_player()
+    assert player.static_state["Secret"] == "hidden"
+    values = {value["name"]: value for value in factory.player_values(player)}
+    assert values["Secret"]["hide"] is True
 
 
 def test_factory_proposed_values_follow_exclusions():

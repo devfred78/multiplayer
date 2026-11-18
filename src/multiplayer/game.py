@@ -1501,9 +1501,10 @@ class PlayerFactory:
             player (Player): The player to inspect.
 
         Returns:
-            list[dict]: One ``option_id``, ``name``, ``value``, ``target`` and
-            ``attribute`` entry per option, in their order of definition.
-            Options whose value is absent from the player are left out.
+            list[dict]: One ``option_id``, ``name``, ``value``, ``target``,
+            ``attribute`` and ``hide`` entry per option, in their order of
+            definition. Options whose value is absent from the player are left
+            out.
         """
         values = []
         for entry in self._entries:
@@ -1522,6 +1523,7 @@ class PlayerFactory:
                     "value": value,
                     "target": target,
                     "attribute": attribute_name,
+                    "hide": entry.hide,
                 }
             )
         return values

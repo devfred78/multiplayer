@@ -1800,7 +1800,8 @@ les options du formulaire, dans leur ordre de définition.
             "name": "Colour",
             "value": "white",
             "target": "STATIC",
-            "attribute": null
+            "attribute": null,
+            "hide": false
           }
         ]
       }
@@ -1834,6 +1835,7 @@ les options du formulaire, dans leur ordre de définition.
 | `payload.participants[].options[].value` | `any` | - | Valeur choisie par le joueur pour l'option. |
 | `payload.participants[].options[].target` | `string` | - | Emplacement de la valeur dans le joueur (`ATTRIBUTE`, `STATIC` ou `DYNAMIC`). |
 | `payload.participants[].options[].attribute` | `string` | Non | Attribut du joueur recevant la valeur, ou `null` lorsque la cible n'est pas `ATTRIBUTE`. |
+| `payload.participants[].options[].hide` | `boolean` | Non | `true` si l'option est masquée du formulaire de création du joueur. Par défaut : `false`. |
 | `payload.error_code` | `string` | Non | Code d'erreur en cas d'échec (voir tableau ci-dessous). |
 | `payload.message` | `string` | Non | Message d'information ou d'erreur. |
 
@@ -4921,4 +4923,4 @@ Ce tableau regroupe l'ensemble des codes d'erreur définis dans le protocole, cl
 | `UNKNOWN_TYPE` | Le type de message n'est pas reconnu par le serveur, par exemple un message introduit par une révision du protocole que le serveur ne prend pas en charge. | `ERROR` |
 | `UNSUPPORTED_VERSION` | La version majeure du protocole indiquée dans le champ `version` n'est pas prise en charge. | `ERROR` |
 | `USER_ALREADY_EXISTS` | Un utilisateur avec ce nom existe déjà. | `USER_CREATE_RESPONSE` |
-| `USER_NOT_FOUND` | L'utilisateur spécifié n'existe pas. | `AUTH_RESPONSE`, `USER_UPDATE_RESPONSE`, `USER_DELETE_RESPONSE` |
+| `USER_NOT_FOUND` | L'utilisateur spécifié n'existe pas. | `AUTH_RESPONSE`, `USER_UPDATE_RESPONSE`

@@ -101,7 +101,7 @@ Une énumération représentant les formats de stockage pris en charge par un fi
 *   `SaveFormat.SQLITE` : Sauvegarde dans une base de données SQLite.
 
 #### `OptionType` (Enum)
-Une énumération représentant les types d'options qui permettent de configurer des paramètres de personnalisation des joueurs. Ces options sont typiquement utilisées pour construire un formulaire de personnalisation par un processus client.
+Une énumération représentant les types d'options qui permettent de configurer des paramètres de personnalisation des joueurs et des parties. Ces options sont typiquement utilisées pour construire un formulaire de personnalisation par un processus client.
 
 *   `OptionType.CHECK` : Une option de type booléen, qui peut typiquement être représentée par une case à cocher.
 *   `OptionType.RANGE` : Une option de type numérique, dont la valeur est comprise dans un intervalle spécifié, qui peut être représentée par une barre de défilement ou un champ de saisie numérique.
@@ -170,14 +170,23 @@ Cette classe est dérivée de `GameNotFoundError` et est utilisée pour signaler
 #### Classe `GameHasPlayersError`
 Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative d'opération sur une partie qui n'est possible que tant qu'aucun joueur ne l'a rejointe (par exemple la création ou le remplacement de la factory de joueurs). La présence d'observateurs n'est pas prise en compte. Cette exception retourne dans son message l'ID de la partie concernée.
 
+#### Classe `GroupHasGamesError`
+Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative de création ou de remplacement de la factory de parties d'un groupe qui compte déjà au moins une partie. La suppression de la factory reste possible. Cette exception retourne dans son message l'ID du groupe concerné.
+
 #### Classe `PlayerFactoryNotDefinedError`
 Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative d'utilisation de la factory de joueurs d'une partie qui n'en dispose pas (attribut `player_factory` à `None`), par exemple avec la méthode `create_and_join_player` de la classe `Game`. Cette exception retourne dans son message l'ID de la partie concernée.
 
+#### Classe `GameFactoryNotDefinedError`
+Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative d'utilisation de la factory de parties d'un groupe qui n'en dispose pas (attribut `game_factory` à `None`), par exemple avec la méthode `create_and_add_game` de la classe `GameGroup`. Cette exception retourne dans son message l'ID du groupe concerné.
+
+#### Classe `PlayerFactoryTemplateNotFoundError`
+Cette classe est dérivée de `MultiplayerError` et est utilisée pour signaler une tentative d'utilisation d'un modèle de factory de joueurs (`PlayerFactoryTemplate`) qui n'existe pas, par exemple lorsque la valeur d'une option associée à la référence `"player_factory_template"` d'une factory de parties désigne un identifiant de modèle inexistant lors de la création d'une partie. Cette exception retourne dans son message l'ID du modèle de factory de joueurs concerné.
+
 #### Classe `UnsupportedFeatureError`
-Cette classe est dérivée de `MultiplayerError` et est utilisée par la classe `GameClient` pour signaler une tentative d'utilisation d'une fonctionnalité du protocole que le serveur ne propose pas (par exemple la fonctionnalité `player_factory` auprès d'un serveur de révision 2.0). Elle est levée avant l'envoi de la requête correspondante. Cette exception retourne dans son message le nom de la fonctionnalité concernée et la révision annoncée par le serveur.
+Cette classe est dérivée de `MultiplayerError` et est utilisée par la classe `GameServer` et la classe `GameClient` pour signaler une tentative d'utilisation d'une fonctionnalité du protocole que le serveur ne propose pas (par exemple la fonctionnalité `player_factory` auprès d'un serveur de révision 2.0, ou la fonctionnalité `game_factory` auprès d'un serveur de révision 2.1). Elle est levée avant l'envoi de la requête correspondante. Cette exception retourne dans son message le nom de la fonctionnalité concernée et la révision annoncée par le serveur.
 
 #### Classe `OptionError`
-Cette classe est dérivée de `MultiplayerError` et sert de classe de base commune aux exceptions liées aux options de personnalisation des joueurs (`OptionValueAlreadyGivenError`, `LackingOptionError`, `InvalidOptionValueError` et `OptionAlreadyExistsError`). Elle n'est pas destinée à être levée directement, mais permet d'intercepter en une seule fois toutes les erreurs liées aux options (`except OptionError`), sans les confondre avec les autres erreurs du module.
+Cette classe est dérivée de `MultiplayerError` et sert de classe de base commune aux exceptions liées aux options de personnalisation des joueurs et des parties (`OptionValueAlreadyGivenError`, `LackingOptionError`, `InvalidOptionValueError` et `OptionAlreadyExistsError`). Elle n'est pas destinée à être levée directement, mais permet d'intercepter en une seule fois toutes les erreurs liées aux options (`except OptionError`), sans les confondre avec les autres erreurs du module.
 
 #### Classe `OptionValueAlreadyGivenError`
 Cette classe est dérivée de `OptionError` et est utilisée pour signaler une tentative d'introduction d'un objet contenant une option dont la valeur a déjà été utilisée, alors qu'elle est censée être unique dans le contexte. Cette exception retourne dans son message l'ID de l'option concernée et la valeur en cause.
@@ -197,10 +206,10 @@ Elle présente les attributs suivants, renseignés à sa création:
 | Nom | Type | Description |
 |-----|------|-------------|
 | `option_id` | str | L'ID de l'option concernée. |
-| `reason` | str | La raison de l'erreur : `"ABSENT_FROM_PLAYER"` si l'objet `Player` introduit dans une partie ne porte pas de valeur pour cette option (ou porte la valeur `None`, considérée comme une absence de valeur), ou `"NO_AVAILABLE_VALUE"` si aucune valeur n'a été fournie pour cette option lors de la création d'un joueur et qu'il n'existe plus de valeur possible (valeur proposée à `None`). |
+| `reason` | str | La raison de l'erreur : `"ABSENT_FROM_PLAYER"` si l'objet `Player` introduit dans une partie ne porte pas de valeur pour cette option (ou porte la valeur `None`, considérée comme une absence de valeur), `"ABSENT_FROM_GAME"` si l'objet `Game` introduit dans un groupe ne porte pas de valeur pour cette option (ou porte la valeur `None`), ou `"NO_AVAILABLE_VALUE"` si aucune valeur n'a été fournie pour cette option lors de la création d'un joueur ou d'une partie et qu'il n'existe plus de valeur possible (valeur proposée à `None`). |
 
 #### Classe `InvalidOptionValueError`
-Cette classe est dérivée à la fois de `OptionError` et de `ValueError`, et est utilisée pour signaler une valeur d'option incorrecte, lors de la création d'un joueur par une factory ou lors de l'introduction d'un joueur dans une partie dotée d'une factory. Le fait de dériver de `ValueError` permet au code qui intercepte cette exception standard de continuer à fonctionner. Cette exception retourne dans son message l'ID de l'option concernée, la valeur en cause et la raison de l'erreur.
+Cette classe est dérivée à la fois de `OptionError` et de `ValueError`, et est utilisée pour signaler une valeur d'option incorrecte, lors de la création d'un joueur ou d'une partie par une factory, ou lors de l'introduction d'un joueur dans une partie ou d'une partie dans un groupe dotés d'une factory. Le fait de dériver de `ValueError` permet au code qui intercepte cette exception standard de continuer à fonctionner. Cette exception retourne dans son message l'ID de l'option concernée, la valeur en cause et la raison de l'erreur.
 
 Elle présente les attributs suivants, renseignés à sa création:
 
@@ -211,7 +220,7 @@ Elle présente les attributs suivants, renseignés à sa création:
 | `reason` | str | La raison de l'erreur : `"UNKNOWN_OPTION"` (la clé fournie ne correspond à aucune option), `"INCOMPATIBLE_TYPE"` (la valeur n'est pas acceptée pour le type de l'option, selon les règles de conversion de la classe `Option`) ou `"INVALID_VALUE"` (la valeur est en dehors des bornes `min_value` / `max_value`, ne correspond pas à un incrément `step`, ou est absente de `choices`). |
 
 #### Classe `OptionAlreadyExistsError`
-Cette classe est dérivée de `OptionError` et est utilisée pour signaler une tentative d'introduction d'une option qui est déjà présente. Cette exception retourne dans son message l'ID de l'option déjà présente. Cette exception est également levée lorsqu'une option similaire est déjà présente. La similitude est définie soit par l'égalité des ID des options, soit par l'égalité entre le nom de l'option introduite et la clé figée d'une option déjà présente (voir la méthode `add_option` de la classe `PlayerFactoryTemplate`).
+Cette classe est dérivée de `OptionError` et est utilisée pour signaler une tentative d'introduction d'une option qui est déjà présente. Cette exception retourne dans son message l'ID de l'option déjà présente. Cette exception est également levée lorsqu'une option similaire est déjà présente. La similitude est définie soit par l'égalité des ID des options, soit par l'égalité entre le nom de l'option introduite et la clé figée d'une option déjà présente (voir la méthode `add_option` des classes `PlayerFactoryTemplate` et `GameFactoryTemplate`).
 
 ### Contenu du fichier src/multiplayer/game.py
 
@@ -219,7 +228,7 @@ Ce fichier contient la logique principale de gestion des parties. Il définit le
 On y trouve en particulier les classes suivantes:
 
 #### Classe `Option`
-Cette classe représente une option dans le contexte du jeu. Une option est un paramètre de personnalisation dont la valeur est choisie lors de la création d'un joueur, au moyen d'une factory de joueurs. Elle peut être de différents types, tels que booléen, numérique, texte, etc. Chaque option est définie par un type et des paramètres spécifiques.
+Cette classe représente une option dans le contexte du jeu. Une option est un paramètre de personnalisation dont la valeur est choisie lors de la création d'un joueur, au moyen d'une factory de joueurs, ou d'une partie, au moyen d'une factory de parties. Elle peut être de différents types, tels que booléen, numérique, texte, etc. Chaque option est définie par un type et des paramètres spécifiques.
 
 Elle s'instancie avec les paramètres suivants:
 
@@ -303,7 +312,7 @@ La classe `Option` présente les méthodes suivantes:
 
 ##### Règles de conversion des valeurs
 
-Les règles suivantes s'appliquent de manière identique à la valeur par défaut (à la création de l'option), aux valeurs fournies lors de la création d'un joueur (méthode `create_player` de la classe `PlayerFactory`) et aux valeurs contrôlées lors de l'introduction d'un joueur dans une partie (méthode `join_game_as_player` de la classe `Game`):
+Les règles suivantes s'appliquent de manière identique à la valeur par défaut (à la création de l'option), aux valeurs fournies lors de la création d'un joueur (méthode `create_player` de la classe `PlayerFactory`) ou d'une partie (méthode `create_game` de la classe `GameFactory`), et aux valeurs contrôlées lors de l'introduction d'un joueur dans une partie (méthode `join_game_as_player` de la classe `Game`) ou d'une partie dans un groupe (méthode `add_game` de la classe `GameGroup`):
 
 | Type d'option | Valeurs acceptées | Conversion |
 |---------------|-------------------|------------|
@@ -312,7 +321,7 @@ Les règles suivantes s'appliquent de manière identique à la valeur par défau
 | `OptionType.LIST` | Chaîne de caractères uniquement. | Aucune. |
 | `OptionType.TEXT` | Chaîne de caractères uniquement. | Aucune. |
 
-Une valeur qui n'est pas acceptée est de type incompatible : selon le contexte, elle provoque l'exception `TypeError` (à la création de l'option) ou l'exception `InvalidOptionValueError` avec `reason` à `"INCOMPATIBLE_TYPE"` (lors de la création ou de l'introduction d'un joueur). C'est toujours la valeur convertie qui est retenue : elle est stockée dans l'objet `Player`, et c'est elle qui est comparée pour le contrôle d'unicité.
+Une valeur qui n'est pas acceptée est de type incompatible : selon le contexte, elle provoque l'exception `TypeError` (à la création de l'option) ou l'exception `InvalidOptionValueError` avec `reason` à `"INCOMPATIBLE_TYPE"` (lors de la création ou de l'introduction d'un joueur, ou lors de la création ou de l'introduction d'une partie dans un groupe). C'est toujours la valeur convertie qui est retenue : elle est stockée dans l'objet `Player`, et c'est elle qui est comparée pour le contrôle d'unicité.
 
 ##### Valeurs possibles d'une option `OptionType.RANGE`
 
@@ -322,7 +331,7 @@ Une option `OptionType.RANGE` est **entière** si `step`, ainsi que `min_value`,
 
 ##### Valeur par défaut `None`
 
-Une valeur par défaut à `None` signifie "première valeur disponible". Lors du calcul de la valeur proposée (voir la méthode `get_option` de la classe `PlayerFactory`), elle est remplacée par:
+Une valeur par défaut à `None` signifie "première valeur disponible". Lors du calcul de la valeur proposée (voir la méthode `get_option` des classes `PlayerFactory` et `GameFactory`), elle est remplacée par:
 
 | Type d'option | Valeur retenue |
 |---------------|----------------|
@@ -331,7 +340,7 @@ Une valeur par défaut à `None` signifie "première valeur disponible". Lors du
 | `OptionType.LIST` | Le premier élément de `choices` |
 | `OptionType.TEXT` | `""` (chaîne vide) |
 
-Si cette valeur est exclue, la règle de la valeur suivante s'applique (voir la méthode `get_option` de la classe `PlayerFactory`).
+Si cette valeur est exclue, la règle de la valeur suivante s'applique (voir la méthode `get_option` des classes `PlayerFactory` et `GameFactory`).
 
 ##### Constantes d'exécution
 
@@ -346,7 +355,8 @@ Les constantes d'exécution reconnues sont les suivantes:
 | `%%CURRENT_TIME%%` | str | Bibliothèque | La date et l'heure locales au moment de l'évaluation, au format ISO 8601, à la seconde près, avec le décalage horaire (ex: `"2026-11-15T12:34:56+01:00"`). |
 | `%%RANDOM_NUMBER%%` | int | Bibliothèque | Pour une option `OptionType.TEXT` : un nombre entier tiré au hasard entre 0 et 100 inclus. Pour une option `OptionType.RANGE` : une valeur tirée au hasard parmi les valeurs possibles de l'option (voir ci-dessous). |
 | `%%RANDOM_CHOICE%%` | str | Bibliothèque | Pour une option `OptionType.LIST` uniquement : une valeur tirée au hasard parmi les choix possibles de l'option (voir ci-dessous). |
-| `%%GAMENAME%%` | str | Factory | Le nom de la partie à laquelle la factory est associée (attribut `name` de l'objet `Game`). Si la partie n'a pas de nom (attribut `name` à `None`), la constante est remplacée par une chaîne vide (`""`). |
+| `%%GAMENAME%%` | str | Factory | Le nom de la partie à laquelle la factory de joueurs est associée (attribut `name` de l'objet `Game`). Si la partie n'a pas de nom (attribut `name` à `None`), la constante est remplacée par une chaîne vide (`""`). |
+| `%%GROUPNAME%%` | str | Factory | Le nom du groupe de parties auquel la factory de parties est associée (attribut `name` de l'objet `GameGroup`). |
 | `%%USERNAME%%` | str | Contexte | Le nom de l'utilisateur pour lequel le joueur est créé (attribut `username` de l'objet `User`). |
 | `%%SERVERNAME%%` | str | Contexte | Le nom du serveur (attribut `name` de l'objet `GameServer`). |
 | `%%CLIENTADDRESS%%` | str | Contexte | L'adresse IP (IPv4 ou IPv6) du client. |
@@ -354,10 +364,12 @@ Les constantes d'exécution reconnues sont les suivantes:
 
 La colonne "Source" indique qui fournit la valeur de la constante:
 - Bibliothèque : la valeur est calculée par la bibliothèque `multiplayer` elle-même, au moment de l'évaluation.
-- Factory : la valeur est fournie par l'objet `PlayerFactory` qui procède à l'évaluation, à partir de la partie à laquelle il est associé.
+- Factory : la valeur est fournie par l'objet `PlayerFactory` ou `GameFactory` qui procède à l'évaluation, à partir de la partie ou du groupe auquel il est associé (`%%GAMENAME%%` pour une factory de joueurs, `%%GROUPNAME%%` pour une factory de parties).
 - Contexte : la valeur est fournie par l'appelant, au travers d'un dictionnaire de contexte (voir ci-dessous). Côté serveur, c'est l'objet `GameServer` qui construit ce contexte à partir de la session et de la connexion de l'utilisateur concerné.
 
 Le **contexte** est un dictionnaire de type `dict[str, str]`, dont les clés sont les noms des constantes sans les caractères `%%` (par exemple `{"USERNAME": "alice", "CLIENTADDRESS": "192.168.1.12"}`), et les valeurs sont les valeurs à leur substituer. Une constante présente dans le contexte prend toujours la valeur du contexte, y compris s'il s'agit d'une constante normalement fournie par la bibliothèque ou par la factory : cela permet notamment d'obtenir des résultats reproductibles lors des tests unitaires (par exemple en fixant `CURRENT_TIME` ou `RANDOM_NUMBER`). Une constante de source "Contexte" absente du contexte est remplacée par une chaîne vide (`""`).
+
+Lorsqu'une option est évaluée par une `GameFactory`, la constante `%%GAMENAME%%` n'est pas fournie et est remplacée par une chaîne vide (`""`), puisqu'aucune partie n'existe encore. Inversement, lorsqu'une option est évaluée par une `PlayerFactory`, la constante `%%GROUPNAME%%` est remplacée par une chaîne vide (`""`), puisqu'une partie n'est pas nécessairement associée à un groupe.
 
 Les règles d'utilisation des constantes dépendent du type de l'option:
 
@@ -370,12 +382,12 @@ Les règles d'utilisation des constantes dépendent du type de l'option:
 
 Les constantes ne sont pas autorisées dans les autres paramètres de l'option (`min_value`, `max_value`, `step`, `choices`, `name`, `description`).
 
-Les constantes sont conservées sans évaluation dans l'objet `Option` (l'attribut `default` retourne toujours la valeur brute, par exemple `"Joueur_%%RANDOM_NUMBER%%"`), ainsi que lors de la copie des options dans un modèle ou dans une factory. Elles ne sont évaluées qu'au moment du calcul de la valeur proposée d'une option, par la méthode `evaluate_default`, appelée par les méthodes `get_option` et `create_player` de la classe `PlayerFactory`. Chaque évaluation est indépendante : deux évaluations successives peuvent donner des résultats différents (date et heure, tirages aléatoires). Il est donc recommandé au processus client de transmettre explicitement à la méthode `create_player` la valeur proposée qu'il a présentée à l'utilisateur, plutôt que de laisser la factory procéder à une nouvelle évaluation.
+Les constantes sont conservées sans évaluation dans l'objet `Option` (l'attribut `default` retourne toujours la valeur brute, par exemple `"Joueur_%%RANDOM_NUMBER%%"`), ainsi que lors de la copie des options dans un modèle ou dans une factory. Elles ne sont évaluées qu'au moment du calcul de la valeur proposée d'une option, par la méthode `evaluate_default`, appelée par les méthodes `get_option` et `create_player` de la classe `PlayerFactory`, et par les méthodes `get_option` et `create_game` de la classe `GameFactory`. Chaque évaluation est indépendante : deux évaluations successives peuvent donner des résultats différents (date et heure, tirages aléatoires). Il est donc recommandé au processus client de transmettre explicitement à la méthode `create_player` ou `create_game` la valeur proposée qu'il a présentée à l'utilisateur, plutôt que de laisser la factory procéder à une nouvelle évaluation.
 
 #### Classe `OptionEntry`
-Cette classe décrit une option telle qu'elle est enregistrée dans un modèle (`PlayerFactoryTemplate`) ou dans une factory (`PlayerFactory`) : l'option elle-même, accompagnée des paramètres qui lui ont été associés lors de son ajout au modèle. Ces paramètres n'appartiennent pas à l'objet `Option`, une même option pouvant être ajoutée à plusieurs modèles avec des paramètres différents.
+Cette classe décrit une option telle qu'elle est enregistrée dans un modèle (`PlayerFactoryTemplate`, `GameFactoryTemplate`) ou dans une factory (`PlayerFactory`, `GameFactory`) : l'option elle-même, accompagnée des paramètres qui lui ont été associés lors de son ajout au modèle. Ces paramètres n'appartiennent pas à l'objet `Option`, une même option pouvant être ajoutée à plusieurs modèles avec des paramètres différents.
 
-Les objets `OptionEntry` sont créés par les classes `PlayerFactoryTemplate` et `PlayerFactory`, et retournés par leurs méthodes `get_option`. Ils ne sont pas destinés à être instanciés directement par l'usager de la bibliothèque `multiplayer`.
+Les objets `OptionEntry` sont créés par les classes `PlayerFactoryTemplate`, `PlayerFactory`, `GameFactoryTemplate` et `GameFactory`, et retournés par leurs méthodes `get_option`. Ils ne sont pas destinés à être instanciés directement par l'usager de la bibliothèque `multiplayer`.
 
 Un objet `OptionEntry` est immuable : aucun de ses attributs n'est modifiable, et il ne donne pas accès aux objets internes du modèle ou de la factory.
 
@@ -386,7 +398,7 @@ Elle présente les attributs suivants:
 | `option` | `Option` | L'option concernée. | Non | Il s'agit d'une copie de l'objet `Option` détenu par le modèle ou la factory : sa modification est sans effet sur le modèle ou la factory. Cette copie représente la même option, et non une option nouvelle : elle conserve donc l'ID de l'option d'origine (voir la convention sur les ID). Elle se distingue en cela des copies effectuées lors de la création d'une factory, qui constituent de nouvelles options et reçoivent un nouvel ID. |
 | `unicity` | bool | La valeur du paramètre `unicity` associé à l'option. | Non | - |
 | `hide` | bool | La valeur du paramètre `hide` associé à l'option. | Non | - |
-| `player_attribute` | str\|`ParameterFamily` | La valeur du paramètre `player_attribute` associé à l'option. | Non | - |
+| `player_attribute` | str\|`ParameterFamily` | La valeur du paramètre `player_attribute` (pour les factories de joueurs) ou `game_attribute` (pour les factories de parties) associé à l'option. | Non | - |
 | `key` | str | La clé figée de l'option. | Non | - |
 
 La classe `OptionEntry` présente les méthodes suivantes:
@@ -399,14 +411,14 @@ La classe `OptionEntry` présente les méthodes suivantes:
     |-----|--------|
     | `unicity` | La valeur de l'attribut `unicity`. |
     | `hide` | La valeur de l'attribut `hide`. |
-    | `target` | `"ATTRIBUTE"` si `player_attribute` est une chaîne de caractères, `"STATIC"` s'il vaut `ParameterFamily.STATIC`, `"DYNAMIC"` s'il vaut `ParameterFamily.DYNAMIC`. |
-    | `attribute` | La valeur de `player_attribute` lorsque `target` vaut `"ATTRIBUTE"` (ex: `"name"`), `None` sinon. |
+    | `target` | `"ATTRIBUTE"` si `player_attribute` (ou `game_attribute`) est une chaîne de caractères, `"STATIC"` s'il vaut `ParameterFamily.STATIC`, `"DYNAMIC"` s'il vaut `ParameterFamily.DYNAMIC`. |
+    | `attribute` | La valeur de `player_attribute` (ou `game_attribute`) lorsque `target` vaut `"ATTRIBUTE"` (ex: `"name"`), `None` sinon. |
     | `key` | La clé figée de l'option. |
 
-- `from_dict` (méthode de classe): crée un objet `OptionEntry` à partir d'une représentation sous forme de dictionnaire, au format retourné par la méthode `to_dict`. Cette méthode est principalement utilisée par les méthodes `from_dict` des classes `PlayerFactoryTemplate` et `PlayerFactory`.
+- `from_dict` (méthode de classe): crée un objet `OptionEntry` à partir d'une représentation sous forme de dictionnaire, au format retourné par la méthode `to_dict`. Cette méthode est principalement utilisée par les méthodes `from_dict` des classes `PlayerFactoryTemplate`, `PlayerFactory`, `GameFactoryTemplate` et `GameFactory`.
   - Paramètres:
     - `data` (dict): la représentation de l'option enregistrée. Les éléments de l'option elle-même sont traités par la méthode `from_dict` de la classe `Option`. La clé `target` est obligatoire, ainsi que la clé `attribute` lorsque `target` vaut `"ATTRIBUTE"`. La clé `unicity` est optionnelle (`False` si absente). La clé `hide` est optionnelle (`False` si absente). La clé `key` est optionnelle : si elle est absente, la clé figée est le nom de l'option. Obligatoire.
-  - Précision d'implémentation: le paramètre `player_attribute` est reconstruit à partir de `target` et `attribute` (`"STATIC"` donne `ParameterFamily.STATIC`, `"DYNAMIC"` donne `ParameterFamily.DYNAMIC`, `"ATTRIBUTE"` donne la valeur de `attribute`). Les contrôles appliqués par la méthode `add_option` de la classe `PlayerFactoryTemplate` à `player_attribute` s'appliquent. Le dictionnaire fourni n'est pas modifié.
+  - Précision d'implémentation: le paramètre `player_attribute` (ou `game_attribute`) est reconstruit à partir de `target` et `attribute` (`"STATIC"` donne `ParameterFamily.STATIC`, `"DYNAMIC"` donne `ParameterFamily.DYNAMIC`, `"ATTRIBUTE"` donne la valeur de `attribute`). Les contrôles appliqués aux paramètres `player_attribute` et `game_attribute` par la méthode `add_option` des classes `PlayerFactoryTemplate` et `GameFactoryTemplate` s'appliquent. Le dictionnaire fourni n'est pas modifié.
   - Exceptions émises:
     - `TypeError` ou `ValueError`: dans les mêmes cas que la méthode `from_dict` de la classe `Option` et que les contrôles de `player_attribute` de la méthode `add_option`, ainsi que si `target` est absent ou ne vaut pas `"ATTRIBUTE"`, `"STATIC"` ou `"DYNAMIC"` (`ValueError`).
   - Valeur de retour: l'objet `OptionEntry` créé.
@@ -441,7 +453,7 @@ La classe `Player` présente les méthodes suivantes:
   - Valeur de retour: L'objet `Player` correspondant, ou `None` si aucun joueur existant ne porte cet ID.
 
 #### Classe `PlayerFactoryTemplate`
-Lors de la création d'une partie, il est possible de définir la manière dont les joueurs seront créés, les paramètres qu'ils devront traiter, ainsi que les valeurs qu'il sera possible de leur affecter avant le démarrage de la partie. Par exemple, pour un jeu d'échecs, le joueur qui souhaite rejoindre la partie doit pouvoir décider s'il jouera les blancs ou les noirs.
+Lors de la création d'un joueur, il est possible de définir la manière dont les joueurs seront créés, les paramètres qu'ils devront traiter, ainsi que les valeurs qu'il sera possible de leur affecter avant le démarrage de la partie. Par exemple, pour un jeu d'échecs, le joueur qui souhaite rejoindre la partie doit pouvoir décider s'il jouera les blancs ou les noirs.
 Il est également possible de faire évoluer et restreindre les valeurs possibles au fur et à mesure que les joueurs rejoignent la partie. Par exemple, toujours dans le cadre d'un jeu d'échecs, si un joueur a choisi de jouer les blancs, alors le second joueur ne pourra jouer que les noirs.
 Pour cela, il conviendra de créer un objet `PlayerFactoryTemplate`, et de lui affecter des objets `Option` qui définiront les paramètres, les valeurs possibles, ainsi que les valeurs par défaut. Cet objet `PlayerFactoryTemplate` pourra ensuite être utilisé par un objet `Game` pour créer en son sein (c'est-à-dire dans l'espace de nom de l'objet `Game`) un objet `PlayerFactory`, qui sera, lui, utilisé pour accompagner la création des objets `Player` à affecter à la partie en tant que joueurs. Une factory est propre à une partie : elle détermine les valeurs encore disponibles à partir de la liste des joueurs de cette partie (notamment pour gérer les choix "uniques", tels que la couleur - blanc ou noir - affectée pour une partie d'échecs). C'est pourquoi elle est créée au sein de l'objet `Game`. Le modèle, lui, est indépendant de toute partie et se situe dans l'espace de nom global : il peut servir à créer les factories de plusieurs parties.
 
@@ -623,6 +635,190 @@ La classe `PlayerFactory` présente les méthodes suivantes:
     - `OptionAlreadyExistsError`: si deux options de la liste partagent le même ID ou la même clé figée.
   - Valeur de retour: l'objet `PlayerFactory` créé.
 
+#### Classe `GameFactoryTemplate`
+
+Lors de la création d'une partie, il est possible de définir la manière dont les parties seront créées, les paramètres qu'elles devront traiter, ainsi que les valeurs qu'il sera possible de leur affecter avant leur création. Par exemple, pour un jeu d'échecs, la personne qui crée une partie peut décider du nom de la partie, du nombre maximal de joueurs, ou encore du caractère tour par tour. Il est également possible de faire évoluer et restreindre les valeurs possibles au fur et à mesure que les parties rejoignent un groupe. Par exemple, si un groupe impose des noms de parties uniques, une partie déjà créée interdit son nom aux suivantes.
+
+Pour cela, il convient de créer un objet `GameFactoryTemplate`, et de lui affecter des objets `Option` qui définiront les paramètres, les valeurs possibles, ainsi que les valeurs par défaut. Cet objet `GameFactoryTemplate` pourra ensuite être utilisé par un objet `GameGroup` pour créer en son sein (c'est-à-dire dans l'espace de nom de l'objet `GameGroup`) un objet `GameFactory`, qui sera, lui, utilisé pour accompagner la création des objets `Game` à affecter au groupe. Une factory est propre à un groupe : elle détermine les valeurs encore disponibles à partir de la liste des parties de ce groupe (notamment pour gérer les choix "uniques", tels que le nom de la partie). C'est pourquoi elle est créée au sein de l'objet `GameGroup`. Le modèle, lui, est indépendant de tout groupe et se situe dans l'espace de nom global : il peut servir à créer les factories de plusieurs groupes.
+
+La classe `GameFactoryTemplate` s'instancie avec les paramètres suivants:
+
+| Nom        | Type | Description      | Obligatoire | Valeur par défaut |
+|------------|------|------------------|-------------|-------------------|
+| `name`     | str  | Nom du modèle | Oui           | -                 |
+
+Ce paramètre `name` permet à un utilisateur d'identifier le modèle, par exemple dans la liste des modèles détenus par un serveur (voir le registre des modèles de factory de parties de la classe `GameServer`, et la requête `FACTORY_TEMPLATE_LIST` du [Protocole d'échanges entre le client et le serveur](PROTOCOLE_FR.md)). En usage local, la bibliothèque `multiplayer` ne tient aucun registre des modèles : il appartient à l'usager de conserver les modèles qu'il crée. Même si ce n'est pas obligatoire, il est **fortement** recommandé de fournir un nom unique pour chaque modèle.
+
+Elle présente les attributs suivants:
+
+| Nom        | Type | Description                     | Modifiable | Précision d'implémentation |
+|------------|------|---------------------------------|------------|----------------------------|
+| `ID`       | str  | Identifiant unique du modèle| Non          | S'initialise automatiquement avec la valeur de `uuid.uuid4()`.                          |
+| `name`     | str  | Nom du modèle               | Oui          | S'initialise automatiquement avec le nom fourni lors de la création du modèle.|
+| `options`    | list[tuple[str,str]] | Liste des ID et noms des options du modèle, sous forme de tuples (ID, nom)  | Non          | Une nouvelle liste est créée à chaque demande de lecture de cet attribut, dont une éventuelle modification n'a aucun impact sur les options contenues dans le modèle.                              |
+
+La classe `GameFactoryTemplate` présente les méthodes suivantes:
+
+- `add_option`: permet d'ajouter une option au modèle.
+  - Description: ajoute une option au modèle. Le modèle enregistre une copie de l'objet `Option` fourni, et non l'objet lui-même : une modification ultérieure de l'objet fourni (par exemple de son attribut `name` ou `description`) est sans effet sur le modèle. Cette copie représente la même option et conserve donc son ID (voir la convention sur les ID). Vérifie qu'une option similaire n'est pas déjà présente dans le modèle. La similitude est définie soit par l'égalité des ID des options, soit par l'égalité entre le nom actuel de l'option à ajouter (qui deviendra sa clé figée) et la clé figée d'une option déjà présente dans le modèle. Pour les options déjà présentes, c'est leur clé figée qui est prise en compte, et non leur nom. En cas de similitude, une exception `OptionAlreadyExistsError` est levée, sauf dans le cas du remplacement d'une option associée à un même attribut direct de la partie (voir ci-dessous).
+  - Paramètres (dans cet ordre):
+    - `option` (`Option`): l'objet `Option` à ajouter au modèle. Obligatoire.
+    - `game_attribute` (str|`ParameterFamily`): l'attribut de l'objet `Game` associé à cette option. Obligatoire. Voir le tableau ci-dessous. La chaîne de caractères `"player_factory_template"` désigne une référence à un modèle de factory de joueurs (`PlayerFactoryTemplate`) : dans ce cas, l'option est destinée à configurer la factory de joueurs de la partie créée (voir le tableau ci-dessous).
+    - `hide` (bool): indique si l'option doit être masquée dans le formulaire de création de la partie dans l'interface utilisateur. Si `True`, cela permet de créer un attribut utilisé par la logique du serveur ou du groupe mais qui n'a pas à être initialisé par l'utilisateur. Facultatif, par défaut à `False`.
+    - `unicity` (bool): Si `True`, alors une valeur de cette option portée par une partie du groupe ne peut pas être portée par une autre partie de ce même groupe. La valeur redevient disponible dès que la partie qui la porte est retirée du groupe. Pour une option associée à `ParameterFamily.DYNAMIC`, c'est la valeur courante portée par la partie qui est prise en compte : si elle évolue après la création, les valeurs exclues évoluent en conséquence. L'unicité n'est garantie qu'au moment où la partie est ajoutée au groupe (méthode `add_game` de la classe `GameGroup`) : une modification ultérieure de la valeur portée par une partie (attribut `name`, `static_state` ou `dynamic_state`) n'est pas contrôlée. Il est de la responsabilité de l'usager de la bibliothèque `multiplayer` de préserver l'unicité après l'introduction des parties, si elle est nécessaire au jeu. Pour une option unique associée à l'attribut `name`, une partie sans nom (`None`) est ignorée dans le calcul des exclusions, comme une absence de valeur. Il est donc recommandé de donner à une telle option une valeur par défaut variable, par exemple `"Partie_%%RANDOM_NUMBER%%"`. Optionnel. `False` par défaut.
+  - Exceptions émises:
+    - `TypeError` si l'objet fourni n'est pas une instance de `Option`.
+    - `TypeError` si `game_attribute` n'est ni une chaîne de caractères, ni un membre de l'énumération `ParameterFamily`.
+    - `ValueError` si `game_attribute` est une chaîne de caractères qui ne correspond ni à un attribut direct autorisé, ni à `"player_factory_template"`.
+    - `TypeError` si le type de l'option n'est pas compatible avec l'attribut direct choisi (voir le tableau ci-dessous).
+    - `OptionAlreadyExistsError` si une option similaire est déjà présente dans le modèle, hors cas de remplacement.
+  - Valeur de retour: Aucune.
+
+Les attributs directs de la partie et les types d'option acceptés sont les suivants:
+
+| `game_attribute` | Types d'option acceptés | Effet |
+|------------------|-------------------------|-------|
+| `"name"` | `OptionType.TEXT`, `OptionType.LIST` | La valeur choisie est affectée à l'attribut `name` de la partie. |
+| `"max_players"` | `OptionType.RANGE` entière | La valeur choisie est affectée à l'attribut `max_players` de la partie. |
+| `"max_observers"` | `OptionType.RANGE` entière | La valeur choisie est affectée à l'attribut `max_observers` de la partie. |
+| `"min_players"` | `OptionType.RANGE` entière | La valeur choisie est affectée à l'attribut `min_players` de la partie. |
+| `"turn_based"` | `OptionType.CHECK` | La valeur choisie est affectée à l'attribut `turn_based` de la partie. |
+| `"player_factory_template"` | `OptionType.TEXT`, `OptionType.LIST` | La valeur choisie est interprétée comme l'ID d'un modèle de factory de joueurs (`PlayerFactoryTemplate`) : une factory de joueurs construite à partir de ce modèle est associée à la partie créée. Une option de type `OptionType.LIST` permet de laisser le créateur de la partie choisir parmi plusieurs modèles de factory de joueurs. |
+| `"password"` | `OptionType.TEXT` | La valeur choisie est affectée au paramètre `password` de la partie, qui est haché par la classe `Game`. |
+| `"observer_password"` | `OptionType.TEXT` | La valeur choisie est affectée au paramètre `observer_password` de la partie, qui est haché par la classe `Game`. |
+| `ParameterFamily.STATIC` | Tous | La valeur choisie est ajoutée dans `static_state`, à la clé figée de l'option. |
+| `ParameterFamily.DYNAMIC` | Tous | La valeur choisie est ajoutée dans `dynamic_state`, à la clé figée de l'option. |
+
+Une option `OptionType.RANGE` est dite **entière** lorsque toutes ses valeurs sont de type `int` (voir le paragraphe "Valeurs possibles d'une option `OptionType.RANGE`" de la classe `Option`). Une option `OptionType.RANGE` décimale ne peut pas être associée aux attributs `max_players`, `max_observers` et `min_players`.
+
+Lors des contrôles effectués à l'ajout d'une partie dans le groupe, la valeur lue pour l'attribut `min_players` est la valeur effective retournée par l'objet `Game`, c'est-à-dire la valeur fournie éventuellement plafonnée par `max_players` (voir la classe `Game`).
+
+> Précision d'implémentation:
+> - Le remplacement silencieux ne concerne que les attributs directs de l'objet `Game` : si `game_attribute` désigne un attribut direct déjà associé à une autre option du modèle, l'ancienne option est remplacée par la nouvelle option silencieusement. L'ancienne option est alors retirée du modèle (de la même manière que par l'utilisation de la méthode `del_option`). Pour ce contrôle de remplacement, l'option remplacée n'est pas comparée sur sa clé figée (la nouvelle option peut donc porter le même nom que l'option qu'elle remplace), mais l'est toujours sur son ID. Un attribut direct ne peut donc être associé qu'à une seule option à la fois.
+> - La référence `"player_factory_template"` ne désigne pas un attribut direct de l'objet `Game`, mais un modèle de factory de joueurs (`PlayerFactoryTemplate`) : lors de la création de la partie (méthode `create_game` de la classe `GameFactory`), la valeur de l'option est résolue vers un objet `PlayerFactoryTemplate`, puis la factory de joueurs correspondante est associée à la partie créée, via la méthode `create_player_factory` de la classe `Game`. Si la valeur ne correspond à aucun modèle, la méthode `create_game` lève l'exception `PlayerFactoryTemplateNotFoundError`.
+> - Pour `ParameterFamily.STATIC` et `ParameterFamily.DYNAMIC`, aucun remplacement n'a lieu : un même modèle peut contenir autant d'options associées à une même famille que nécessaire, chacune étant identifiée par sa clé figée. Une option dont le nom correspond à la clé figée d'une option déjà présente provoque l'exception `OptionAlreadyExistsError`.
+> - Chaque option reçoit, au moment de l'appel à `add_option`, une clé figée : il s'agit de la valeur de l'attribut `name` de l'option à cet instant. Une modification ultérieure de l'attribut `name` de l'option n'a aucun effet sur cette clé. Pour les options associées à `ParameterFamily.STATIC` ou `ParameterFamily.DYNAMIC`, c'est cette clé qui est utilisée dans `static_state` ou `dynamic_state`. Pour toutes les options, c'est également cette clé qui sert au contrôle de similitude. Le modèle enregistrant une copie de l'option fournie, et ne proposant aucun moyen de renommer une option qu'il contient, la clé figée d'une option ajoutée par `add_option` reste égale à son nom. Elle ne peut en différer que pour une option reconstruite à partir d'une représentation fournissant explicitement sa clé (méthodes `from_dict`).
+> - Une option associée aux attributs `"max_players"` ou `"max_observers"` ne peut pas produire `None` : pour conserver la possibilité d'une partie sans limite, il ne faut pas associer d'option à l'attribut correspondant. Les mots de passe (`password` et `observer_password`) ne font pas partie des attributs directs proposés, car la classe `Game` n'en conserve qu'un hash non réversible : ils ne peuvent donc pas être relus pour vérifier les contraintes de la factory lors de l'ajout d'une partie au groupe. Une partie protégée peut néanmoins être créée directement, sans passer par la factory, puis ajoutée au groupe si elle respecte les options de la factory.
+
+- `get_option`: fournit une option spécifique du modèle.
+  - Paramètres:
+    - `option_id` (str): l'ID de l'option à obtenir. Obligatoire.
+  - Exceptions émises:
+    - `KeyError` si l'option n'existe pas dans le modèle.
+  - Valeur de retour: un objet `OptionEntry` décrivant l'option demandée, avec ses paramètres `unicity`, `hide` et `game_attribute` et sa clé figée.
+
+- `del_option`: supprime une option du modèle.
+  - Paramètres:
+    - `option_id` (str): l'ID de l'option à supprimer. Obligatoire.
+  - Exceptions émises:
+    - `KeyError` si l'option n'existe pas dans le modèle.
+  - Valeur de retour: Aucune.
+
+- `to_dict`: fournit une représentation du modèle sous forme de dictionnaire, commune à la sauvegarde et aux échanges réseau.
+  - Paramètres: Aucun.
+  - Valeur de retour: un objet `dict` présentant les éléments suivants:
+
+    | Clé | Valeur |
+    |-----|--------|
+    | `template_id` | L'ID du modèle. |
+    | `name` | Le nom du modèle. |
+    | `options` | La liste des options du modèle, dans leur ordre d'ajout, chacune sous la forme retournée par la méthode `to_dict` de la classe `OptionEntry`. |
+
+- `from_dict` (méthode de classe): crée un modèle à partir d'une représentation sous forme de dictionnaire, au format retourné par la méthode `to_dict`. Cette méthode est utilisée pour la restauration d'une sauvegarde, et par le serveur pour la création et la modification de modèles à partir des données reçues des clients.
+  - Paramètres:
+    - `data` (dict): la représentation du modèle. La clé `name` est obligatoire. La clé `options` est optionnelle (aucune option si absente). La clé `template_id` est optionnelle. Obligatoire.
+  - Précision d'implémentation: si la clé `template_id` est présente, le modèle créé conserve cet ID ; sinon, un nouvel ID est généré. Chaque option est reconstruite par la méthode `from_dict` de la classe `OptionEntry`, puis ajoutée au modèle dans l'ordre de la liste, selon les règles de la méthode `add_option` (contrôle de similitude, remplacement d'une option associée à un attribut direct), mais en conservant son ID et sa clé figée lorsqu'ils sont fournis. La création est atomique : si l'une des options est rejetée, aucun modèle n'est créé. Le dictionnaire fourni n'est pas modifié.
+  - Exceptions émises:
+    - `TypeError` ou `ValueError`: si les données sont mal formées, ou dans les mêmes cas que la méthode `from_dict` de la classe `OptionEntry`.
+    - `OptionAlreadyExistsError`: si deux options de la liste partagent le même ID ou la même clé figée.
+  - Valeur de retour: l'objet `GameFactoryTemplate` créé.
+
+#### Classe `GameFactory`
+
+Cette classe permet de créer des objets `Game` à partir d'options pré-établies. Cette classe est particulièrement utile pour définir les caractéristiques des parties selon le type de jeu ou le groupe auquel elles vont participer. Par exemple, pour un groupe de parties d'échecs, les parties peuvent être caractérisées par un nom unique, un nombre maximal de joueurs et un caractère tour par tour. Ces contraintes peuvent être implémentées dans une instance de `GameFactory`, et servir à générer les objets `Game` compatibles avec le groupe auquel l'objet `GameFactory` aura été associé.
+
+Un objet `GameFactory` n'est typiquement utilisé pour créer des objets `Game` que dans le cadre d'un groupe en particulier. Ainsi, un objet `GameFactory` ne devrait s'instancier que dans l'espace de nom d'un objet `GameGroup`, et jamais dans l'espace de nom global. En réalité, l'objet `GameFactory` ne devrait être créé qu'avec la méthode `create_game_factory` de l'objet `GameGroup` dans lequel on souhaite l'intégrer.
+
+L'utilisateur y accède aux options au travers de l'attribut `options` (pour obtenir les ID et noms des options) et par la méthode `get_option` (pour obtenir l'option dans son intégralité, avec ses paramètres `unicity`, `hide` et `game_attribute`, sa clé figée, sa liste d'exclusion et la valeur proposée). Cela permet à l'utilisateur de choisir une valeur pour chaque option. Les valeurs choisies sont ensuite transmises en une seule fois, en paramètre de la méthode `create_game`, qui crée l'objet `Game` correspondant.
+
+La factory ne conserve aucune valeur en cours de saisie : chaque appel à `create_game` est indépendant des autres. Plusieurs utilisateurs peuvent ainsi préparer simultanément leur partie à partir de la même factory, sans que leurs choix n'interfèrent.
+
+La liste des parties du groupe (attribut `games` de l'objet `GameGroup` associé) est l'unique référence pour déterminer les valeurs exclues : la factory ne réserve aucune valeur. Un objet `Game` créé par la factory n'est pris en compte dans les exclusions qu'à partir du moment où il a effectivement rejoint le groupe par la méthode `add_game`, et cesse de l'être dès qu'il en est retiré. C'est la méthode `add_game` qui effectue la vérification définitive des contraintes de la factory. Pour que les choix d'un utilisateur soient immédiatement pris en compte dans les valeurs proposées aux suivants, il est recommandé de créer les parties au moyen de la méthode `create_and_add_game` de la classe `GameGroup`, qui enchaîne la création de la partie et son introduction dans le groupe en une seule opération.
+
+> Précision d'implémentation: les valeurs exclues ne sont pas stockées, mais calculées à chaque fois qu'elles sont nécessaires (méthodes `get_option` et `create_game`). Pour chaque option créée avec `unicity` à `True`, les valeurs exclues sont les valeurs de cette option portées par les objets `Game` présents dans l'attribut `games` du groupe associé. La valeur portée par une partie est lue selon le paramètre `game_attribute` de l'option : dans l'attribut direct correspondant, ou dans `static_state` / `dynamic_state` à la clé figée lors de l'ajout de l'option au modèle. Une partie ne portant pas de valeur pour cette option, ou portant la valeur `None`, est ignorée pour cette option.
+
+La classe `GameFactory` s'instancie avec les paramètres suivants:
+
+| Nom        | Type | Description      | Obligatoire | Valeur par défaut |
+|------------|------|------------------|-------------|-------------------|
+| `template` | `GameFactoryTemplate` | Le modèle dont la factory copie les options, ainsi que leurs paramètres `unicity`, `hide` et `game_attribute`, et leurs clés figées. | Oui | - |
+| `group_id`  | str  | L'ID de l'objet `GameGroup` auquel la factory est associée. Le groupe est retrouvé au travers de la méthode de classe `GameGroup.get_by_id`. | Oui | - |
+
+Ces paramètres sont fournis par la méthode `create_game_factory` de la classe `GameGroup`, qui est le seul moyen prévu pour créer un objet `GameFactory`.
+
+> Précision d'implémentation: les méthodes `get_option` et `create_game` retrouvent le groupe associé au moyen de la méthode de classe `GameGroup.get_by_id`. Si le groupe n'existe plus, elles lèvent l'exception `GroupNotFoundError`.
+
+> Précision d'implémentation: à l'instanciation, les objets `Option` du modèle sont copiés dans la factory (ils ne sont pas partagés), de même que leurs paramètres `unicity`, `hide` et `game_attribute` et leurs clés figées. Une modification ultérieure du modèle (ajout, suppression ou remplacement d'option) ou des objets `Option` qu'il contient n'est pas répercutée sur la factory, et inversement. Chaque option copiée reçoit un nouvel ID, généré avec `uuid.uuid4()` : les ID des options de la factory sont donc distincts de ceux des options du modèle, et doivent être obtenus au travers de l'attribut `options` de la factory.
+
+Elle présente les attributs suivants:
+
+| Nom        | Type | Description                     | Modifiable | Précision d'implémentation |
+|------------|------|---------------------------------|------------|----------------------------|
+| `ID`       | str  | Identifiant unique de la factory| Non        | S'initialise automatiquement avec la valeur de `uuid.uuid4()`.                          |
+| `options`    | list[tuple[str,str]] | Liste des ID et noms des options de la factory, sous forme de tuples (ID, nom)  | Non        | Une nouvelle liste est créée à chaque demande de lecture de cet attribut, dont une éventuelle modification n'a aucun impact sur les options contenues dans la factory.                              |
+
+La classe `GameFactory` présente les méthodes suivantes:
+
+- `get_option`: fournit une option spécifique de la factory.
+  - Paramètres:
+    - `option_id` (str): l'ID de l'option à obtenir. Obligatoire.
+    - `context` (dict[str, str]\|`None`): le contexte fournissant la valeur des constantes d'exécution pour le calcul de la valeur proposée (voir le paragraphe "Constantes d'exécution" de la classe `Option`). Optionnel. Valeur par défaut: `None`.
+  - Exceptions émises:
+    - `KeyError` si l'option n'existe pas dans la factory.
+    - `GroupNotFoundError` si le groupe associé n'existe plus.
+  - Valeur de retour: un objet `dict` présentant les éléments suivants:
+
+    | Clé    | Valeur  |
+    |--------|---------|
+    | `entry`| un objet `OptionEntry` décrivant l'option demandée, avec ses paramètres `unicity`, `hide` et `game_attribute` et sa clé figée. |
+    | `exclusions`| la liste des valeurs exclues pour cette option, calculée au moment de l'appel à partir des parties présentes dans le groupe. Liste vide pour une option créée avec `unicity` à `False`. |
+    | `proposed_value`| la valeur proposée pour cette option, calculée au moment de l'appel. Elle peut servir à pré-remplir un formulaire de saisie, et c'est elle qui est utilisée par `create_game` si aucune valeur n'est fournie pour cette option. |
+
+> Précision d'implémentation: la valeur proposée est calculée selon les mêmes règles que la méthode `get_option` de la classe `PlayerFactory` (valeur par défaut évaluée, puis valeur suivante si nécessaire, et `None` s'il n'existe plus de valeur possible), y compris la table des valeurs suivantes et les règles de comparaison des valeurs. La méthode `evaluate_default` de l'objet `Option` est appelée avec le contexte fourni, complété par la factory de la constante `GROUPNAME` (nom du groupe associé) si elle n'y figure pas déjà, et avec les valeurs exclues de l'option (paramètre `exclusions`), de sorte qu'un tirage aléatoire ne retienne jamais une valeur exclue. La constante `GAMENAME` n'est pas fournie par la factory et vaut une chaîne vide si elle est utilisée.
+
+- `create_game`: génère un objet `Game` à partir des valeurs choisies pour les options de la factory.
+  - Paramètres:
+    - `values` (dict[str, any]): les valeurs choisies, sous la forme d'un dictionnaire dont les clés sont les ID des options de la factory (tels que fournis par l'attribut `options`) et les valeurs sont les valeurs choisies pour ces options. Il n'est pas nécessaire de fournir une valeur pour chaque option : une option absente du dictionnaire prend sa valeur proposée (voir la méthode `get_option`). Une valeur `None` signifie "pas de choix" : l'option correspondante est traitée comme si elle était absente du dictionnaire, et prend donc sa valeur proposée. Optionnel. Valeur par défaut: dictionnaire vide (toutes les options prennent leur valeur proposée).
+    - `context` (dict[str, str]\|`None`): le contexte fournissant la valeur des constantes d'exécution, utilisé pour calculer la valeur proposée des options absentes du dictionnaire `values` (voir la méthode `get_option`). Les valeurs fournies dans `values` ne sont jamais évaluées comme des constantes d'exécution : une chaîne telle que `"%%USERNAME%%"` y est une valeur ordinaire. Elles sont en revanche converties selon les règles de conversion de la classe `Option`. Optionnel. Valeur par défaut: `None`.
+  - Exceptions émises:
+    - `InvalidOptionValueError` si une clé du dictionnaire `values` ne correspond à aucune option de la factory (`reason` à `"UNKNOWN_OPTION"`), si une valeur fournie n'est pas compatible avec le type attendu pour l'option correspondante (`reason` à `"INCOMPATIBLE_TYPE"`), ou si une valeur fournie n'est pas valide pour l'option correspondante (`reason` à `"INVALID_VALUE"`).
+    - `OptionValueAlreadyGivenError` si une valeur fournie pour une option créée avec `unicity` à `True` fait partie des valeurs exclues au moment de l'appel.
+    - `LackingOptionError` si une option absente du dictionnaire `values` n'a pas de valeur proposée (valeur proposée à `None`), avec `reason` à `"NO_AVAILABLE_VALUE"`.
+    - `GroupNotFoundError` si le groupe associé n'existe plus.
+    - `PlayerFactoryTemplateNotFoundError` si une option associée à `"player_factory_template"` fournit une valeur correspondant à un identifiant de modèle de factory de joueurs (`PlayerFactoryTemplate`) inexistant.
+  - Valeur de retour: un objet `Game`.
+
+> Précision d'implémentation: la méthode construit une nouvelle instance de `Game` en renseignant les attributs directs de la partie avec les valeurs des options qui leur sont associées, et en transmettant les options de famille `ParameterFamily.STATIC` et `ParameterFamily.DYNAMIC` sous la forme de paramètres nommés `(famille, valeur)` acceptés par le constructeur de `Game`. Les attributs directs pour lesquels aucune option n'est définie prennent leur valeur par défaut dans la classe `Game`. Si une option de la factory est associée à `"player_factory_template"`, la méthode construit la factory de joueurs correspondante à partir du modèle désigné par la valeur de l'option, puis l'attribue à l'objet `Game` créé (attribut `player_factory` de la classe `Game`), via la méthode `create_player_factory` de la classe `Game`. La méthode ne modifie pas l'état de la factory et n'ajoute pas la partie au groupe. La création d'une partie ne réserve aucune valeur : l'objet créé n'est pris en compte dans les exclusions qu'une fois ajouté au groupe par la méthode `add_game`. Deux appels successifs ou simultanés à `create_game` avec la même valeur pour une option unique peuvent donc tous deux réussir : c'est lors de l'introduction des parties dans le groupe que le second sera refusé (exception `OptionValueAlreadyGivenError`). Le dictionnaire `values` fourni n'est pas modifié par la méthode.
+
+- `to_dict`: fournit une représentation de la factory sous forme de dictionnaire, utilisée pour la sauvegarde du groupe auquel elle est associée.
+  - Paramètres: Aucun.
+  - Valeur de retour: un objet `dict` présentant les éléments suivants:
+
+    | Clé | Valeur |
+    |-----|--------|
+    | `factory_id` | L'ID de la factory. |
+    | `options` | La liste des options de la factory, dans leur ordre de définition, chacune sous la forme retournée par la méthode `to_dict` de la classe `OptionEntry`. |
+
+- `from_dict` (méthode de classe): recrée une factory à partir d'une représentation sous forme de dictionnaire, au format retourné par la méthode `to_dict`, sans passer par un modèle. Cette méthode est réservée à la restauration d'un groupe sauvegardé : en dehors de ce cas, une factory doit être créée par la méthode `create_game_factory` de la classe `GameGroup`.
+  - Paramètres:
+    - `data` (dict): la représentation de la factory. Obligatoire.
+    - `group_id` (str): l'ID du groupe auquel la factory est associée. Obligatoire.
+  - Précision d'implémentation: la factory et ses options conservent les ID et les clés figées fournis. Chaque option est reconstruite par la méthode `from_dict` de la classe `OptionEntry`. Le dictionnaire fourni n'est pas modifié.
+  - Exceptions émises:
+    - `TypeError` ou `ValueError`: si les données sont mal formées, ou dans les mêmes cas que la méthode `from_dict` de la classe `OptionEntry`.
+    - `OptionAlreadyExistsError`: si deux options de la liste partagent le même ID ou la même clé figée.
+  - Valeur de retour: l'objet `GameFactory` créé.
+
 #### Classe `Game`
 Cette classe représente une partie de jeu. Elle s'instancie avec les paramètres suivants:
 
@@ -643,6 +839,8 @@ La classe présente les attributs suivants:
 |-----------------|-----------------|--------------|------------|----------------------------|
 | `ID`            | str             | L'identifiant unique de la partie. | Non | S'initialise automatiquement avec la valeur de `uuid.uuid4()`.|
 | `name`          | str\|`None`     | Le nom de la partie. `None` si la partie n'a pas de nom. | Oui        | S'initialise avec le paramètre `name`. |
+| `max_players`   | int\|`None`     | Nombre maximal de joueurs. `None` si le nombre de joueurs n'est pas limité. | Non | S'initialise avec le paramètre `max_players`. |
+| `max_observers` | int\|`None`     | Nombre maximal d'observateurs. `None` si le nombre d'observateurs n'est pas limité. | Non | S'initialise avec le paramètre `max_observers`. |
 | `hash`          | str\|`None`     | Le hash du mot de passe de la partie. `None` si la partie est publique (sans mot de passe).| Non  | Le hash est automatiquement généré à partir de `password` avec `bcrypt`. |
 | `observer_hash` | str\|`None`     | Le hash du mot de passe de l'observateur. `None` si aucun mot de passe d'observation n'est défini. | Non  | Le hash est automatiquement généré à partir de `observer_password` avec `bcrypt`.|
 | `turn_based`    | bool            | `True` si le jeu est au tour par tour, `False` pour un jeu simultané. | Non  | -  |
@@ -659,6 +857,8 @@ Chaque objet `Game` créé (ou restauré depuis une sauvegarde) est enregistré 
 
 > Précision d'implémentation: l'attribut `player_factory`, lorsqu'il est défini, facilite la création des joueurs de la partie, en permettant de créer des joueurs personnalisés à partir de la classe `PlayerFactory` plutôt que de créer des joueurs par défaut à partir de la classe `Player`. Son utilisation n'est pas obligatoire, et les objets `Player` créés à partir de cette factory doivent être traités comme n'importe quel autre objet `Player`: ils doivent être intégrés à la partie en utilisant la méthode `join_game_as_player`. La méthode `create_player` de la factory ne les intègre pas automatiquement à la partie. Pour créer un joueur et l'intégrer à la partie en une seule opération, il convient d'utiliser la méthode `create_and_join_player`.
 > Toutefois, si `player_factory` est défini, alors l'ajout de joueurs par la méthode `join_game_as_player` vérifie que l'objet `Player` transmis répond bien aux contraintes de la factory, sur les options qui y sont spécifiées : présence de l'option, compatibilité du type de la valeur, validité de la valeur, et unicité de la valeur parmi les joueurs de la partie pour les options créées avec le paramètre `unicity` à `True`. Le détail de ces vérifications, et des exceptions levées, est décrit dans la méthode `join_game_as_player`. La liste des joueurs de la partie est l'unique référence pour l'unicité des valeurs : retirer un joueur de la partie rend automatiquement ses valeurs à nouveau disponibles. Ces vérifications ne sont effectuées qu'au moment de l'introduction d'un joueur : l'unicité n'est donc garantie qu'au moment du `join`, et une modification ultérieure des valeurs portées par les joueurs n'est pas contrôlée.
+
+Une partie peut également être préparée par une factory de parties (classe `GameFactory`), associée au groupe de parties (`GameGroup`) dans lequel la partie est destinée à être créée. Cette factory facilite la création des parties et contrôle leurs paramètres lors de leur introduction dans le groupe. Dans ce cadre, une option peut être associée à la référence `"player_factory_template"`, afin de déterminer la factory de joueurs de la partie créée à partir d'un modèle de factory de joueurs (`PlayerFactoryTemplate`). Voir la classe `GameGroup` et la classe `GameFactory`.
 
 La classe `Game` présente les méthodes suivantes:
 
@@ -823,7 +1023,7 @@ La classe `Game` présente les méthodes suivantes:
   - Valeur de retour: Aucune.
 
 #### Classe `GameGroup`
-Cette classe permet de regrouper plusieurs parties dans un seul objet. Elle permet de gérer les parties en parallèle et de les manipuler en tant que groupe. Elle s'instancie avec les paramètres suivants:
+Cette classe permet de regrouper plusieurs parties dans un seul objet. Elle permet de gérer les parties en parallèle et de les manipuler en tant que groupe. Elle peut également être dotée d'une factory de parties (classe `GameFactory`), qui facilite la création des parties du groupe et contrôle leurs paramètres lors de leur introduction dans le groupe. Elle s'instancie avec les paramètres suivants:
 
 | Nom                 | Type        | Description | Obligatoire | Valeur par défaut |
 |---------------------|-------------|-------------|-------------|-------------------|
@@ -836,25 +1036,67 @@ La classe présente les attributs suivants:
 |-----------------|-----------------|--------------|------------|----------------------------|
 | `ID`            | str             | L'identifiant unique du groupe. | Non | S'initialise automatiquement avec la valeur de `uuid.uuid4()`.|
 | `name`          | str             | Le nom du groupe. | Oui        | - |
+| `game_factory`  | `GameFactory`\|`None` | Fabrique de parties pour aider à la création des parties du groupe, et contrôler leurs paramètres lors de leur introduction dans le groupe. Si `None`, alors il n'y a ni aide à la création des parties, ni contrôle de leurs paramètres lors de leur introduction dans le groupe. | Non | Se crée à partir de la méthode `create_game_factory`. |
 | `games`       | Tuple[str] | Tuple (liste non mutable) des ID des objets `Game` représentant les parties du groupe. | Non | La variable interne correspondante ( `_games`) est une liste qui est transformée en tuple pour son affichage public au travers de l'attribut `games`. |
 | `parameters` | dict | Paramètres de personnalisation du groupe | Oui        | S'initialise automatiquement avec les paramètres spécifiés dans `kwargs`, mais peut être complété par la suite par tout autre paramètre au choix de l'utilisateur. |
 
+Chaque objet `GameGroup` créé (ou restauré depuis une sauvegarde) est enregistré dans un registre global, indexé par son ID. C'est ce registre qui permet de désigner un groupe par son seul ID, par exemple dans le constructeur de la classe `GameFactory`.
+
+> Précision d'implémentation: Le registre ne conserve que des références faibles (`weakref.WeakValueDictionary`) : il n'empêche pas la destruction d'un objet `GameGroup` qui n'est plus utilisé par ailleurs.
 
 La classe `GameGroup` présente les méthodes suivantes:
 
+- `get_by_id` (méthode de classe): permet de retrouver un groupe existant à partir de son ID.
+  - Paramètres:
+    - `group_id` (str): l'ID du groupe recherché. Obligatoire.
+  - Valeur de retour: L'objet `GameGroup` correspondant, ou `None` si aucun groupe existant ne porte cet ID.
+
+- `create_game_factory`: permet de créer une factory de parties à partir d'un modèle.
+  - Description: Cette méthode permet de créer une factory de parties à partir d'un modèle, ou de remplacer une factory de parties existante. Si le modèle est `None`, alors la factory est supprimée. Une fois créée, la factory est stockée dans l'attribut `game_factory` de l'instance courante. La création ou le remplacement de la factory (paramètre `template` différent de `None`) ne sont autorisés que si le groupe ne compte encore aucune partie. Ainsi, toutes les parties du groupe sont nécessairement vérifiées au regard des contraintes de la factory lors de leur introduction. La suppression de la factory (paramètre `template` à `None`) reste possible lorsque le groupe compte déjà des parties. Dans tous les cas d'interdiction, l'attribut `game_factory` n'est pas modifié.
+  - Précision d'implémentation: la factory est instanciée avec le modèle fourni et l'ID de l'instance courante (paramètres `template` et `group_id` de la classe `GameFactory`).
+  - Paramètres:
+    - `template` (`GameFactoryTemplate`|`None`): le modèle à utiliser pour créer la factory. Obligatoire.
+  - Exceptions émises:
+    - `TypeError`: si le paramètre `template` n'est pas de type `GameFactoryTemplate` ou `None`.
+    - `GroupHasGamesError`: levée si le paramètre `template` n'est pas `None` et que le groupe compte déjà au moins une partie.
+  - Valeur de retour:
+      - Aucune.
+
 - `add_game`: permet d'ajouter une partie au groupe. La partie est ajoutée à la fin de la liste des parties du groupe. 
-  - Description: Cette méthode permet d'ajouter une partie au groupe en spécifiant son ID ou son objet `Game` et éventuellement un mot de passe administrateur de groupe. Elle lance une exception si la partie n'existe pas ou si le mot de passe est incorrect. 
-  - Précision d'implémentation: En cas de succès, la méthode ajoute l'ID de l'objet `Game` à la liste `_games` de l'instance courante.
+  - Description: Cette méthode permet d'ajouter une partie au groupe en spécifiant son ID ou son objet `Game` et éventuellement un mot de passe administrateur de groupe. Elle lance une exception si la partie n'existe pas ou si le mot de passe est incorrect. Si l'attribut `game_factory` est défini, alors l'objet `Game` est vérifié, et n'est ajouté que s'il répond bien aux contraintes de la factory, sur les options qui y sont spécifiées (les attributs de partie non traités par la factory sont ignorés). Pour chacune de ces options, la valeur portée par la partie (lue dans l'attribut direct correspondant, ou dans `static_state` / `dynamic_state` à la clé figée de l'option) fait l'objet des vérifications suivantes, dans cet ordre :
+    1. Présence : si la valeur est absente de l'objet `Game`, ou si elle vaut `None` (ce qui est considéré comme une absence de valeur), l'exception `LackingOptionError` est levée, avec `reason` à `"ABSENT_FROM_GAME"`.
+    2. Type : si la valeur n'est pas acceptée pour le type de l'option, selon les règles de conversion de la classe `Option`, l'exception `InvalidOptionValueError` est levée, avec `reason` à `"INCOMPATIBLE_TYPE"`.
+    3. Validité : si la valeur n'est pas valide pour l'option (en dehors des bornes `min_value` / `max_value`, ne correspondant pas à un incrément `step`, ou absente de `choices`), l'exception `InvalidOptionValueError` est levée, avec `reason` à `"INVALID_VALUE"`.
+    4. Unicité : pour les options créées avec le paramètre `unicity` à `True`, si la valeur se retrouve dans une autre partie déjà introduite dans le groupe, l'exception `OptionValueAlreadyGivenError` est levée.
+
+    Dans tous ces cas, la partie n'est pas ajoutée.
+  - Précision d'implémentation: En cas de succès, la méthode ajoute l'ID de l'objet `Game` à la liste `_games` de l'instance courante. Les vérifications liées à la factory et l'ajout de la partie à la liste `_games` doivent être effectués de manière atomique (par exemple sous la protection d'un verrou), afin que deux parties portant la même valeur d'une option unique ne puissent pas être ajoutées simultanément.
   - Paramètres:
     - `game` (`Game`|str): l'instance de la partie à ajouter, ou une chaîne de caractères représentant l'ID de la partie à ajouter. Obligatoire.
   - Valeur de retour:
     - Aucune.
   - Exceptions émises:
     - `GameNotFoundError`: levée si la partie spécifiée n'existe pas.
+    - `OptionValueAlreadyGivenError`: levée si l'objet `Game` que l'on tente d'introduire présente une valeur d'option déjà présente avec la même valeur dans un autre objet `Game` déjà introduit dans le groupe.
+    - `LackingOptionError`: levée si l'objet `Game` que l'on tente d'introduire ne porte pas de valeur pour une option spécifiée dans la factory (`reason` à `"ABSENT_FROM_GAME"`).
+    - `InvalidOptionValueError`: levée si l'objet `Game` que l'on tente d'introduire porte, pour une option spécifiée dans la factory, une valeur dont le type n'est pas compatible avec celui de l'option (`reason` à `"INCOMPATIBLE_TYPE"`), ou une valeur non valide pour cette option (`reason` à `"INVALID_VALUE"`).
+
+- `create_and_add_game`: permet de créer une partie à partir de la factory du groupe, et de l'ajouter immédiatement au groupe.
+  - Description: Cette méthode enchaîne, en une seule opération, l'appel à la méthode `create_game` de l'attribut `game_factory` et l'appel à la méthode `add_game` avec l'objet `Game` ainsi créé. Les deux étapes étant réalisées ensemble, une partie créée par cette méthode est soit ajoutée au groupe, soit abandonnée : il ne peut pas exister de partie créée mais pas encore introduite, dont les valeurs ne seraient pas prises en compte dans les exclusions de la factory. Cette méthode est le moyen recommandé de créer des parties lorsque le groupe dispose d'une factory. Les méthodes `create_game` de la factory et `add_game` restent néanmoins utilisables séparément.
+  - Précision d'implémentation: la création de la partie et son introduction dans le groupe sont effectuées sous la protection du même verrou que celui utilisé par la méthode `add_game`, de sorte qu'aucune autre partie ne puisse être ajoutée entre le calcul des exclusions et l'ajout de la partie. Si l'introduction échoue (quelle qu'en soit la raison), l'objet `Game` créé n'est pas retourné et n'est référencé nulle part : il est alors détruit, et disparaît du registre global des parties (qui ne conserve que des références faibles). En cas de succès, l'ID de l'objet `Game` est ajouté à la liste `_games` de l'instance courante, comme avec la méthode `add_game`.
+  - Paramètres:
+    - `values` (dict[str, any]): les valeurs choisies pour les options de la factory, sous la même forme que le paramètre `values` de la méthode `create_game` de la classe `GameFactory`. Optionnel. Valeur par défaut: dictionnaire vide (toutes les options prennent leur valeur proposée).
+    - `context` (dict[str, str]\|`None`): le contexte fournissant la valeur des constantes d'exécution, transmis tel quel à la méthode `create_game` de la factory. Optionnel. Valeur par défaut: `None`.
+  - Exceptions émises:
+    - `GameFactoryNotDefinedError`: levée si l'attribut `game_factory` vaut `None`.
+    - Toutes les exceptions de la méthode `create_game` de la classe `GameFactory` (`InvalidOptionValueError`, `OptionValueAlreadyGivenError`, `LackingOptionError`).
+    - Toutes les exceptions de la méthode `add_game` (`OptionValueAlreadyGivenError`, `LackingOptionError`, `InvalidOptionValueError`), `GameNotFoundError` étant sans objet ici puisque la partie vient d'être créée.
+  - Valeur de retour: l'objet `Game` créé et ajouté au groupe.
+
 - `remove_game`: permet de retirer une partie du groupe. La partie est retirée de la liste des parties du groupe.
   - Paramètres:
     - `game` (`Game`|str): l'instance de la partie à retirer, ou une chaîne de caractères représentant l'ID de la partie à retirer. Obligatoire.
-  - Précision d'implémentation: En cas de succès, la méthode retire l'ID de l'objet `Game` de la liste `_games` de l'instance courante.
+  - Précision d'implémentation: En cas de succès, la méthode retire l'ID de l'objet `Game` de la liste `_games` de l'instance courante. Si l'attribut `game_factory` est défini, aucun traitement supplémentaire n'est nécessaire : les valeurs exclues étant calculées à partir des parties présentes dans le groupe, les valeurs d'options portées par la partie retirée redeviennent automatiquement disponibles dans la factory.
   - Valeur de retour:
     - Aucune.
   - Exceptions émises:
@@ -948,7 +1190,7 @@ Suggère un nom aléatoire pour un joueur. Si `category` est `None`, une catégo
 
 ### Contenu du fichier src/multiplayer/save.py
 
-Ce fichier contient la logique de sauvegarde et de restauration des objets instanciés à partir des classes `Player`, `User`, `Game`, `GameGroup` et `PlayerFactoryTemplate`. Les objets `Option` et `PlayerFactory` ne sont pas sauvegardés de manière autonome : ils le sont au sein de l'objet qui les contient (voir le paragraphe "Sauvegarde des options, des modèles et des factories" ci-dessous). Il définit la classe `Save`, dont chaque instance représente un fichier de sauvegarde et fait le lien entre un tampon en mémoire et un fichier persistant (document JSON ou base de données SQLite).
+Ce fichier contient la logique de sauvegarde et de restauration des objets instanciés à partir des classes `Player`, `User`, `Game`, `GameGroup`, `PlayerFactoryTemplate` et `GameFactoryTemplate`. Les objets `Option`, `PlayerFactory` et `GameFactory` ne sont pas sauvegardés de manière autonome : ils le sont au sein de l'objet qui les contient (voir le paragraphe "Sauvegarde des options, des modèles et des factories" ci-dessous). Il définit la classe `Save`, dont chaque instance représente un fichier de sauvegarde et fait le lien entre un tampon en mémoire et un fichier persistant (document JSON ou base de données SQLite).
 
 #### Classe `Save`
 Cette classe permet de sauvegarder, de mettre à jour et de restaurer les objets du module. Les objets sont d'abord enregistrés dans un tampon en mémoire, puis écrits dans le fichier uniquement lors de l'appel explicite à la méthode `flush`. Elle s'instancie avec les paramètres suivants:
@@ -976,7 +1218,7 @@ La classe `Save` présente les méthodes suivantes:
   - Description: L'objet est sérialisé et stocké dans le tampon, indexé par sa classe et son ID. Si un objet de même classe et de même ID existe déjà, il est remplacé. La modification n'est persistée dans le fichier qu'à l'appel de `flush`.
   - Précision d'implémentation: avant la sauvegarde d'un objet `User`, une vérification est effectuée pour nettoyer la liste des identifiants des objets `Player` qui ne sont plus associés à aucune partie non terminée.
   - Paramètres:
-    - `obj` (`Player`|`User`|`Game`|`GameGroup`|`PlayerFactoryTemplate`): l'instance à sauvegarder. Obligatoire. Un objet `Option` ou `PlayerFactory` fourni directement n'est pas pris en charge, et provoque l'exception `SaveError`.
+    - `obj` (`Player`|`User`|`Game`|`GameGroup`|`PlayerFactoryTemplate`|`GameFactoryTemplate`): l'instance à sauvegarder. Obligatoire. Un objet `Option`, `PlayerFactory` ou `GameFactory` fourni directement n'est pas pris en charge, et provoque l'exception `SaveError`.
   - Exceptions émises:
     - `SaveError`: levée si l'objet n'est pas une instance d'une classe prise en charge.
   - Valeur de retour: Aucune.
@@ -984,7 +1226,7 @@ La classe `Save` présente les méthodes suivantes:
 - `load`: permet de charger toutes les instances d'une classe donnée.
   - Description: Reconstruit et retourne la liste des instances de la classe demandée à partir du tampon en mémoire.
   - Paramètres:
-    - `target` (str\|type): la classe à charger ou son nom (`Player`, `User`, `Game`, `GameGroup` ou `PlayerFactoryTemplate`). Obligatoire.
+    - `target` (str\|type): la classe à charger ou son nom (`Player`, `User`, `Game`, `GameGroup`, `PlayerFactoryTemplate` ou `GameFactoryTemplate`). Obligatoire.
   - Exceptions émises:
     - `SaveError`: levée si la cible ne correspond pas à une classe prise en charge.
   - Valeur de retour: La liste des instances reconstruites de la classe demandée.
@@ -1005,26 +1247,34 @@ La classe `Save` présente les méthodes suivantes:
 
 #### Sauvegarde des options, des modèles et des factories
 
-Les objets `Option`, `PlayerFactoryTemplate` et `PlayerFactory` sont sauvegardés selon les règles suivantes.
+Les objets `Option`, `PlayerFactoryTemplate`, `PlayerFactory`, `GameFactoryTemplate` et `GameFactory` sont sauvegardés selon les règles suivantes.
 
 **Objets `Option`**: ils ne sont jamais sauvegardés de manière autonome, mais uniquement au sein du modèle ou de la factory qui les contient. Au sein d'un modèle ou d'une factory, chaque option est sérialisée avec les paramètres qui lui ont été associés lors de son ajout au modèle, sous la forme retournée par la méthode `to_dict` de la classe `OptionEntry`:
 - les éléments de l'option elle-même (`option_id`, `type`, `name`, `description`, `default`, `min`, `max`, `step`, `choices`), tels que retournés par la méthode `to_dict` de la classe `Option`. La valeur par défaut est sauvegardée brute, sans évaluation des éventuelles constantes d'exécution (ex: `"Joueur_%%RANDOM_NUMBER%%"`). La valeur `None` est représentée par `null` en JSON et `NULL` en SQLite ;
-- les paramètres associés : `unicity`, `hide`, `target` et `attribute` (représentation du paramètre `player_attribute`, qui permet de distinguer sans ambiguïté un attribut de l'objet `Player` d'une famille `ParameterFamily`), et `key` (clé figée).
+- les paramètres associés : `unicity`, `hide`, `target` et `attribute` (représentation des paramètres `player_attribute` ou `game_attribute`, qui permettent de distinguer sans ambiguïté un attribut de l'objet `Player` ou `Game` d'une famille `ParameterFamily`), et `key` (clé figée).
 
 Cette représentation est identique à celle utilisée dans les échanges réseau (voir le [Protocole d'échanges entre le client et le serveur](PROTOCOLE_FR.md), paragraphe "Représentation d'une option").
 
 **Objets `PlayerFactoryTemplate`**: ils sont sauvegardés de manière autonome, comme les objets `Player`, `User`, `Game` et `GameGroup`, indexés par leur classe et leur ID. Chaque modèle est sérialisé avec son ID, son nom (`name`), et la liste ordonnée de ses options (avec, pour chacune, les éléments décrits ci-dessus), sous la forme retournée par la méthode `to_dict` de la classe `PlayerFactoryTemplate`, et restauré par sa méthode `from_dict`.
+
+**Objets `GameFactoryTemplate`**: ils sont sauvegardés de manière autonome, comme les objets `Player`, `User`, `Game`, `GameGroup` et `PlayerFactoryTemplate`, indexés par leur classe et leur ID. Chaque modèle est sérialisé avec son ID, son nom (`name`), et la liste ordonnée de ses options (avec, pour chacune, les éléments décrits ci-dessus), sous la forme retournée par la méthode `to_dict` de la classe `GameFactoryTemplate`, et restauré par sa méthode `from_dict`.
 
 **Objets `PlayerFactory`**: ils ne sont jamais sauvegardés de manière autonome, mais uniquement au sein de l'objet `Game` auquel ils sont associés, dans l'élément `player_factory` de la partie. Cet élément vaut `null` (JSON) ou `NULL` (SQLite) lorsque la partie ne dispose pas de factory. Sinon, la factory est sérialisée avec son ID et la liste ordonnée de ses options (avec, pour chacune, les éléments décrits ci-dessus), sous la forme retournée par la méthode `to_dict` de la classe `PlayerFactory`, et restaurée par sa méthode `from_dict`. Les éléments suivants ne sont pas sauvegardés:
 - l'ID de la partie associée, qui est celui de la partie dans laquelle la factory est sauvegardée ;
 - le modèle à partir duquel la factory a été créée : les options de la factory étant des copies indépendantes de celles du modèle, la factory se suffit à elle-même, et sa restauration ne dépend pas de la présence du modèle dans la sauvegarde ;
 - les valeurs exclues des options, qui ne sont jamais stockées mais calculées à partir des joueurs de la partie : elles sont donc automatiquement cohérentes après restauration, dès lors que les joueurs de la partie sont restaurés.
 
+**Objets `GameFactory`**: ils ne sont jamais sauvegardés de manière autonome, mais uniquement au sein de l'objet `GameGroup` auquel ils sont associés, dans l'élément `game_factory` du groupe. Cet élément vaut `null` (JSON) ou `NULL` (SQLite) lorsque le groupe ne dispose pas de factory. Sinon, la factory est sérialisée avec son ID et la liste ordonnée de ses options (avec, pour chacune, les éléments décrits ci-dessus), sous la forme retournée par la méthode `to_dict` de la classe `GameFactory`, et restaurée par sa méthode `from_dict`. Les éléments suivants ne sont pas sauvegardés:
+- l'ID du groupe associé, qui est celui du groupe dans lequel la factory est sauvegardée ;
+- le modèle à partir duquel la factory a été créée : les options de la factory étant des copies indépendantes de celles du modèle, la factory se suffit à elle-même, et sa restauration ne dépend pas de la présence du modèle dans la sauvegarde ;
+- les valeurs exclues des options, qui ne sont jamais stockées mais calculées à partir des parties du groupe : elles sont donc automatiquement cohérentes après restauration, dès lors que les parties du groupe sont restaurées.
+
 > Précision d'implémentation:
 > - Lors de la restauration, tous les ID (des modèles, des factories et des options) sont restaurés à l'identique, sans nouvelle génération par `uuid.uuid4()`. Il en va de même des clés figées, qui sont restaurées telles quelles, même si elles diffèrent du nom actuel de l'option.
 > - La restauration d'une option applique les mêmes contrôles que sa création (voir la classe `Option`), au travers des méthodes `from_dict`. Si les données restaurées sont incohérentes (type d'option inconnu, valeur de `target` ou de `attribute` non reconnue, valeur par défaut incompatible avec l'option, clés figées en double, etc.), les exceptions levées par les méthodes `from_dict` (`TypeError`, `ValueError`, `OptionAlreadyExistsError`) sont chaînées dans une exception `SaveError`.
 > - La restauration d'un objet `Game` comportant une factory recrée directement l'objet `PlayerFactory` à partir des données sauvegardées, au moyen de la méthode `from_dict` de la classe `PlayerFactory`, sans passer par la méthode `create_player_factory` : les contrôles liés à l'état de la partie et à la présence de joueurs (exceptions `GameAlreadyStartedError`, `GameIsFinishedError` et `GameHasPlayersError`) ne s'appliquent donc pas à la restauration.
-> - Compatibilité ascendante : un fichier de sauvegarde produit avant l'introduction de ces objets doit rester lisible. Une partie sauvegardée sans élément `player_factory` est restaurée avec `player_factory` à `None`, et un fichier ne contenant aucun modèle donne une liste vide lors du chargement de la classe `PlayerFactoryTemplate`.
+> - La restauration d'un objet `GameGroup` comportant une factory recrée directement l'objet `GameFactory` à partir des données sauvegardées, au moyen de la méthode `from_dict` de la classe `GameFactory`, sans passer par la méthode `create_game_factory` : le contrôle lié à la présence de parties (exception `GroupHasGamesError`) ne s'applique donc pas à la restauration.
+> - Compatibilité ascendante : un fichier de sauvegarde produit avant l'introduction de ces objets doit rester lisible. Une partie sauvegardée sans élément `player_factory` est restaurée avec `player_factory` à `None`, un groupe sauvegardé sans élément `game_factory` est restauré avec `game_factory` à `None`, et un fichier ne contenant aucun modèle donne une liste vide lors du chargement des classes `PlayerFactoryTemplate` et `GameFactoryTemplate`.
 
 ### Contenu du fichier src/multiplayer/server.py
 
@@ -1080,9 +1330,12 @@ Informations complémentaires:
   - `persistence_mode=SaveFormat.JSON` : permet de sauvegarder les données du serveur dans un fichier JSON. Par défaut (si `persistence_path=None`), le fichier est défini par `Path("data/server_data.json")`. Le fichier (ainsi que les répertoires y accédant) est créé automatiquement s'il n'existe pas déjà.
   - `persistence_mode=SaveFormat.SQLITE` : permet de sauvegarder les données du serveur dans une base de données SQLITE. Par défaut (si `persistence_path=None`), le fichier est défini par `Path("data/server_data.db")`. La base de données (ainsi que les répertoires y accédant) est créée automatiquement si elle n'existe pas déjà.
 - **Nettoyage automatique** : Le serveur effectue périodiquement un nettoyage des objets `Player` qui ne sont associés qu'à des parties terminées. Les objets `Player` associés à aucune partie (cas des objets nouvellement créés en attente d'affectation de partie) ne sont, eux, pas concernés par ce nettoyage, tant qu'ils restent rattachés à une session ouverte ou listés dans l'attribut `players_id` d'un utilisateur. Un objet `Player` associé à aucune partie et qui n'est plus accessible (par exemple le joueur d'un client non authentifié dont la session a été fermée) est en revanche supprimé. La fréquence de ce nettoyage est définie par le paramètre `garbage_collection_periodicity` (en secondes).
-- **Version et révision du protocole**: le serveur transmet la version majeure du protocole (`2`) dans le champ `version` de chaque message, et refuse tout message portant une autre version majeure. Il annonce sa révision du protocole (`"2.1"`) et la liste des fonctionnalités qu'il propose (`["player_factory"]`) dans la réponse à la requête `PROTOCOL_INFO`, utilisable au niveau `OPEN` avant toute authentification, ainsi que sa révision dans le champ `revision` de la réponse de découverte (`DISCOVERY_RESPONSE`). La révision et la liste des fonctionnalités sont définies par des constantes du module `server.py`, mises à jour à chaque nouvelle révision du protocole.
+- **Version et révision du protocole**: le serveur transmet la version majeure du protocole (`2`) dans le champ `version` de chaque message, et refuse tout message portant une autre version majeure. Il annonce sa révision du protocole (`"2.1"`) et la liste des fonctionnalités qu'il propose (`["player_factory", "game_factory"]`) dans la réponse à la requête `PROTOCOL_INFO`, utilisable au niveau `OPEN` avant toute authentification, ainsi que sa révision dans le champ `revision` de la réponse de découverte (`DISCOVERY_RESPONSE`). La révision et la liste des fonctionnalités sont définies par des constantes du module `server.py`, mises à jour à chaque nouvelle révision du protocole.
 - **Modèles de factory de joueurs**: le serveur détient un registre des modèles de factory (objets `PlayerFactoryTemplate`), indexé par leur ID et commun à l'ensemble du serveur. Ces modèles sont exposés aux clients par les requêtes `FACTORY_TEMPLATE_LIST` et `FACTORY_TEMPLATE_GET` (niveau `BASE`), et gérés par les requêtes `FACTORY_TEMPLATE_CREATE`, `FACTORY_TEMPLATE_UPDATE` et `FACTORY_TEMPLATE_DELETE` (niveau `ADMIN`), décrites dans le [Protocole d'échanges entre le client et le serveur](PROTOCOLE_FR.md). Lorsque la persistance est activée, le registre est sauvegardé et restauré avec les autres données du serveur (classe `PlayerFactoryTemplate` de l'objet `Save`), y compris lors des sauvegardes et rechargements à la demande. La création, la modification et la suppression d'un modèle sont enregistrées dans le journal d'audit du serveur. Un modèle est appliqué à une partie uniquement lors de sa création (champ `factory_template_id` de la requête `GAME_CREATE`), par la méthode `create_player_factory` de la classe `Game` : la modification ou la suppression ultérieure du modèle est sans effet sur les parties déjà créées.
 - **Création des joueurs à partir de la factory d'une partie**: les requêtes `GAME_FACTORY_GET` et `GAME_FACTORY_JOIN` s'appuient respectivement sur la méthode `get_option` de la classe `PlayerFactory` et sur la méthode `create_and_join_player` de la classe `Game`. Pour chacune de ces requêtes, le serveur construit lui-même le contexte d'évaluation des constantes d'exécution (voir le paragraphe "Constantes d'exécution" de la classe `Option`) à partir de la session et de la connexion du client : `USERNAME` (nom de l'utilisateur authentifié de la session, absent sinon), `CLIENTADDRESS` (adresse IP du client), `SERVERNAME` (attribut `name` du serveur) et `SERVERADDRESS` (adresse IP locale de la connexion). Le contexte n'est jamais accepté depuis le client. Les représentations des options transmises aux clients sont obtenues par la méthode `to_dict` des objets `OptionEntry` (et, pour la requête `FACTORY_TEMPLATE_GET`, par la méthode `to_dict` de l'objet `PlayerFactoryTemplate`). Pour la requête `FACTORY_TEMPLATE_CREATE`, le serveur crée le modèle au moyen de la méthode `from_dict` de la classe `PlayerFactoryTemplate`, sans fournir d'ID : le modèle et ses options reçoivent de nouveaux ID, et la clé figée de chaque option est son nom. Pour la requête `FACTORY_TEMPLATE_UPDATE`, le serveur construit de la même manière un nouveau modèle, en lui fournissant l'ID du modèle existant (`template_id`) et, si les options ne sont pas fournies, la représentation des options existantes ; en cas de succès, ce nouveau modèle remplace l'ancien dans le registre. Ces deux opérations sont ainsi atomiques : en cas d'erreur, le registre n'est pas modifié. Les exceptions levées par les méthodes `from_dict` sont traduites en codes d'erreur `INVALID_OPTION` (`TypeError`, `ValueError`) et `OPTION_ALREADY_EXISTS` (`OptionAlreadyExistsError`). Les exceptions levées par la bibliothèque sont traduites en codes d'erreur du protocole de la manière suivante, les attributs des exceptions alimentant le champ `details` de la réponse : `InvalidOptionValueError` donne `INVALID_OPTION_VALUE` (avec `option_id`, `value` et `reason`), `OptionValueAlreadyGivenError` donne `OPTION_VALUE_ALREADY_GIVEN` (avec `option_id` et `value`), `LackingOptionError` donne `LACKING_OPTION` (avec `option_id` et `reason`), et `PlayerFactoryNotDefinedError` donne `NO_PLAYER_FACTORY`. Le serveur tient également à jour, pour chaque partie dotée d'une factory, la liste des sessions abonnées à la notification `GAME_FACTORY_UPDATED`, et leur envoie cette notification à chaque arrivée ou départ d'un joueur dans la partie.
+- **Modèles de factory de parties**: le serveur détient un registre des modèles de factory de parties (objets `GameFactoryTemplate`), indexé par leur ID et commun à l'ensemble du serveur. Ces modèles sont exposés aux clients par les requêtes `FACTORY_TEMPLATE_LIST` et `FACTORY_TEMPLATE_GET` (niveau `BASE`), et gérés par les requêtes `FACTORY_TEMPLATE_CREATE`, `FACTORY_TEMPLATE_UPDATE` et `FACTORY_TEMPLATE_DELETE` (niveau `ADMIN`). Ces noms de requêtes sont ceux de la famille `FACTORY_TEMPLATE_*`, désormais partagés avec ceux des factories de joueurs ; leur documentation des formats est la suivante : `FACTORY_TEMPLATE_LIST` renvoie une liste de modèles, chacun résumé par son identifiant, son nom et le nombre d'options (`template_id`, `name`, `options_count`) ; `FACTORY_TEMPLATE_GET` renvoie un modèle sous la forme complète retournée par le `to_dict` de la classe `GameFactoryTemplate` (`template_id`, `name`, `options`) ; `FACTORY_TEMPLATE_CREATE` et `FACTORY_TEMPLATE_UPDATE` transmettent des modèles selon ce format (avec, pour `CREATE`, la génération des ID par le serveur, et pour `UPDATE`, l'identifiant du modèle existant) ; `FACTORY_TEMPLATE_DELETE` prend l'identifiant du modèle à supprimer. Leurs formats définitifs restent à valider dans le [Protocole d'échanges entre le client et le serveur](PROTOCOLE_FR.md). Lorsque la persistance est activée, le registre est sauvegardé et restauré avec les autres données du serveur (classe `GameFactoryTemplate` de l'objet `Save`), y compris lors des sauvegardes et rechargements à la demande. La création, la modification et la suppression d'un modèle sont enregistrées dans le journal d'audit du serveur. Un modèle est appliqué à un groupe de parties, et non à une partie individuelle : il sert à créer la factory du groupe au moyen de la méthode `create_game_factory` de la classe `GameGroup`. La modification ou la suppression ultérieure du modèle est sans effet sur les factories de groupes déjà créées.
+- **Création des parties à partir de la factory d'un groupe**: lorsqu'une partie est créée dans un groupe doté d'une factory de parties, le serveur s'appuie respectivement sur la méthode `get_option` de la classe `GameFactory` pour construire le formulaire de création, et sur la méthode `create_and_add_game` de la classe `GameGroup` pour créer la partie et l'ajouter au groupe. Le serveur construit lui-même le contexte d'évaluation des constantes d'exécution à partir de la session et de la connexion du client, comme pour la factory de joueurs, et ne l'accepte jamais depuis le client. Les valeurs choisies sont transmises dans le champ `game_factory_values` de la requête `GAME_CREATE`, dont le format est un objet dont les clés sont les ID des options de la factory et les valeurs les valeurs choisies (correspondant au format `values` de la méthode `create_game` de la classe `GameFactory`). Ce format définitif reste à valider dans le [Protocole d'échanges entre le client et le serveur](PROTOCOLE_FR.md). Les exceptions levées par la bibliothèque sont traduites en codes d'erreur du protocole : `InvalidOptionValueError` donne `INVALID_OPTION_VALUE`, `OptionValueAlreadyGivenError` donne `OPTION_VALUE_ALREADY_GIVEN`, `LackingOptionError` donne `LACKING_OPTION`, `GameFactoryNotDefinedError` donne `NO_GAME_FACTORY` et `GroupHasGamesError` donne `GROUP_HAS_GAMES`. Une notification destinée aux sessions qui préparent un formulaire de création de partie est prévue : elle s'appelle `GAME_CREATION_FACTORY_UPDATED` et est envoyée lorsque les valeurs déjà prises dans la factory de parties d'un groupe changent ; elle reste à décrire dans le [Protocole d'échanges entre le client et le serveur](PROTOCOLE_FR.md).
+- **Révision du protocole**: l'introduction des factories de parties nécessite l'ajout de la fonctionnalité dédiée `game_factory`, proposée au sein de la révision 2.1 en cours (aux côtés de la fonctionnalité `player_factory` existante) ; aucune nouvelle révision du protocole n'est donc nécessaire. Les noms des requêtes et des notifications introduits ou réutilisés pour ces factories sont désormais ceux cités ci-dessus ; leur documentation dans le [Protocole d'échanges entre le client et le serveur](PROTOCOLE_FR.md) reste à finaliser.
 
 La classe `GameServer` présente les méthodes suivantes:
 - `start`: Lance le serveur en mode asynchrone.
@@ -1132,7 +1385,7 @@ La classe présente les attributs suivants:
 | `is_connected` | bool | Indique si le client est actuellement connecté au serveur | Non | - |
 | `session_user` | `User\|None` | L'utilisateur associé à la session actuelle | Non | Mis à jour automatiquement lors de l'authentification de l'utilisateur. |
 | `server_revision` | str\|`None` | La révision du protocole annoncée par le serveur (ex: `"2.1"`). `"2.0"` si le serveur ne prend pas en charge la requête `PROTOCOL_INFO`. `None` tant que le client n'est pas connecté. | Non | Mis à jour automatiquement par la méthode `connect`. |
-| `server_features` | tuple[str, ...] | Les fonctionnalités optionnelles du protocole proposées par le serveur (ex: `("player_factory",)`). Tuple vide si le serveur ne prend pas en charge la requête `PROTOCOL_INFO`, ou tant que le client n'est pas connecté. | Non | Mis à jour automatiquement par la méthode `connect`. |
+| `server_features` | tuple[str, ...] | Les fonctionnalités optionnelles du protocole proposées par le serveur (ex: `("player_factory", "game_factory")`). Tuple vide si le serveur ne prend pas en charge la requête `PROTOCOL_INFO`, ou tant que le client n'est pas connecté. | Non | Mis à jour automatiquement par la méthode `connect`. |
 
 ##### Méthodes
 
@@ -1189,7 +1442,7 @@ La classe `GameClient` présente les méthodes suivantes:
     - `MultiplayerError` (ou une sous-classe): si le serveur refuse la modification.
     - `ConnectionError`: si le client n'est pas connecté.
 - `create_game`: Crée une partie sur le serveur.
-  - Description: Envoie une requête `GAME_CREATE`. Permet notamment de doter la partie d'une factory de joueurs, construite à partir d'un modèle détenu par le serveur (paramètre `factory_template_id`, voir la méthode `list_factory_templates`). Le modèle ne peut être choisi qu'à la création de la partie.
+  - Description: Envoie une requête `GAME_CREATE`. Permet notamment de doter la partie d'une factory de joueurs, construite à partir d'un modèle détenu par le serveur (paramètre `factory_template_id`, voir la méthode `list_factory_templates`). Le modèle ne peut être choisi qu'à la création de la partie. Lorsque la partie est créée dans un groupe doté d'une factory de parties, les valeurs choisies pour cette factory sont transmises avec la requête (paramètre `game_factory_values`, voir la méthode `get_group_game_factory`).
   - Paramètres:
     - `name` (str): Le nom de la partie. Obligatoire.
     - `min_players` (int): Le nombre minimal de joueurs pour démarrer la partie. Optionnel. Valeur par défaut: `0`.
@@ -1200,12 +1453,13 @@ La classe `GameClient` présente les méthodes suivantes:
     - `group_id` (str\|`None`): L'ID du groupe dans lequel créer la partie. Optionnel. Valeur par défaut: `None`.
     - `group_password` (str\|`None`): Le mot de passe du groupe, si nécessaire. Optionnel. Valeur par défaut: `None`.
     - `factory_template_id` (str\|`None`): L'ID du modèle de factory de joueurs à appliquer à la partie (`None` pour une partie sans factory). Nécessite la fonctionnalité `player_factory` du protocole : si ce paramètre est fourni et que la fonctionnalité ne figure pas dans l'attribut `server_features`, l'exception `UnsupportedFeatureError` est levée et la requête n'est pas envoyée. Optionnel. Valeur par défaut: `None`.
+    - `game_factory_values` (dict[str, any]\|`None`): Les valeurs choisies pour les options de la factory de parties du groupe, indexées par l'ID des options de cette factory. Nécessite la fonctionnalité `game_factory` du protocole et un `group_id` dont la factory de parties existe : si la fonctionnalité n'est pas proposée par le serveur, l'exception `UnsupportedFeatureError` est levée et la requête n'est pas envoyée. Optionnel. Valeur par défaut: `None` (toutes les options prennent leur valeur proposée).
     - `attributes` (dict\|`None`): Les attributs personnalisés de la partie. Optionnel. Valeur par défaut: `None`.
-  - Précision d'implémentation: les paramètres valant `None` ne sont pas transmis dans la requête, à l'exception de `max_players` et `max_observers`, transmis explicitement à `null` pour signifier l'absence de limite.
+  - Précision d'implémentation: les paramètres valant `None` ne sont pas transmis dans la requête, à l'exception de `max_players` et `max_observers`, transmis explicitement à `null` pour signifier l'absence de limite. Le nom exact du champ transportant `game_factory_values` est celui de la requête, et son format est celui décrit dans la requête `GAME_CREATE` ; sa validation côté protocole reste à réaliser dans le [Protocole d'échanges entre le client et le serveur](PROTOCOLE_FR.md).
   - Valeur de retour: L'ID de la partie créée.
   - Exceptions émises:
-    - `UnsupportedFeatureError`: si `factory_template_id` est fourni et que le serveur ne propose pas la fonctionnalité `player_factory` (la requête n'est alors pas envoyée).
-    - `MultiplayerError` (ou une sous-classe): si le serveur refuse la création, par exemple si le modèle indiqué n'existe pas (code `FACTORY_TEMPLATE_NOT_FOUND`).
+    - `UnsupportedFeatureError`: si `factory_template_id` est fourni et que le serveur ne propose pas la fonctionnalité `player_factory` (la requête n'est alors pas envoyée), ou si `game_factory_values` est fourni et que le serveur ne propose pas la fonctionnalité `game_factory`.
+    - `MultiplayerError` (ou une sous-classe): si le serveur refuse la création, par exemple si le modèle indiqué n'existe pas (code `FACTORY_TEMPLATE_NOT_FOUND`), si le groupe n'a pas de factory de parties (code `NO_GAME_FACTORY`) ou si les valeurs ne respectent pas les contraintes de cette factory (codes `INVALID_OPTION_VALUE`, `LACKING_OPTION`, `OPTION_VALUE_ALREADY_GIVEN`).
     - `ConnectionError`: si le client n'est pas connecté.
 - `send_request`: Envoie une requête au serveur et attend sa réponse.
   - Description: Méthode de bas niveau permettant d'envoyer n'importe quelle commande supportée par le protocole et de recevoir la réponse correspondante.
@@ -1273,6 +1527,42 @@ Les méthodes suivantes facilitent l'utilisation des modèles de factory et des 
     - `group_password` (str\|`None`): Le mot de passe d'un groupe protégé contenant la partie, si nécessaire. Optionnel. Valeur par défaut: `None`.
     - `is_default` (bool\|`None`): Si `True`, le joueur créé devient le joueur par défaut de la session. Si `None`, le champ n'est pas transmis et la règle du serveur s'applique (le joueur devient le joueur par défaut s'il s'agit du premier joueur de la session). Optionnel. Valeur par défaut: `None`.
 
+Les méthodes suivantes facilitent l'utilisation des modèles de factory de parties et des factories de parties des groupes. Chacune envoie la requête correspondante du protocole et retourne un dictionnaire contenant les données de la réponse du serveur (champ `payload`). Elles nécessitent toutes la fonctionnalité `game_factory` du protocole (révision 2.1) : avant d'envoyer la requête, chacune vérifie que cette fonctionnalité figure dans l'attribut `server_features`. Les noms définitifs des requêtes restent à documenter dans le [Protocole d'échanges entre le client et le serveur](PROTOCOLE_FR.md). Toutes peuvent lever les exceptions suivantes:
+- `UnsupportedFeatureError`: si le serveur ne propose pas la fonctionnalité `game_factory` (la requête n'est alors pas envoyée) ;
+- `MultiplayerError` (ou une sous-classe): si le serveur retourne une erreur ;
+- `ConnectionError`: si le client n'est pas connecté.
+
+- `list_game_factory_templates`: Récupère la liste des modèles de factory de parties disponibles sur le serveur.
+  - Description: Envoie une requête `FACTORY_TEMPLATE_LIST`. Permet notamment de proposer à l'utilisateur le choix d'un modèle lors de la configuration d'un groupe.
+  - Paramètres: Aucun.
+- `get_game_factory_template`: Récupère la définition complète d'un modèle de factory de parties.
+  - Description: Envoie une requête `FACTORY_TEMPLATE_GET`.
+  - Paramètres:
+    - `template_id` (str): L'ID du modèle. Obligatoire.
+- `create_game_factory_template`: Crée un modèle de factory de parties sur le serveur.
+  - Description: Envoie une requête `FACTORY_TEMPLATE_CREATE`. Requiert le niveau d'accès `ADMIN` du protocole.
+  - Paramètres:
+    - `name` (str): Le nom du modèle. Obligatoire.
+    - `options` (list[dict]): La liste des options du modèle, chacune décrite par un dictionnaire au format défini par la requête `FACTORY_TEMPLATE_CREATE` (`type`, `name`, `description`, `default`, `min`, `max`, `step`, `choices`, `unicity`, `target`, `attribute`). Obligatoire.
+- `update_game_factory_template`: Modifie un modèle de factory de parties existant.
+  - Description: Envoie une requête `FACTORY_TEMPLATE_UPDATE`. Requiert le niveau d'accès `ADMIN` du protocole.
+  - Paramètres:
+    - `template_id` (str): L'ID du modèle à modifier. Obligatoire.
+    - `name` (str\|`None`): Le nouveau nom du modèle. Optionnel. Valeur par défaut: `None` (nom inchangé).
+    - `options` (list[dict]\|`None`): La nouvelle liste complète des options. Optionnel. Valeur par défaut: `None` (options inchangées).
+  - Exceptions émises (en plus de celles listées ci-dessus):
+    - `ValueError`: si `name` et `options` valent tous deux `None` (la requête n'est alors pas envoyée).
+- `delete_game_factory_template`: Supprime un modèle de factory de parties du serveur.
+  - Description: Envoie une requête `FACTORY_TEMPLATE_DELETE`. Requiert le niveau d'accès `ADMIN` du protocole.
+  - Paramètres:
+    - `template_id` (str): L'ID du modèle à supprimer. Obligatoire.
+- `get_group_game_factory`: Récupère la factory de parties d'un groupe, pour construire le formulaire de création d'une partie.
+  - Description: Envoie une requête `GROUP_FACTORY_GET`. La réponse fournit, pour chaque option, les valeurs déjà prises (`exclusions`) et la valeur proposée (`proposed_value`). Une consultation réussie abonne la session à la notification de mise à jour de la factory de parties du groupe, qu'il est possible de traiter avec la méthode `on_notification`.
+  - Paramètres:
+    - `group_id` (str): L'ID du groupe. Obligatoire.
+    - `group_password` (str\|`None`): Le mot de passe du groupe, si nécessaire. Optionnel. Valeur par défaut: `None`.
+  - Format de la réponse (proposition): un objet dont la liste des options est fournie, chaque option étant décrite par les éléments `entry`, `exclusions` et `proposed_value`. Le format exact reste à valider dans le [Protocole d'échanges entre le client et le serveur](PROTOCOLE_FR.md).
+
 Informations complémentaires:
 - **Gestion des notifications**: Le client doit être capable de recevoir et de traiter les notifications envoyées spontanément par le serveur. L'implémentation repose sur l'enregistrement de fonctions de rappel (*callbacks*) via la méthode `on_notification`. Lorsqu'une notification arrive, le client identifie les callbacks enregistrés pour ce type (ou les callbacks globaux) et les exécute de manière asynchrone ou séquentielle selon l'architecture choisie.
 
@@ -1284,6 +1574,8 @@ Informations complémentaires:
   - `GAME_EVENT` : Notifie les participants d'une action effectuée par l'un d'entre eux ou par le serveur.
   - `GAME_STATE_CHANGED` : Informe les clients que l'état global ou personnalisé de la partie a été modifié.
   - `GAME_TURN_CHANGED` : Prévient les clients connectés qu'un nouveau tour commence et identifie le joueur actif.
+  - `GAME_FACTORY_UPDATED` : Informe les clients préparant un formulaire de création de joueur que les valeurs déjà prises dans la partie ont changé.
+  - `GAME_CREATION_FACTORY_UPDATED` : Informe les clients qui préparent un formulaire de création de partie que les valeurs déjà prises dans la factory de parties d'un groupe ont changé. Ce type de notification n'est pas encore décrit dans le [Protocole d'échanges entre le client et le serveur](PROTOCOLE_FR.md). Son format de payload (identifiant du groupe, identifiant de l'option, ou liste d'exclusions mise à jour) reste à définir.
 
   **Exemple d'utilisation :**
   ```python

@@ -170,14 +170,23 @@ This class is derived from `GameNotFoundError` and is used to report an attempt 
 #### Class `GameHasPlayersError`
 This class is derived from `MultiplayerError` and is used to report an attempt to perform an operation on a game that is only possible as long as no player has joined it (for example creating or replacing the player factory). The presence of observers is not taken into account. This exception includes the ID of the game concerned in its message.
 
+#### Class `GroupHasGamesError`
+This class is derived from `MultiplayerError` and is used to report an attempt to create or replace a game factory of a group that already has at least one game. Removing the factory remains possible. This exception includes the ID of the group concerned in its message.
+
 #### Class `PlayerFactoryNotDefinedError`
 This class is derived from `MultiplayerError` and is used to report an attempt to use the player factory of a game that does not have one (`player_factory` attribute set to `None`), for example with the `create_and_join_player` method of the `Game` class. This exception includes the ID of the game concerned in its message.
 
+#### Class `GameFactoryNotDefinedError`
+This class is derived from `MultiplayerError` and is used to report an attempt to use the game factory of a group that does not have one (`game_factory` attribute set to `None`), for example with the `create_and_add_game` method of the `GameGroup` class. This exception includes the ID of the group concerned in its message.
+
+#### Class `PlayerFactoryTemplateNotFoundError`
+This class is derived from `MultiplayerError` and is used to report an attempt to use a player factory template (`PlayerFactoryTemplate`) that does not exist, for example when the value of an option associated with the `"player_factory_template"` reference of a game factory designates a template ID that does not exist when creating a game. This exception includes the ID of the player factory template concerned in its message.
+
 #### Class `UnsupportedFeatureError`
-This class is derived from `MultiplayerError` and is used by the `GameClient` class to report an attempt to use a protocol feature that the server does not offer (for example the `player_factory` feature with a revision 2.0 server). It is raised before the corresponding request is sent. This exception includes the name of the feature concerned and the revision announced by the server in its message.
+This class is derived from `MultiplayerError` and is used by the `GameServer` and `GameClient` classes to report an attempt to use a protocol feature that the server does not offer (for example the `player_factory` feature with a revision 2.0 server, or the `game_factory` feature with a revision 2.1 server). It is raised before the corresponding request is sent. This exception includes the name of the feature concerned and the revision announced by the server in its message.
 
 #### Class `OptionError`
-This class is derived from `MultiplayerError` and serves as the common base class for exceptions related to player customization options (`OptionValueAlreadyGivenError`, `LackingOptionError`, `InvalidOptionValueError` and `OptionAlreadyExistsError`). It is not intended to be raised directly, but makes it possible to catch all option-related errors at once (`except OptionError`), without confusing them with the other errors of the module.
+This class is derived from `MultiplayerError` and serves as the common base class for exceptions related to player and game customization options (`OptionValueAlreadyGivenError`, `LackingOptionError`, `InvalidOptionValueError` and `OptionAlreadyExistsError`). It is not intended to be raised directly, but makes it possible to catch all option-related errors at once (`except OptionError`), without confusing them with the other errors of the module.
 
 #### Class `OptionValueAlreadyGivenError`
 This class is derived from `OptionError` and is used to report an attempt to introduce an object containing an option whose value has already been used, although it is supposed to be unique in the context. This exception includes the ID of the option concerned and the offending value in its message.
@@ -197,10 +206,10 @@ It has the following attributes, set when it is created:
 | Name | Type | Description |
 |-----|------|-------------|
 | `option_id` | str | The ID of the option concerned. |
-| `reason` | str | The reason for the error: `"ABSENT_FROM_PLAYER"` if the `Player` object introduced into a game does not carry a value for this option (or carries the value `None`, which is considered as an absence of value), or `"NO_AVAILABLE_VALUE"` if no value was provided for this option when creating a player and there is no possible value left (proposed value set to `None`). |
+| `reason` | str | The reason for the error: `"ABSENT_FROM_PLAYER"` if the `Player` object introduced into a game does not carry a value for this option (or carries the value `None`, which is considered as an absence of value), `"ABSENT_FROM_GAME"` if the `Game` object introduced into a group does not carry a value for this option (or carries the value `None`), or `"NO_AVAILABLE_VALUE"` if no value was provided for this option when creating a player or a game and there is no possible value left (proposed value set to `None`). |
 
 #### Class `InvalidOptionValueError`
-This class is derived from both `OptionError` and `ValueError`, and is used to report an incorrect option value, either when a player is created by a factory or when a player is introduced into a game that has a factory. Deriving from `ValueError` allows code that catches this standard exception to keep working. This exception includes the ID of the option concerned, the offending value and the reason for the error in its message.
+This class is derived from both `OptionError` and `ValueError`, and is used to report an incorrect option value, either when a player or a game is created by a factory, or when a player is introduced into a game or a game is introduced into a group that has a factory. Deriving from `ValueError` allows code that catches this standard exception to keep working. This exception includes the ID of the option concerned, the offending value and the reason for the error in its message.
 
 It has the following attributes, set when it is created:
 
@@ -211,7 +220,7 @@ It has the following attributes, set when it is created:
 | `reason` | str | The reason for the error: `"UNKNOWN_OPTION"` (the key provided does not match any option), `"INCOMPATIBLE_TYPE"` (the value is not accepted for the type of the option, according to the conversion rules of the `Option` class) or `"INVALID_VALUE"` (the value is outside the `min_value` / `max_value` bounds, does not match a `step` increment, or is not in `choices`). |
 
 #### Class `OptionAlreadyExistsError`
-This class is derived from `OptionError` and is used to report an attempt to introduce an option that is already present. This exception includes the ID of the option already present in its message. This exception is also raised when a similar option is already present. Similarity is defined either by the equality of the option IDs, or by the equality between the name of the introduced option and the frozen key of an option already present (see the `add_option` method of the `PlayerFactoryTemplate` class).
+This class is derived from `OptionError` and is used to report an attempt to introduce an option that is already present. This exception includes the ID of the option already present in its message. This exception is also raised when a similar option is already present. Similarity is defined either by the equality of the option IDs, or by the equality between the name of the introduced option and the frozen key of an option already present (see the `add_option` method of the `PlayerFactoryTemplate` and `GameFactoryTemplate` classes).
 
 ### Contents of the src/multiplayer/game.py file
 
@@ -219,7 +228,7 @@ This file contains the main game management logic. It defines the classes and fu
 In particular, it contains the following classes:
 
 #### Class `Option`
-This class represents an option in the context of the game. An option is a customization parameter whose value is chosen when a player is created, by means of a player factory. It can be of different types, such as boolean, numeric, text, etc. Each option is defined by a type and specific parameters.
+This class represents an option in the context of the game. An option is a customization parameter whose value is chosen when a player is created, by means of a player factory, or when a game is created, by means of a game factory. It can be of different types, such as boolean, numeric, text, etc. Each option is defined by a type and specific parameters.
 
 It is instantiated with the following parameters:
 
@@ -303,7 +312,7 @@ The `Option` class has the following methods:
 
 ##### Value conversion rules
 
-The following rules apply identically to the default value (when the option is created), to the values provided when a player is created (`create_player` method of the `PlayerFactory` class) and to the values checked when a player is introduced into a game (`join_game_as_player` method of the `Game` class):
+The following rules apply identically to the default value (when the option is created), to the values provided when a player is created (`create_player` method of the `PlayerFactory` class) or when a game is created (`create_game` method of the `GameFactory` class), and to the values checked when a player is introduced into a game (`join_game_as_player` method of the `Game` class) or when a game is introduced into a group (`add_game` method of the `GameGroup` class):
 
 | Option type | Accepted values | Conversion |
 |---------------|-------------------|------------|
@@ -312,7 +321,7 @@ The following rules apply identically to the default value (when the option is c
 | `OptionType.LIST` | String only. | None. |
 | `OptionType.TEXT` | String only. | None. |
 
-A value that is not accepted is of an incompatible type: depending on the context, it causes a `TypeError` exception (when the option is created) or an `InvalidOptionValueError` exception with `reason` set to `"INCOMPATIBLE_TYPE"` (when a player is created or introduced). It is always the converted value that is retained: it is stored in the `Player` object, and it is the one compared for the uniqueness check.
+A value that is not accepted is of an incompatible type: depending on the context, it causes a `TypeError` exception (when the option is created) or an `InvalidOptionValueError` exception with `reason` set to `"INCOMPATIBLE_TYPE"` (when a player or a game is created or introduced). It is always the converted value that is retained: it is stored in the `Player` object, and it is the one compared for the uniqueness check.
 
 ##### Possible values of an `OptionType.RANGE` option
 
@@ -322,7 +331,7 @@ An `OptionType.RANGE` option is **integer** if `step`, as well as `min_value`, `
 
 ##### `None` default value
 
-A default value of `None` means "first available value". When the proposed value is computed (see the `get_option` method of the `PlayerFactory` class), it is replaced by:
+A default value of `None` means "first available value". When the proposed value is computed (see the `get_option` method of the `PlayerFactory` and `GameFactory` classes), it is replaced by:
 
 | Option type | Retained value |
 |---------------|----------------|
@@ -331,7 +340,7 @@ A default value of `None` means "first available value". When the proposed value
 | `OptionType.LIST` | The first element of `choices` |
 | `OptionType.TEXT` | `""` (empty string) |
 
-If this value is excluded, the next value rule applies (see the `get_option` method of the `PlayerFactory` class).
+If this value is excluded, the next value rule applies (see the `get_option` method of the `PlayerFactory` and `GameFactory` classes).
 
 ##### Runtime constants
 
@@ -346,7 +355,8 @@ The recognized runtime constants are the following:
 | `%%CURRENT_TIME%%` | str | Library | The local date and time at the moment of evaluation, in ISO 8601 format, to the second, with the UTC offset (e.g. `"2026-11-15T12:34:56+01:00"`). |
 | `%%RANDOM_NUMBER%%` | int | Library | For an `OptionType.TEXT` option: an integer drawn at random between 0 and 100 inclusive. For an `OptionType.RANGE` option: a value drawn at random among the possible values of the option (see below). |
 | `%%RANDOM_CHOICE%%` | str | Library | For an `OptionType.LIST` option only: a value drawn at random among the possible choices of the option (see below). |
-| `%%GAMENAME%%` | str | Factory | The name of the game the factory is associated with (`name` attribute of the `Game` object). If the game has no name (`name` attribute set to `None`), the constant is replaced by an empty string (`""`). |
+| `%%GAMENAME%%` | str | Factory | The name of the game the player factory is associated with (`name` attribute of the `Game` object). If the game has no name (`name` attribute set to `None`), the constant is replaced by an empty string (`""`). |
+| `%%GROUPNAME%%` | str | Factory | The name of the game group the game factory is associated with (`name` attribute of the `GameGroup` object). |
 | `%%USERNAME%%` | str | Context | The name of the user for whom the player is created (`username` attribute of the `User` object). |
 | `%%SERVERNAME%%` | str | Context | The name of the server (`name` attribute of the `GameServer` object). |
 | `%%CLIENTADDRESS%%` | str | Context | The IP address (IPv4 or IPv6) of the client. |
@@ -354,10 +364,12 @@ The recognized runtime constants are the following:
 
 The "Source" column indicates who provides the value of the constant:
 - Library: the value is computed by the `multiplayer` library itself, at the moment of evaluation.
-- Factory: the value is provided by the `PlayerFactory` object performing the evaluation, based on the game it is associated with.
+- Factory: the value is provided by the `PlayerFactory` or `GameFactory` object performing the evaluation, based on the game or the game group it is associated with (`%%GAMENAME%%` for a player factory, `%%GROUPNAME%%` for a game factory).
 - Context: the value is provided by the caller, through a context dictionary (see below). On the server side, it is the `GameServer` object that builds this context from the session and the connection of the user concerned.
 
 The **context** is a dictionary of type `dict[str, str]`, whose keys are the names of the constants without the `%%` characters (for example `{"USERNAME": "alice", "CLIENTADDRESS": "192.168.1.12"}`), and whose values are the values to substitute for them. A constant present in the context always takes the value from the context, even if it is a constant normally provided by the library or by the factory: this makes it possible, in particular, to obtain reproducible results in unit tests (for example by setting `CURRENT_TIME` or `RANDOM_NUMBER`). A constant whose source is "Context" and which is absent from the context is replaced by an empty string (`""`).
+
+When an option is evaluated by a `GameFactory`, the `%%GAMENAME%%` constant is not provided and is replaced by an empty string (`\"\"`), since no game exists yet. Conversely, when an option is evaluated by a `PlayerFactory`, the `%%GROUPNAME%%` constant is replaced by an empty string (`\"\"`), since a game is not necessarily associated with a group.
 
 The rules for using the constants depend on the type of the option:
 
@@ -370,12 +382,12 @@ The rules for using the constants depend on the type of the option:
 
 Constants are not allowed in the other parameters of the option (`min_value`, `max_value`, `step`, `choices`, `name`, `description`).
 
-Constants are kept unevaluated in the `Option` object (the `default` attribute always returns the raw value, for example `"Player_%%RANDOM_NUMBER%%"`), as well as when options are copied into a template or into a factory. They are only evaluated when the proposed value of an option is computed, by the `evaluate_default` method, called by the `get_option` and `create_player` methods of the `PlayerFactory` class. Each evaluation is independent: two successive evaluations may give different results (date and time, random draws). It is therefore recommended that the client process explicitly pass to the `create_player` method the proposed value it presented to the user, rather than letting the factory perform a new evaluation.
+Constants are kept unevaluated in the `Option` object (the `default` attribute always returns the raw value, for example `"Player_%%RANDOM_NUMBER%%"`), as well as when options are copied into a template or into a factory. They are only evaluated when the proposed value of an option is computed, by the `evaluate_default` method, called by the `get_option` and `create_player` methods of the `PlayerFactory`, and by the `get_option` and `create_game` methods of the `GameFactory`. Each evaluation is independent: two successive evaluations may give different results (date and time, random draws). It is therefore recommended that the client process explicitly pass to the `create_player` or `create_game` method the proposed value it presented to the user, rather than letting the factory perform a new evaluation.
 
 #### Class `OptionEntry`
-This class describes an option as it is registered in a template (`PlayerFactoryTemplate`) or in a factory (`PlayerFactory`): the option itself, together with the parameters that were associated with it when it was added to the template. These parameters do not belong to the `Option` object, since the same option can be added to several templates with different parameters.
+This class describes an option as it is registered in a template (`PlayerFactoryTemplate`, `GameFactoryTemplate`) or in a factory (`PlayerFactory`, `GameFactory`): the option itself, together with the parameters that were associated with it when it was added to the template. These parameters do not belong to the `Option` object, since the same option can be added to several templates with different parameters.
 
-`OptionEntry` objects are created by the `PlayerFactoryTemplate` and `PlayerFactory` classes, and returned by their `get_option` methods. They are not intended to be instantiated directly by the user of the `multiplayer` library.
+`OptionEntry` objects are created by the `PlayerFactoryTemplate`, `PlayerFactory`, `GameFactoryTemplate` and `GameFactory` classes, and returned by their `get_option` methods. They are not intended to be instantiated directly by the user of the `multiplayer` library.
 
 An `OptionEntry` object is immutable: none of its attributes can be modified, and it does not give access to the internal objects of the template or of the factory.
 
@@ -386,7 +398,7 @@ It has the following attributes:
 | `option` | `Option` | The option concerned. | No | This is a copy of the `Option` object held by the template or the factory: modifying it has no effect on the template or the factory. This copy represents the same option, not a new option: it therefore keeps the ID of the original option (see the ID convention). In this respect it differs from the copies made when a factory is created, which constitute new options and receive a new ID. |
 | `unicity` | bool | The value of the `unicity` parameter associated with the option. | No | - |
 | `hide` | bool | The value of the `hide` parameter associated with the option. | No | - |
-| `player_attribute` | str\|`ParameterFamily` | The value of the `player_attribute` parameter associated with the option. | No | - |
+| `player_attribute` | str\|`ParameterFamily` | The value of the `player_attribute` parameter (for player factories) or `game_attribute` (for game factories) associated with the option. | No | - |
 | `key` | str | The frozen key of the option. | No | - |
 
 The `OptionEntry` class has the following methods:
@@ -399,16 +411,16 @@ The `OptionEntry` class has the following methods:
     |-----|--------|
     | `unicity` | The value of the `unicity` attribute. |
     | `hide` | The value of the `hide` attribute. |
-    | `target` | `"ATTRIBUTE"` if `player_attribute` is a string, `"STATIC"` if it is `ParameterFamily.STATIC`, `"DYNAMIC"` if it is `ParameterFamily.DYNAMIC`. |
-    | `attribute` | The value of `player_attribute` when `target` is `"ATTRIBUTE"` (e.g. `"name"`), `None` otherwise. |
+    | `target` | `"ATTRIBUTE"` if `player_attribute` (or `game_attribute`) is a string, `"STATIC"` if it is `ParameterFamily.STATIC`, `"DYNAMIC"` if it is `ParameterFamily.DYNAMIC`. |
+    | `attribute` | The value of `player_attribute` (or `game_attribute`) when `target` is `"ATTRIBUTE"` (e.g. `"name"`), `None` otherwise. |
     | `key` | The frozen key of the option. |
 
-- `from_dict` (class method): creates an `OptionEntry` object from a dictionary representation, in the format returned by the `to_dict` method. This method is mainly used by the `from_dict` methods of the `PlayerFactoryTemplate` and `PlayerFactory` classes.
+- `from_dict` (class method): creates an `OptionEntry` object from a dictionary representation, in the format returned by the `to_dict` method. This method is mainly used by the `from_dict` methods of the `PlayerFactoryTemplate`, `PlayerFactory`, `GameFactoryTemplate` and `GameFactory` classes.
   - Parameters:
     - `data` (dict): the representation of the registered option. The elements of the option itself are processed by the `from_dict` method of the `Option` class. The `target` key is mandatory, as is the `attribute` key when `target` is `"ATTRIBUTE"`. The `unicity` key is optional (`False` if absent). The `hide` key is optional (`False` if absent). The `key` key is optional: if it is absent, the frozen key is the name of the option. Mandatory.
-  - Implementation details: the `player_attribute` parameter is rebuilt from `target` and `attribute` (`"STATIC"` gives `ParameterFamily.STATIC`, `"DYNAMIC"` gives `ParameterFamily.DYNAMIC`, `"ATTRIBUTE"` gives the value of `attribute`). The checks applied to `player_attribute` by the `add_option` method of the `PlayerFactoryTemplate` class apply. The dictionary provided is not modified.
+  - Implementation details: the `player_attribute` (or `game_attribute`) parameter is rebuilt from `target` and `attribute` (`"STATIC"` gives `ParameterFamily.STATIC`, `"DYNAMIC"` gives `ParameterFamily.DYNAMIC`, `"ATTRIBUTE"` gives the value of `attribute`). The checks applied to the parameters `player_attribute` and `game_attribute` by the `add_option` methods of the `PlayerFactoryTemplate` and `GameFactoryTemplate` classes apply. The dictionary provided is not modified.
   - Exceptions raised:
-    - `TypeError` or `ValueError`: in the same cases as the `from_dict` method of the `Option` class and as the `player_attribute` checks of the `add_option` method, as well as if `target` is missing or is not `"ATTRIBUTE"`, `"STATIC"` or `"DYNAMIC"` (`ValueError`).
+    - `TypeError` or `ValueError`: in the same cases as the `from_dict` method of the `Option` class and as the `player_attribute` checks of the `add_option` methods, as well as if `target` is missing or is not `"ATTRIBUTE"`, `"STATIC"` or `"DYNAMIC"` (`ValueError`).
   - Return value: the created `OptionEntry` object.
 
 #### Class `Player`
@@ -623,6 +635,190 @@ The `PlayerFactory` class has the following methods:
     - `OptionAlreadyExistsError`: if two options of the list share the same ID or the same frozen key.
   - Return value: the created `PlayerFactory` object.
 
+#### Class `GameFactoryTemplate`
+
+When creating a game, it is possible to define how games will be created, the parameters they will have to handle, as well as the values that can be assigned to them before their creation. For example, for a chess game, the person creating a game may decide on the name of the game, the maximum number of players, or even whether it is turn-based. It is also possible to evolve and restrict the possible values as games join a group. For example, if a group imposes unique game names, an already created game forbids its name to the following ones.
+
+To do so, a `GameFactoryTemplate` object must be created, and `Option` objects must be assigned to it to define the parameters, the possible values, and the default values. This `GameFactoryTemplate` object can then be used by a `GameGroup` object to create within it (that is, in the `GameGroup` namespace) a `GameFactory` object, which will in turn be used to accompany the creation of the `Game` objects to assign to the group. A factory is specific to a group: it determines the values still available from the list of games of this group (notably to handle "unique" choices, such as the game name). That is why it is created within the `GameGroup` object. The template, on the other hand, is independent of any group and lives in the global namespace: it can be used to create factories of several groups.
+
+The `GameFactoryTemplate` class is instantiated with the following parameters:
+
+| Name | Type | Description | Mandatory | Default |
+|------------|------|------------------|-------------|-------------------|
+| `name` | str | The model name | Yes | - |
+
+This `name` parameter allows a user to identify the model, for example in the list of models held by a server (see the game factory template registry of the `GameServer` class, and the `FACTORY_TEMPLATE_LIST` request of the [Client-server exchange protocol](PROTOCOLE.md)). In local use, the `multiplayer` library keeps no registry of models: it is up to the user to keep the models they create. Although not mandatory, it is **strongly** recommended to provide a unique name for each model.
+
+It has the following attributes:
+
+| Name | Type | Description | Editable | Implementation details |
+|------------|------|---------------------------------|------------|----------------------------|
+| `ID` | str | Unique identifier of the model | No | Automatically initialized with the value of `uuid.uuid4()`. |
+| `name` | str | The model name | Yes | Automatically initialized with the name provided at model creation. |
+| `options` | list[tuple[str,str]] | List of the IDs and names of the model's options, as (ID, name) tuples | No | A new list is created each time this attribute is read; modifying it has no impact on the options contained in the model. |
+
+The `GameFactoryTemplate` class has the following methods:
+
+- `add_option`: adds an option to the model.
+  - Description: adds an option to the model. The model records a copy of the provided `Option` object, not the object itself: a later modification of the provided object (for example of its `name` or `description` attribute) has no effect on the model. This copy represents the same option and therefore keeps its ID (see the ID convention). It checks that a similar option is not already present in the model. Similarity is defined either by the equality of the option IDs, or by the equality between the name of the option being added (which will become its frozen key) and the frozen key of an option already present in the model. For already existing options, it is their frozen key that is taken into account, and not their name. In case of similarity, an `OptionAlreadyExistsError` exception is raised, except in the case of the replacement of an option associated with the same direct attribute of the game (see below).
+  - Parameters (in this order):
+    - `option` (`Option`): the `Option` object to add to the model. Mandatory.
+    - `game_attribute` (str|`ParameterFamily`): the attribute of the `Game` object associated with this option. Mandatory. See the table below. The string `"player_factory_template"` designates a reference to a player factory model (`PlayerFactoryTemplate`): in this case, the option is intended to configure the player factory of the created game (see the table below).
+    - `hide` (bool): indicates whether the option should be hidden in the game creation form in the user interface. If `True`, this makes it possible to create an attribute used by server or group logic but that does not have to be initialized by the user. Optional, default `False`.
+    - `unicity` (bool): If `True`, then a value of this option carried by a game of the group cannot be carried by another game of the same group. The value becomes available again as soon as the game carrying it is removed from the group. For an option associated with `ParameterFamily.DYNAMIC`, it is the current value carried by the game that is taken into account: if it evolves after creation, the excluded values evolve accordingly. Uniqueness is guaranteed only at the time the game is added to the group (method `add_game` of the `GameGroup` class): a later modification of the value carried by a game (attribute `name`, `static_state` or `dynamic_state`) is not checked. It is the responsibility of the library user to preserve uniqueness after the introduction of games, if necessary for the game. For a unique option associated with the `name` attribute, a game without a name (`None`) is ignored in the computation of exclusions, like an absence of value. It is therefore recommended to give such an option a variable default value, for example `"Game_%%RANDOM_NUMBER%%"`. Optional. `False` by default.
+  - Exceptions raised:
+    - `TypeError` if the provided object is not an instance of `Option`.
+    - `TypeError` if `game_attribute` is neither a string, nor a member of the `ParameterFamily` enumeration.
+    - `ValueError` if `game_attribute` is a string that does not correspond to either an allowed direct attribute, nor to `"player_factory_template"`.
+    - `TypeError` if the type of the option is not compatible with the chosen direct attribute (see the table below).
+    - `OptionAlreadyExistsError` if a similar option is already present in the model, except in the replacement case.
+  - Return value: None.
+
+The direct attributes of a game and the accepted option types are the following:
+
+| `game_attribute` | Accepted option types | Effect |
+|------------------|-------------------------|-------|
+| `"name"` | `OptionType.TEXT`, `OptionType.LIST` | The chosen value is assigned to the `name` attribute of the game. |
+| `"max_players"` | Entire `OptionType.RANGE` | The chosen value is assigned to the `max_players` attribute of the game. |
+| `"max_observers"` | Entire `OptionType.RANGE` | The chosen value is assigned to the `max_observers` attribute of the game. |
+| `"min_players"` | Entire `OptionType.RANGE` | The chosen value is assigned to the `min_players` attribute of the game. |
+| `"turn_based"` | `OptionType.CHECK` | The chosen value is assigned to the `turn_based` attribute of the game. |
+| `"player_factory_template"` | `OptionType.TEXT`, `OptionType.LIST` | The chosen value is interpreted as the ID of a player factory model (`PlayerFactoryTemplate`): the created game is associated with a player factory built from this model. An `OptionType.LIST` option makes it possible to let the game creator choose among several player factory models. |
+| `"password"` | `OptionType.TEXT` | The chosen value is assigned to the `password` attribute of the game, which is hashed by the `Game` class. |
+| `"observer_password"` | `OptionType.TEXT` | The chosen value is assigned to the `observer_password` attribute of the game, which is hashed by the `Game` class. |
+| `ParameterFamily.STATIC` | All | The chosen value is added to `static_state`, under the option's frozen key. |
+| `ParameterFamily.DYNAMIC` | All | The chosen value is added to `dynamic_state`, under the option's frozen key. |
+
+An `OptionType.RANGE` option is said to be **entire** when all its values are of type `int` (see the "`OptionType.RANGE` option values" paragraph of the `Option` class). A decimal `OptionType.RANGE` option cannot be associated with the `max_players`, `max_observers` and `min_players` attributes.
+
+When checking the constraints at the addition of a game to the group, the value read for the `min_players` attribute is the effective value returned by the `Game` object, that is, the value provided possibly capped by `max_players` (see the `Game` class).
+
+> Implementation details:
+> - The silent replacement only concerns the direct attributes of the `Game` object: if `game_attribute` designates a direct attribute already associated with another option of the model, the old option is replaced by the new one silently. The old option is then removed from the model (in the same way as by means of the `del_option` method). For this replacement check, the old option is not compared on its frozen key (the new option may thus bear the same name as the option it replaces), but is always compared on its ID. A direct attribute can therefore only be associated with one option at a time.
+> - The `"player_factory_template"` reference does not designate a direct attribute of the `Game` object, but a player factory model (`PlayerFactoryTemplate`): when creating the game (the `create_game` method of the `GameFactory` class), the option's value is resolved to a `PlayerFactoryTemplate` object, then the corresponding player factory is associated with the created game, via the `create_player_factory` method of the `Game` class. If the value does not correspond to any model, the `create_game` method raises the `PlayerFactoryTemplateNotFoundError` exception.
+> - For `ParameterFamily.STATIC` and `ParameterFamily.DYNAMIC`, no replacement occurs: the same model can contain as many options associated with the same family as necessary, each identified by its frozen key. An option whose name corresponds to the frozen key of an option already present causes the `OptionAlreadyExistsError` exception.
+> - Each option receives, at the time of the call to `add_option`, a frozen key: it is the value of the option's `name` attribute at that moment. A later modification of the option's `name` attribute has no effect on this key. For options associated with `ParameterFamily.STATIC` or `ParameterFamily.DYNAMIC`, it is this key that is used in `static_state` or `dynamic_state`. For all options, it is also this key that is used for the similarity check. The model records a copy of the provided option, and provides no means of renaming an option it contains, so the frozen key of an option added by `add_option` remains equal to its name. It can only differ from it for an option rebuilt from a representation providing its key explicitly (the `from_dict` methods).
+> - An option associated with the `"max_players"` or `"max_observers"` attributes cannot produce `None`: to preserve the possibility of a game without limit, one must not associate an option with the corresponding attribute. The passwords (`password` and `observer_password`) are not part of the direct attributes offered, because the `Game` class only keeps a non-reversible hash: they therefore cannot be read back to check the factory constraints when adding a game to the group. A protected game can nevertheless be created directly, without going through the factory, then added to the group if it complies with the factory options.
+
+- `get_option`: provides a specific option of the model.
+  - Parameters:
+    - `option_id` (str): the ID of the option to get. Mandatory.
+  - Exceptions raised:
+    - `KeyError` if the option does not exist in the model.
+  - Return value: an `OptionEntry` object describing the requested option, with its `unicity`, `hide` and `game_attribute` parameters and its frozen key.
+
+- `del_option`: removes an option from the model.
+  - Parameters:
+    - `option_id` (str): the ID of the option to remove. Mandatory.
+  - Exceptions raised:
+    - `KeyError` if the option does not exist in the model.
+  - Return value: None.
+
+- `to_dict`: provides a representation of the model as a dictionary, common to persistence and network exchanges.
+  - Parameters: None.
+  - Return value: a `dict` object with the following elements:
+
+    | Key | Value |
+    |-----|--------|
+    | `template_id` | The ID of the model. |
+    | `name` | The name of the model. |
+    | `options` | The list of the options of the model, in the order of addition, each in the form returned by the `to_dict` method of the `OptionEntry` class. |
+
+- `from_dict` (class method): creates a model from a dictionary representation, in the format returned by the `to_dict` method. This method is used to restore a save, and by the server to create and modify models from data received from clients.
+  - Parameters:
+    - `data` (dict): the representation of the model. The `name` key is mandatory. The `options` key is optional (no option if absent). The `template_id` key is optional. Mandatory.
+  - Implementation details: if the `template_id` key is present, the created model keeps this ID; otherwise, a new ID is generated. Each option is rebuilt by the `from_dict` method of the `OptionEntry` class, then added to the model in the order of the list, according to the rules of the `add_option` method (similarity check, replacement of an option associated with a direct attribute), but keeping its ID and frozen key when they are provided. Creation is atomic: if one of the options is rejected, no model is created. The provided dictionary is not modified.
+  - Exceptions raised:
+    - `TypeError` or `ValueError`: if the data is malformed, or in the same cases as the `from_dict` method of the `OptionEntry` class.
+    - `OptionAlreadyExistsError`: if two options of the list share the same ID or the same frozen key.
+  - Return value: the created `GameFactoryTemplate` object.
+
+#### Class `GameFactory`
+
+This class creates `Game` objects from predefined options. This class is particularly useful for defining the characteristics of games according to the type of game or group they will take part in. For example, for a group of chess games, games can be characterized by a unique name, a maximum number of players and whether they are turn-based. These constraints can be implemented in a `GameFactory` instance, and used to generate `Game` objects compatible with the group to which the `GameFactory` object has been associated.
+
+A `GameFactory` object is typically used to create `Game` objects only in the context of a particular group. Thus, a `GameFactory` object should only be instantiated in the namespace of a `GameGroup` object, and never in the global namespace. In practice, the `GameFactory` object should only be created with the `create_game_factory` method of the `GameGroup` class in which it should be integrated.
+
+The user accesses the options through the `options` attribute (to get the IDs and names of the options) and through the `get_option` method (to get the full option, with its `unicity`, `hide` and `game_attribute` parameters, its frozen key, its exclusion list and the proposed value). This allows the user to choose a value for each option. The chosen values are then passed all at once, as a parameter of the `create_game` method, which creates the corresponding `Game` object.
+
+The factory does not keep any value being entered: each call to `create_game` is independent of the others. Several users can thus prepare their game simultaneously from the same factory, without their choices interfering.
+
+The list of games of the group (`games` attribute of the associated `GameGroup` object) is the only reference for determining the excluded values: the factory does not reserve any value. A `Game` object created by the factory is only taken into account in the exclusions once it has actually joined the group by means of the `add_game` method, and ceases to be as soon as it is removed from it. It is the `add_game` method that performs the final check of the factory's constraints. For a user's choices to be immediately taken into account in the values proposed to the following users, it is recommended to create games by means of the `create_and_add_game` method of the `GameGroup` class, which chains the creation of the game and its introduction into the group in a single operation.
+
+> Implementation details: the excluded values are not stored, but computed each time they are needed (`get_option` and `create_game` methods). For each option created with `unicity` set to `True`, the excluded values are the values of this option carried by the `Game` objects present in the `games` attribute of the associated group (observers are ignored). The value carried by a game is read according to the `game_attribute` parameter of the option: in the corresponding direct attribute, or in `static_state` / `dynamic_state` under the key frozen when the option was added to the model (see the `add_option` method of the `GameFactoryTemplate` class). A game that does not carry a value for this option, or that carries the value `None`, is ignored for this option.
+
+The `GameFactory` class is instantiated with the following parameters:
+
+| Name | Type | Description | Mandatory | Default |
+|------------|------|------------------|-------------|-------------------|
+| `template` | `GameFactoryTemplate` | The model from which the factory copies the options, as well as their `unicity`, `hide` and `game_attribute` parameters, and their frozen keys. | Yes | - |
+| `group_id` | str | The ID of the `GameGroup` object the factory is associated with. The group is retrieved through the `GameGroup.get_by_id` class method. | Yes | - |
+
+These parameters are provided by the `create_game_factory` method of the `GameGroup` class, which is the only intended way to create a `GameFactory` object.
+
+> Implementation details: the `get_option` and `create_game` methods retrieve the associated group through the `GameGroup.get_by_id` class method. If the group no longer exists, they raise the `GroupNotFoundError` exception.
+
+> Implementation details: at instantiation, the `Option` objects of the model are copied into the factory (they are not shared), as are their `unicity`, `hide` and `game_attribute` parameters and their frozen keys. A later modification of the model (addition, removal or replacement of an option) or of the `Option` objects it contains is not reflected in the factory, and vice versa. Each copied option receives a new ID, generated with `uuid.uuid4()`: the IDs of the factory's options are therefore distinct from those of the model's options, and must be obtained through the `options` attribute of the factory.
+
+It has the following attributes:
+
+| Name | Type | Description | Editable | Implementation details |
+|------------|------|---------------------------------|------------|----------------------------|
+| `ID` | str | Unique identifier of the factory | No | Automatically initialized with the value of `uuid.uuid4()`. |
+| `options` | list[tuple[str,str]] | List of the IDs and names of the factory's options, as (ID, name) tuples | No | A new list is created each time this attribute is read; modifying it has no impact on the options contained in the factory. |
+
+The `GameFactory` class has the following methods:
+
+- `get_option`: provides a specific option of the factory.
+  - Parameters:
+    - `option_id` (str): the ID of the option to get. Mandatory.
+    - `context` (dict[str, str]\|`None): the context providing the value of the runtime constants for computing the proposed value (see the "Runtime constants" paragraph of the `Option` class). Optional. Default: `None`.
+  - Exceptions raised:
+    - `KeyError` if the option does not exist in the factory.
+    - `GroupNotFoundError` if the associated group no longer exists.
+  - Return value: a `dict` object with the following elements:
+
+    | Key | Value |
+    |--------|---------|
+    | `entry`| an `OptionEntry` object describing the requested option, with its `unicity`, `hide` and `game_attribute` parameters and its frozen key. |
+    | `exclusions`| the list of excluded values for this option, computed at the time of the call from the games present in the group. Empty list for an option created with `unicity` set to `False`. |
+    | `proposed_value`| the proposed value for this option, computed at the time of the call (see below). It can be used to pre-fill an input form, and it is the value used by `create_game` if no value is provided for this option. |
+
+> Implementation details: the proposed value is computed according to the same rules as the `get_option` method of the `PlayerFactory` class (default value evaluated, then next value if necessary, and `None` if no value is possible left), including the table of values below and the comparison rules. The `evaluate_default` method of the `Option` object is called with the provided context, supplemented by the factory with the `GROUPNAME` constant (name of the associated group) if not already present, and with the excluded values of the option (`exclusions` parameter), so that a random draw never retains an excluded value. The `GAMENAME` constant is not provided by the factory and is an empty string if used.
+
+- `create_game`: generates a `Game` object from the values chosen for the options of the factory.
+  - Parameters:
+    - `values` (dict[str, any]): the chosen values, as a dictionary whose keys are the IDs of the factory's options (as provided by the `options` attribute) and whose values are the values chosen for these options. It is not necessary to provide a value for each option: an option absent from the dictionary takes its proposed value (see the `get_option` method). A `None` value means "no choice": the corresponding option is treated as if it were absent from the dictionary, and therefore takes its proposed value. Optional. Default: empty dictionary (all options take their proposed value).
+    - `context` (dict[str, str]\|`None): the context providing the value of the runtime constants, used to compute the proposed value of the options absent from the `values` dictionary (see the `get_option` method). The values provided in `values` are never evaluated as runtime constants: a string such as `"%%USERNAME%%"` is an ordinary value there. They are, however, converted according to the conversion rules of the `Option` class. Optional. Default: `None`.
+  - Exceptions raised:
+    - `InvalidOptionValueError` if a key of the `values` dictionary does not match any option of the factory (`reason` set to `"UNKNOWN_OPTION"`), if a value provided is not compatible with the type expected for the corresponding option (`reason` set to `"INCOMPATIBLE_TYPE"`), or if a value provided is not valid for the corresponding option (`reason` set to `"INVALID_VALUE"`).
+    - `OptionValueAlreadyGivenError` if a value provided for an option created with `unicity` set to `True` is among the excluded values at the time of the call.
+    - `LackingOptionError` if an option absent from the `values` dictionary has no proposed value (proposed value set to `None`), with `reason` set to `"NO_AVAILABLE_VALUE"`.
+    - `GroupNotFoundError` if the associated group no longer exists.
+    - `PlayerFactoryTemplateNotFoundError` if an option associated with `"player_factory_template"` provides a value corresponding to a non-existing player factory model (ID) (`PlayerFactoryTemplate`).
+  - Return value: a `Game` object.
+
+> Implementation details: the method creates a new instance of `Game` by filling in the direct attributes of the game with the values of the options associated with them, and by passing the options of the `ParameterFamily.STATIC` and `ParameterFamily.DYNAMIC` families as named parameters `(family, value)` accepted by the `Game` constructor. The direct attributes for which no option is defined take their default value in the `Game` class. If an option of the factory is associated with `"player_factory_template"`, the method creates the corresponding player factory from the model designated by the option's value, then assigns it to the created `Game` object (the `player_factory` attribute of the `Game` class), via the `create_player_factory` method of the `Game` class. The method does not modify the factory's state and does not add the game to the group. Creating a game reserves no value: the created object is only taken into account in the exclusions once added to the group by the `add_game` method. Two successive or simultaneous calls to `create_game` with the same value for a unique option can thus both succeed: it is on the introduction of games into the group that the second will be rejected (the `OptionValueAlreadyGivenError` exception). The provided `values` dictionary is not modified by the method.
+
+- `to_dict`: provides a representation of the factory as a dictionary, used to save the group to which it is associated.
+  - Parameters: None.
+  - Return value: a `dict` object with the following elements:
+
+    | Key | Value |
+    |-----|--------|
+    | `factory_id` | The ID of the factory. |
+    | `options` | The list of the options of the factory, in their order of definition, each in the form returned by the `to_dict` method of the `OptionEntry` class. |
+
+- `from_dict` (class method): recreates a factory from a dictionary representation, in the format returned by the `to_dict` method, without going through a model. This method is reserved for restoring a saved group: outside this case, a factory must be created by the `create_game_factory` method of the `GameGroup` class.
+  - Parameters:
+    - `data` (dict): the representation of the factory. Mandatory.
+    - `group_id` (str): the ID of the group the factory is associated with. Mandatory.
+  - Implementation details: the factory and its options keep the IDs and frozen keys provided. Each option is rebuilt by the `from_dict` method of the `OptionEntry` class. The provided dictionary is not modified.
+  - Exceptions raised:
+    - `TypeError` or `ValueError`: if the data is malformed, or in the same cases as the `from_dict` method of the `OptionEntry` class.
+    - `OptionAlreadyExistsError`: if two options of the list share the same ID or the same frozen key.
+  - Return value: the created `GameFactory` object.
+
 #### Class `Game`
 This class represents a game. It is instantiated with the following parameters:
 
@@ -659,6 +855,8 @@ Every `Game` object created (or restored from a save) is recorded in a global re
 
 > Implementation details: the `player_factory` attribute, when it is defined, makes it easier to create the players of the game, by making it possible to create customized players from the `PlayerFactory` class rather than creating default players from the `Player` class. Its use is not mandatory, and the `Player` objects created from this factory must be treated like any other `Player` object: they must be integrated into the game using the `join_game_as_player` method. The factory's `create_player` method does not automatically integrate them into the game. To create a player and integrate it into the game in a single operation, the `create_and_join_player` method should be used.
 > However, if `player_factory` is defined, adding players with the `join_game_as_player` method checks that the `Player` object passed does meet the constraints of the factory, for the options specified in it: presence of the option, compatibility of the value's type, validity of the value, and uniqueness of the value among the players of the game for options created with the `unicity` parameter set to `True`. The details of these checks, and of the exceptions raised, are described in the `join_game_as_player` method. The list of players of the game is the only reference for the uniqueness of values: removing a player from the game automatically makes their values available again. These checks are only performed when a player is introduced: uniqueness is therefore only guaranteed at the time of the `join`, and a later modification of the values carried by the players is not checked.
+
+A game can also be prepared by a game factory (class `GameFactory`), associated with the game group (`GameGroup`) in which the game is intended to be created. This factory facilitates the creation of games and controls their parameters upon their introduction into the group. In this context, an option can be associated with the `"player_factory_template"` reference, in order to determine the player factory of the created game from a player factory template (`PlayerFactoryTemplate`). See the `GameGroup` and `GameFactory` classes.
 
 The `Game` class has the following methods:
 
@@ -823,7 +1021,7 @@ The `Game` class has the following methods:
   - Return value: None.
 
 #### Class `GameGroup`
-This class groups several games into a single object, making it possible to manage them in parallel and handle them as a group. It is instantiated with the following parameters:
+This class groups several games into a single object, making it possible to manage them in parallel and handle them as a group. It can also be equipped with a game factory (class `GameFactory`), which facilitates the creation of the group's games and controls their parameters upon their introduction into the group. It is instantiated with the following parameters:
 
 | Name | Type | Description | Mandatory | Default |
 |---------------------|--------|-------------|-------------|---------|
@@ -836,25 +1034,66 @@ The class has the following attributes:
 |-----------------|-----------------|-------------|------------|----------------------------|
 | `ID` | str | The unique identifier of the group. | No | Automatically initialized with the value of `uuid.uuid4()`.|
 | `name` | str | The name of the group. | Yes | - |
+| `game_factory` | `GameFactory`\|`None` | Game factory that helps create the group's games, and checks their parameters when they are introduced into the group. If `None`, there is neither help with creating games nor any check of their parameters when they are introduced into the group. | No | Created by the `create_game_factory` method. |
 | `games` | Tuple[str] | Tuple (immutable list) of the IDs of the `Game` objects representing the games of the group. | No | The corresponding internal variable (`_games`) is a list, converted to a tuple when exposed publicly through the `games` attribute. |
 | `parameters` | dict | Customization parameters of the group. | Yes | Automatically initialized with the parameters given in `kwargs`, but can later be extended with any other parameter of the user's choice. |
 
 
+Every `GameGroup` object created (or restored from a save) is registered in a global registry, indexed by its ID. This registry makes it possible to designate a group by its ID alone, for example in the constructor of the `GameFactory` class.
+
+> Implementation details: the registry only holds weak references (`weakref.WeakValueDictionary`): it does not prevent the destruction of a `GameGroup` object that is no longer used elsewhere.
+
 The `GameGroup` class has the following methods:
 
+- `get_by_id` (class method): looks up an existing group from its ID.
+  - Parameters:
+    - `group_id` (str): the ID of the group to look up. Mandatory.
+  - Return value: The corresponding `GameGroup` object, or `None` if no existing group has this ID.
+
+- `create_game_factory`: creates a game factory from a template.
+  - Description: This method creates a game factory from a template, or replaces an existing game factory. If the template is `None`, the factory is removed. Once created, the factory is stored in the `game_factory` attribute of the current instance. The creation or replacement of the factory (`template` parameter other than `None`) is only allowed if the group has no game yet: thus, all the games of the group are necessarily checked against the constraints of the factory when they are introduced. Removing the factory (`template` parameter set to `None`) remains possible when the group already has games. In all forbidden cases, the `game_factory` attribute is not modified.
+  - Implementation details: the factory is instantiated with the template provided and the ID of the current instance (`template` and `group_id` parameters of the `GameFactory` class).
+  - Parameters:
+    - `template` (`GameFactoryTemplate`|`None`): the template to use to create the factory. Mandatory.
+  - Exceptions raised:
+    - `TypeError`: if the `template` parameter is not of type `GameFactoryTemplate` or `None`.
+    - `GroupHasGamesError`: raised if the `template` parameter is not `None` and the group already has at least one game.
+  - Return value:
+      - None.
+
 - `add_game`: adds a game to the group. The game is appended to the end of the group's list of games.
-  - Description: This method adds a game to the group, given its ID or `Game` object, and optionally a group administrator password. It raises an exception if the game does not exist or if the password is incorrect.
-  - Implementation details: If successful, the method adds the ID of the `Game` object to the `_games` list of the current instance.
+  - Description: This method adds a game to the group, given its ID or `Game` object, and optionally a group administrator password. It raises an exception if the game does not exist or if the password is incorrect. If the `game_factory` attribute is defined, then the `Game` object is checked, and is only added if it does meet the constraints of the factory, for the options specified in it (attributes of the game not handled by the factory are ignored). For each of these options, the value carried by the game (read in the corresponding direct attribute, or in `static_state` / `dynamic_state` under the frozen key of the option) undergoes the following checks, in this order:
+    1. Presence: if the value is absent from the `Game` object, or if it is `None` (which is considered as an absence of value), a `LackingOptionError` exception is raised, with `reason` set to `"ABSENT_FROM_GAME"`.
+    2. Type: if the value is not accepted for the type of the option, according to the conversion rules of the `Option` class, an `InvalidOptionValueError` exception is raised, with `reason` set to `"INCOMPATIBLE_TYPE"`.
+    3. Validity: if the value is not valid for the option (outside the `min_value` / `max_value` bounds, not matching a `step` increment, or not in `choices`), an `InvalidOptionValueError` exception is raised, with `reason` set to `"INVALID_VALUE"`.
+    4. Uniqueness: for options created with the `unicity` parameter set to `True`, if the value is found in another `Game` object already introduced into the group, an `OptionValueAlreadyGivenError` exception is raised.
+
+    In all these cases, the game is not added.
+  - Implementation details: If successful, the method adds the ID of the `Game` object to the `_games` list of the current instance. The factory-related checks and the addition of the game to the `_games` list must be performed atomically (for example under the protection of a lock), so that two games carrying the same value of a unique option cannot be added simultaneously.
   - Parameters:
     - `game` (`Game`|str): the game to add, given either as a `Game` instance or as a string containing its ID. Mandatory.
   - Return value:
     - None.
   - Exceptions raised:
     - `GameNotFoundError`: raised if the specified game does not exist.
+    - `OptionValueAlreadyGivenError`: raised if the `Game` object being introduced has an option value that is already present with the same value in another `Game` object already introduced into the group.
+    - `LackingOptionError`: raised if the `Game` object being introduced does not carry a value for an option specified in the factory (`reason` set to `"ABSENT_FROM_GAME"`).
+    - `InvalidOptionValueError`: raised if the `Game` object being introduced carries, for an option specified in the factory, a value whose type is not compatible with that of the option (`reason` set to `"INCOMPATIBLE_TYPE"`), or a value that is not valid for this option (`reason` set to `"INVALID_VALUE"`).
+- `create_and_add_game`: creates a game from the group's factory, and immediately adds it to the group.
+  - Description: This method chains, in a single operation, the call to the `create_game` method of the `game_factory` attribute and the call to the `add_game` method with the `Game` object thus created. Since the two steps are performed together, a game created by this method is either added to the group, or abandoned: there can be no game that has been created but not yet introduced, whose values would not be taken into account in the factory's exclusions. This method is the recommended way to create games when the group has a factory. The factory's `create_game` method and the `add_game` method nevertheless remain usable separately.
+  - Implementation details: the creation of the game and its introduction into the group are performed under the protection of the same lock as the one used by the `add_game` method, so that no other game can be added between the computation of the exclusions and the addition of the game. If the introduction fails (for whatever reason), the created `Game` object is not returned and is not referenced anywhere: it is then destroyed, and disappears from the global game registry (which only holds weak references). If successful, the ID of the `Game` object is added to the `_games` list of the current instance, as with the `add_game` method.
+  - Parameters:
+    - `values` (dict[str, any]): the chosen values for the options of the factory, in the same form as the `values` parameter of the `create_game` method of the `GameFactory` class. Optional. Default: empty dictionary (all options take their proposed value).
+    - `context` (dict[str, str]\|`None): the context providing the value of the runtime constants, passed as is to the factory's `create_game` method. Optional. Default: `None`.
+  - Exceptions raised:
+    - `GameFactoryNotDefinedError`: raised if the `game_factory` attribute is `None`.
+    - All the exceptions of the `create_game` method of the `GameFactory` class (`InvalidOptionValueError`, `OptionValueAlreadyGivenError`, `LackingOptionError`).
+    - All the exceptions of the `add_game` method (`OptionValueAlreadyGivenError`, `LackingOptionError`, `InvalidOptionValueError`), `GameNotFoundError` being without object here since the game has just been created.
+  - Return value: the `Game` object created and added to the group.
 - `remove_game`: removes a game from the group. The game is removed from the group's list of games.
   - Parameters:
     - `game` (`Game`|str): the game to remove, given either as a `Game` instance or as a string containing its ID. Mandatory.
-  - Implementation details: If successful, the method removes the ID of the `Game` object from the `_games` list of the current instance.
+  - Implementation details: If successful, the method removes the ID of the `Game` object from the `_games` list of the current instance. If the `game_factory` attribute is defined, no additional processing is needed: since the excluded values are computed from the games present in the group, the option values carried by the removed game automatically become available again in the factory.
   - Return value:
     - None.
   - Exceptions raised:
@@ -948,7 +1187,7 @@ Suggests a random name for a player. If `category` is `None`, a player-related c
 
 ### Contents of the src/multiplayer/save.py file
 
-This file contains the logic for saving and restoring objects instantiated from the `Player`, `User`, `Game`, `GameGroup` and `PlayerFactoryTemplate` classes. `Option` and `PlayerFactory` objects are not saved on their own: they are saved within the object that contains them (see the "Saving options, templates and factories" paragraph below). It defines the `Save` class, each instance of which represents a save file and links an in-memory buffer to a persistent file (JSON document or SQLite database).
+This file contains the logic for saving and restoring objects instantiated from the `Player`, `User`, `Game`, `GameGroup`, `PlayerFactoryTemplate` and `GameFactoryTemplate` classes. `Option`, `PlayerFactory` and `GameFactory` objects are not saved on their own: they are saved within the object that contains them (see the "Saving options, templates and factories" paragraph below). It defines the `Save` class, each instance of which represents a save file and links an in-memory buffer to a persistent file (JSON document or SQLite database).
 
 #### Class `Save`
 This class saves, updates, and restores the objects of the module. Objects are first stored in an in-memory buffer, then written to the file only when the `flush` method is explicitly called. It is instantiated with the following parameters:
@@ -976,7 +1215,7 @@ The `Save` class has the following methods:
   - Description: The object is serialized and stored in the buffer, indexed by its class and ID. If an object with the same class and ID already exists, it is replaced. The change is only persisted to the file when `flush` is called.
   - Implementation details: before saving a `User` object, a check is performed to clean up the list of identifiers of `Player` objects that are no longer associated with any unfinished game.
   - Parameters:
-    - `obj` (`Player`|`User`|`Game`|`GameGroup`|`PlayerFactoryTemplate`): the instance to save. Mandatory. An `Option` or `PlayerFactory` object provided directly is not supported, and causes a `SaveError` exception.
+    - `obj` (`Player`|`User`|`Game`|`GameGroup`|`PlayerFactoryTemplate`|`GameFactoryTemplate`): the instance to save. Mandatory. An `Option`, `PlayerFactory` or `GameFactory` object provided directly is not supported, and causes a `SaveError` exception.
   - Exceptions raised:
     - `SaveError`: raised if the object is not an instance of a supported class.
   - Return value: None.
@@ -984,7 +1223,7 @@ The `Save` class has the following methods:
 - `load`: loads all instances of a given class.
   - Description: Rebuilds and returns the list of instances of the requested class from the in-memory buffer.
   - Parameters:
-    - `target` (str\|type): the class to load, or its name (`Player`, `User`, `Game`, `GameGroup` or `PlayerFactoryTemplate`). Mandatory.
+    - `target` (str\|type): the class to load, or its name (`Player`, `User`, `Game`, `GameGroup`, `PlayerFactoryTemplate` or `GameFactoryTemplate`). Mandatory.
   - Exceptions raised:
     - `SaveError`: raised if the target does not match a supported class.
   - Return value: The list of rebuilt instances of the requested class.
@@ -1005,26 +1244,34 @@ The `Save` class has the following methods:
 
 #### Saving options, templates and factories
 
-`Option`, `PlayerFactoryTemplate` and `PlayerFactory` objects are saved according to the following rules.
+`Option`, `PlayerFactoryTemplate`, `PlayerFactory`, `GameFactoryTemplate` and `GameFactory` objects are saved according to the following rules.
 
 **`Option` objects**: they are never saved on their own, but only within the template or factory that contains them. Within a template or a factory, each option is serialized with the parameters that were associated with it when it was added to the template, in the form returned by the `to_dict` method of the `OptionEntry` class:
 - the elements of the option itself (`option_id`, `type`, `name`, `description`, `default`, `min`, `max`, `step`, `choices`), as returned by the `to_dict` method of the `Option` class. The default value is saved raw, without evaluation of any runtime constants (e.g. `"Player_%%RANDOM_NUMBER%%"`). The value `None` is represented by `null` in JSON and `NULL` in SQLite;
-- the associated parameters: `unicity`, `hide`, `target` and `attribute` (representation of the `player_attribute` parameter, which makes it possible to distinguish unambiguously between an attribute of the `Player` object and a `ParameterFamily` family), and `key` (frozen key).
+- the associated parameters: `unicity`, `hide`, `target` and `attribute` (representation of the `player_attribute` or `game_attribute` parameter, which makes it possible to distinguish unambiguously between an attribute of the `Player` or `Game` object and a `ParameterFamily` family), and `key` (frozen key).
 
 This representation is identical to the one used in network exchanges (see the [Client-server exchange protocol](PROTOCOLE.md), "Option representation" paragraph).
 
 **`PlayerFactoryTemplate` objects**: they are saved on their own, like `Player`, `User`, `Game` and `GameGroup` objects, indexed by their class and ID. Each template is serialized with its ID, its name (`name`), and the ordered list of its options (with, for each one, the elements described above), in the form returned by the `to_dict` method of the `PlayerFactoryTemplate` class, and restored by its `from_dict` method.
+
+**`GameFactoryTemplate` objects**: they are saved on their own, like `Player`, `User`, `Game`, `GameGroup` and `PlayerFactoryTemplate` objects, indexed by their class and ID. Each model is serialized with its ID, its name (`name`), and the ordered list of its options (with, for each one, the elements described above), in the form returned by the `to_dict` method of the `GameFactoryTemplate` class, and restored by its `from_dict` method.
 
 **`PlayerFactory` objects**: they are never saved on their own, but only within the `Game` object they are associated with, in the `player_factory` element of the game. This element is `null` (JSON) or `NULL` (SQLite) when the game does not have a factory. Otherwise, the factory is serialized with its ID and the ordered list of its options (with, for each one, the elements described above), in the form returned by the `to_dict` method of the `PlayerFactory` class, and restored by its `from_dict` method. The following elements are not saved:
 - the ID of the associated game, which is that of the game in which the factory is saved;
 - the template from which the factory was created: since the options of the factory are independent copies of those of the template, the factory is self-sufficient, and its restoration does not depend on the presence of the template in the save;
 - the excluded values of the options, which are never stored but computed from the players of the game: they are therefore automatically consistent after restoration, as long as the players of the game are restored.
 
+**`GameFactory` objects**: they are never saved on their own, but only within the `GameGroup` object they are associated with, in the `game_factory` element of the group. This element is `null` (JSON) or `NULL` (SQLite) when the group does not have a factory. Otherwise, the factory is serialized with its ID and the ordered list of its options (with, for each one, the elements described above), in the form returned by the `to_dict` method of the `GameFactory` class, and restored by its `from_dict` method. The following elements are not saved:
+- the ID of the associated group, which is that of the group in which the factory is saved;
+- the template from which the factory was created: since the options of the factory are independent copies of those of the template, the factory is self-sufficient, and its restoration does not depend on the presence of the template in the save;
+- the excluded values of the options, which are never stored but computed from the games of the group: they are therefore automatically consistent after restoration, as long as the games of the group are restored.
+
 > Implementation details:
 > - On restoration, all IDs (of templates, factories and options) are restored identically, without being regenerated by `uuid.uuid4()`. The same goes for frozen keys, which are restored as is, even if they differ from the current name of the option.
 > - Restoring an option applies the same checks as creating it (see the `Option` class), through the `from_dict` methods. If the restored data is inconsistent (unknown option type, unrecognized value of `target` or `attribute`, default value incompatible with the option, duplicate frozen keys, etc.), the exceptions raised by the `from_dict` methods (`TypeError`, `ValueError`, `OptionAlreadyExistsError`) are chained into a `SaveError` exception.
 > - Restoring a `Game` object that has a factory directly recreates the `PlayerFactory` object from the saved data, by means of the `from_dict` method of the `PlayerFactory` class, without going through the `create_player_factory` method: the checks related to the state of the game and to the presence of players (`GameAlreadyStartedError`, `GameIsFinishedError` and `GameHasPlayersError` exceptions) therefore do not apply to restoration.
-> - Backward compatibility: a save file produced before these objects were introduced must remain readable. A game saved without a `player_factory` element is restored with `player_factory` set to `None`, and a file that does not contain any template gives an empty list when the `PlayerFactoryTemplate` class is loaded.
+> - Restoring a `GameGroup` object that has a factory directly recreates the `GameFactory` object from the saved data, by means of the `from_dict` method of the `GameFactory` class, without going through the `create_game_factory` method: the check related to the presence of games (the `GroupHasGamesError` exception) therefore does not apply to restoration.
+> - Backward compatibility: a save file produced before the introduction of these objects must remain readable. A game saved without a `player_factory` element is restored with `player_factory` set to `None`, a group saved without a `game_factory` element is restored with `game_factory` set to `None`, and a file containing no model gives an empty list when loading the `PlayerFactoryTemplate` and `GameFactoryTemplate` classes.
 
 ### Contents of the src/multiplayer/server.py file
 
@@ -1080,9 +1327,12 @@ Additional information:
   - `persistence_mode=SaveFormat.JSON`: saves the server data to a JSON file. By default (if `persistence_path=None`), the file is `Path("data/server_data.json")`. The file (as well as its parent directories) is created automatically if it does not already exist.
   - `persistence_mode=SaveFormat.SQLITE`: saves the server data to an SQLite database. By default (if `persistence_path=None`), the file is `Path("data/server_data.db")`. The database (as well as its parent directories) is created automatically if it does not already exist.
 - **Automatic cleanup**: The server periodically cleans up `Player` objects that are only associated with finished games. `Player` objects associated with no game (case of newly created objects waiting to be assigned to a game) are not affected by this cleanup, as long as they remain attached to an open session or listed in the `players_id` attribute of a user. However, a `Player` object associated with no game that is no longer reachable (for example the player of an unauthenticated client whose session has been closed) is deleted. The frequency of this cleanup is defined by the `garbage_collection_periodicity` parameter (in seconds).
-- **Protocol version and revision**: the server transmits the major version of the protocol (`2`) in the `version` field of every message, and rejects any message carrying another major version. It announces its protocol revision (`"2.1"`) and the list of features it offers (`["player_factory"]`) in the response to the `PROTOCOL_INFO` request, usable at the `OPEN` level before any authentication, as well as its revision in the `revision` field of the discovery response (`DISCOVERY_RESPONSE`). The revision and the list of features are defined by constants of the `server.py` module, updated with each new revision of the protocol.
+- **Protocol version and revision**: the server transmits the major version of the protocol (`2`) in the `version` field of every message, and rejects any message carrying another major version. It announces its protocol revision (`"2.1"`) and the list of features it offers (`["player_factory", "game_factory"]`) in the response to the `PROTOCOL_INFO` request, usable at the `OPEN` level before any authentication, as well as its revision in the `revision` field of the discovery response (`DISCOVERY_RESPONSE`). The revision and the list of features are defined by constants of the `server.py` module, updated with each new revision of the protocol.
 - **Player factory templates**: the server holds a registry of factory templates (`PlayerFactoryTemplate` objects), indexed by their ID and shared by the whole server. These templates are exposed to clients through the `FACTORY_TEMPLATE_LIST` and `FACTORY_TEMPLATE_GET` requests (`BASE` level), and managed through the `FACTORY_TEMPLATE_CREATE`, `FACTORY_TEMPLATE_UPDATE` and `FACTORY_TEMPLATE_DELETE` requests (`ADMIN` level), described in the [Client-server exchange protocol](PROTOCOLE.md). When persistence is enabled, the registry is saved and restored along with the other server data (`PlayerFactoryTemplate` class of the `Save` object), including during on-demand saves and reloads. The creation, modification and deletion of a template are recorded in the server's audit log. A template is applied to a game only when the game is created (`factory_template_id` field of the `GAME_CREATE` request), by the `create_player_factory` method of the `Game` class: later modification or deletion of the template has no effect on games already created.
 - **Creating players from a game's factory**: the `GAME_FACTORY_GET` and `GAME_FACTORY_JOIN` requests rely respectively on the `get_option` method of the `PlayerFactory` class and on the `create_and_join_player` method of the `Game` class. For each of these requests, the server itself builds the context for evaluating the runtime constants (see the "Runtime constants" paragraph of the `Option` class) from the client's session and connection: `USERNAME` (name of the authenticated user of the session, absent otherwise), `CLIENTADDRESS` (IP address of the client), `SERVERNAME` (`name` attribute of the server) and `SERVERADDRESS` (local IP address of the connection). The context is never accepted from the client. The representations of the options sent to clients are obtained through the `to_dict` method of the `OptionEntry` objects (and, for the `FACTORY_TEMPLATE_GET` request, through the `to_dict` method of the `PlayerFactoryTemplate` object). For the `FACTORY_TEMPLATE_CREATE` request, the server creates the template by means of the `from_dict` method of the `PlayerFactoryTemplate` class, without providing any ID: the template and its options receive new IDs, and the frozen key of each option is its name. For the `FACTORY_TEMPLATE_UPDATE` request, the server builds a new template in the same way, providing it with the ID of the existing template (`template_id`) and, if the options are not provided, the representation of the existing options; if successful, this new template replaces the old one in the registry. Both operations are thus atomic: in case of error, the registry is not modified. The exceptions raised by the `from_dict` methods are translated into the error codes `INVALID_OPTION` (`TypeError`, `ValueError`) and `OPTION_ALREADY_EXISTS` (`OptionAlreadyExistsError`). The exceptions raised by the library are translated into protocol error codes as follows, the attributes of the exceptions feeding the `details` field of the response: `InvalidOptionValueError` gives `INVALID_OPTION_VALUE` (with `option_id`, `value` and `reason`), `OptionValueAlreadyGivenError` gives `OPTION_VALUE_ALREADY_GIVEN` (with `option_id` and `value`), `LackingOptionError` gives `LACKING_OPTION` (with `option_id` and `reason`), and `PlayerFactoryNotDefinedError` gives `NO_PLAYER_FACTORY`. For each game that has a factory, the server also keeps up to date the list of sessions subscribed to the `GAME_FACTORY_UPDATED` notification, and sends them this notification each time a player joins or leaves the game.
+- **Game factory templates**: the server holds a registry of game factory templates (objects `GameFactoryTemplate`), indexed by their ID and shared by the whole server. These templates are exposed to clients through the `FACTORY_TEMPLATE_LIST` and `FACTORY_TEMPLATE_GET` requests (`BASE` level), and managed through the `FACTORY_TEMPLATE_CREATE`, `FACTORY_TEMPLATE_UPDATE` and `FACTORY_TEMPLATE_DELETE` requests (`ADMIN` level), described in the [Client-server exchange protocol](PROTOCOLE.md). These request names belong to the `FACTORY_TEMPLATE_*` family, now shared with the player factory ones; their format documentation is as follows: `FACTORY_TEMPLATE_LIST` returns a list of templates, each summarized by its identifier, its name and the number of options (`template_id`, `name`, `options_count`); `FACTORY_TEMPLATE_GET` returns a template in the full form returned by the `to_dict` method of the `GameFactoryTemplate` class (`template_id`, `name`, `options`); `FACTORY_TEMPLATE_CREATE` and `FACTORY_TEMPLATE_UPDATE` transmit templates in that format (with, for `CREATE`, the generation of IDs by the server, and for `UPDATE`, the ID of the existing template); `FACTORY_TEMPLATE_DELETE` takes the ID of the template to delete. Their final formats remain to be validated in the [Client-server exchange protocol](PROTOCOLE.md). When persistence is enabled, the registry is saved and restored with the other server data (`GameFactoryTemplate` class of the `Save` object), including during on-demand saves and reloads. The creation, modification and deletion of a template are recorded in the server's audit log. A template is applied to a game group, not to an individual game: it is used to create the group's factory by means of the `create_game_factory` method of the `GameGroup` class. A later modification or deletion of the template has no effect on already created group factories.
+- **Creating games from a group's factory**: when a game is created in a group equipped with a game factory, the server relies respectively on the `get_option` method of the `GameFactory` class to build the creation form, and on the `create_and_add_game` method of the `GameGroup` class to create the game and add it to the group. The server builds the context for evaluating the runtime constants from the client's session and connection, as for the player factory, and never accepts it from the client. The chosen values are transmitted in the `game_factory_values` field of the `GAME_CREATE` request, whose format is an object whose keys are the IDs of the factory's options and whose values are the chosen values (corresponding to the `values` format of the `create_game` method of the `GameFactory` class). This final format remains to be validated in the [Client-server exchange protocol](PROTOCOLE.md). The exceptions raised by the library are translated into protocol error codes as follows: `InvalidOptionValueError` gives `INVALID_OPTION_VALUE`, `OptionValueAlreadyGivenError` gives `OPTION_VALUE_ALREADY_GIVEN`, `LackingOptionError` gives `LACKING_OPTION`, `GameFactoryNotDefinedError` gives `NO_GAME_FACTORY` and `GroupHasGamesError` gives `GROUP_HAS_GAMES`. A notification intended for sessions preparing a game creation form is planned: it is called `GAME_CREATION_FACTORY_UPDATED` and is sent when the values already taken in the game's factory of a group change; it remains to be described in the [Client-server exchange protocol](PROTOCOLE.md).
+- **Protocol revision**: the introduction of game factories requires the addition of the dedicated `game_factory` feature, offered within the ongoing revision 2.1 (alongside the existing `player_factory` feature); no new protocol revision is therefore necessary. The names of the requests and notifications introduced or reused for these factories are those mentioned above; their documentation in the [Client-server exchange protocol](PROTOCOLE.md) remains to be finalized.
 
 The `GameServer` class has the following methods:
 - `start`: Starts the server in asynchronous mode.
@@ -1132,7 +1382,7 @@ The class has the following attributes:
 | `is_connected` | bool | Indicates whether the client is currently connected to the server | No | - |
 | `session_user` | `User\|None` | The user associated with the current session | No | Automatically updated when the user authenticates. |
 | `server_revision` | str\|`None` | The protocol revision announced by the server (e.g. `"2.1"`). `"2.0"` if the server does not support the `PROTOCOL_INFO` request. `None` as long as the client is not connected. | No | Automatically updated by the `connect` method. |
-| `server_features` | tuple[str, ...] | The optional protocol features offered by the server (e.g. `("player_factory",)`). Empty tuple if the server does not support the `PROTOCOL_INFO` request, or as long as the client is not connected. | No | Automatically updated by the `connect` method. |
+| `server_features` | tuple[str, ...] | The optional protocol features offered by the server (e.g. `("player_factory", "game_factory")`). Empty tuple if the server does not support the `PROTOCOL_INFO` request, or as long as the client is not connected. | No | Automatically updated by the `connect` method. |
 
 ##### Methods
 
@@ -1189,7 +1439,7 @@ The `GameClient` class has the following methods:
     - `MultiplayerError` (or a subclass): if the server refuses the modification.
     - `ConnectionError`: if the client is not connected.
 - `create_game`: Creates a game on the server.
-  - Description: Sends a `GAME_CREATE` request. In particular, it makes it possible to give the game a player factory, built from a template held by the server (`factory_template_id` parameter, see the `list_factory_templates` method). The template can only be chosen when the game is created.
+  - Description: Sends a `GAME_CREATE` request. In particular, it makes it possible to give the game a player factory, built from a template held by the server (`factory_template_id` parameter, see the `list_factory_templates` method). The template can only be chosen when the game is created. When the game is created in a group equipped with a game factory, the chosen values for that factory are transmitted with the request (parameter `game_factory_values`, see the `get_group_game_factory` method).
   - Parameters:
     - `name` (str): The name of the game. Mandatory.
     - `min_players` (int): The minimum number of players required to start the game. Optional. Default: `0`.
@@ -1200,12 +1450,13 @@ The `GameClient` class has the following methods:
     - `group_id` (str\|`None`): The ID of the group in which to create the game. Optional. Default: `None`.
     - `group_password` (str\|`None`): The password of the group, if needed. Optional. Default: `None`.
     - `factory_template_id` (str\|`None`): The ID of the player factory template to apply to the game (`None` for a game without a factory). Requires the `player_factory` feature of the protocol: if this parameter is provided and the feature is not in the `server_features` attribute, the `UnsupportedFeatureError` exception is raised and the request is not sent. Optional. Default: `None`.
+    - `game_factory_values` (dict[str, any]\|`None`): The chosen values for the options of the group's game factory, indexed by the ID of the options of that factory. Requires the `game_factory` feature of the protocol and a `group_id` whose game factory exists: if the feature is not offered by the server, the `UnsupportedFeatureError` exception is raised and the request is not sent. Optional. Default: `None` (all options take their proposed value).
     - `attributes` (dict\|`None`): The custom attributes of the game. Optional. Default: `None`.
-  - Implementation details: parameters set to `None` are not sent in the request, except `max_players` and `max_observers`, which are explicitly sent as `null` to indicate the absence of a limit.
+  - Implementation details: parameters set to `None` are not sent in the request, except `max_players` and `max_observers`, which are explicitly sent as `null` to indicate the absence of a limit. The exact name of the field carrying `game_factory_values` is that of the request, and its format is the one described in the `GAME_CREATE` request; its protocol-side validation remains to be performed in the [Client-server exchange protocol](PROTOCOLE.md).
   - Return value: The ID of the created game.
   - Exceptions raised:
-    - `UnsupportedFeatureError`: if `factory_template_id` is provided and the server does not offer the `player_factory` feature (the request is then not sent).
-    - `MultiplayerError` (or a subclass): if the server refuses the creation, for example if the specified template does not exist (`FACTORY_TEMPLATE_NOT_FOUND` code).
+    - `UnsupportedFeatureError`: if `factory_template_id` is provided and the server does not offer the `player_factory` feature (the request is then not sent), or if `game_factory_values` is provided and the server does not offer the `game_factory` feature.
+    - `MultiplayerError` (or a subclass): if the server refuses the creation, for example if the specified template does not exist (`FACTORY_TEMPLATE_NOT_FOUND` code), if the group has no game factory (`NO_GAME_FACTORY` code) or if the values do not comply with that factory's constraints (codes `INVALID_OPTION_VALUE`, `LACKING_OPTION`, `OPTION_VALUE_ALREADY_GIVEN`).
     - `ConnectionError`: if the client is not connected.
 - `send_request`: Sends a request to the server and waits for its response.
   - Description: Low-level method for sending any command supported by the protocol and receiving the corresponding response.
@@ -1273,6 +1524,42 @@ The following methods make it easier to use factory templates and the player fac
     - `group_password` (str\|`None`): The password of a protected group containing the game, if needed. Optional. Default: `None`.
     - `is_default` (bool\|`None`): If `True`, the created player becomes the default player of the session. If `None`, the field is not sent and the server rule applies (the player becomes the default player if it is the first player of the session). Optional. Default: `None`.
 
+The following methods make it easier to use game factory templates and group game factories. Each one sends the corresponding protocol request and returns a dictionary containing the data of the server response (`payload` field). They all require the `game_factory` feature of the protocol (revision 2.1): before sending the request, each one checks that this feature is in the `server_features` attribute. The final names of the requests remain to be documented in the [Client-server exchange protocol](PROTOCOLE.md). They can all raise the following exceptions:
+- `UnsupportedFeatureError`: if the server does not offer the `game_factory` feature (the request is then not sent);
+- `MultiplayerError` (or a subclass): if the server returns an error;
+- `ConnectionError`: if the client is not connected.
+
+- `list_game_factory_templates`: Retrieves the list of game factory templates available on the server.
+  - Description: Sends a `FACTORY_TEMPLATE_LIST` request. In particular, it makes it possible to offer the user a choice of template when configuring a group.
+  - Parameters: None.
+- `get_game_factory_template`: Retrieves the full definition of a game factory template.
+  - Description: Sends a `FACTORY_TEMPLATE_GET` request.
+  - Parameters:
+    - `template_id` (str): The ID of the template. Mandatory.
+- `create_game_factory_template`: Creates a game factory template on the server.
+  - Description: Sends a `FACTORY_TEMPLATE_CREATE` request. Requires the protocol's `ADMIN` access level.
+  - Parameters:
+    - `name` (str): The name of the template. Mandatory.
+    - `options` (list[dict]): The list of the options of the template, each described by a dictionary in the format defined by the `FACTORY_TEMPLATE_CREATE` request (`type`, `name`, `description`, `default`, `min`, `max`, `step`, `choices`, `unicity`, `target`, `attribute`). Mandatory.
+- `update_game_factory_template`: Modifies an existing game factory template.
+  - Description: Sends a `FACTORY_TEMPLATE_UPDATE` request. Requires the protocol's `ADMIN` access level.
+  - Parameters:
+    - `template_id` (str): The ID of the template to modify. Mandatory.
+    - `name` (str\|`None`): The new name of the template. Optional. Default: `None` (name unchanged).
+    - `options` (list[dict]\|`None): The new complete list of options. Optional. Default: `None` (options unchanged).
+  - Exceptions raised (in addition to those listed above):
+    - `ValueError`: if `name` and `options` are both `None` (the request is then not sent).
+- `delete_game_factory_template`: Deletes a game factory template from the server.
+  - Description: Sends a `FACTORY_TEMPLATE_DELETE` request. Requires the protocol's `ADMIN` access level.
+  - Parameters:
+    - `template_id` (str): The ID of the template to delete. Mandatory.
+- `get_group_game_factory`: Retrieves the game factory of a group, in order to build the game creation form.
+  - Description: Sends a `GROUP_FACTORY_GET` request. The response provides, for each option, the values already taken (`exclusions`) and the proposed value (`proposed_value`). A successful lookup subscribes the session to the group factory update notification, which can be handled with the `on_notification` method.
+  - Parameters:
+    - `group_id` (str): The ID of the group. Mandatory.
+    - `group_password` (str\|`None`): The password of the group, if it is private. Optional. Default: `None`.
+  - Response format (proposal): an object providing the list of options, each described by the `entry`, `exclusions` and `proposed_value` elements. The exact format remains to be validated in the [Client-server exchange protocol](PROTOCOLE.md).
+
 Additional information:
 - **Notification handling**: The client must be able to receive and process notifications sent spontaneously by the server. The implementation relies on registering callbacks through the `on_notification` method. When a notification arrives, the client looks up the callbacks registered for that type (as well as the global callbacks) and runs them asynchronously or sequentially, depending on the chosen architecture.
 
@@ -1284,6 +1571,8 @@ Additional information:
   - `GAME_EVENT`: Notifies participants of an action performed by one of them or by the server.
   - `GAME_STATE_CHANGED`: Informs clients that the global or custom state of the game has changed.
   - `GAME_TURN_CHANGED`: Notifies connected clients that a new turn has started and identifies the active player.
+  - `GAME_FACTORY_UPDATED`: Informs clients preparing a player creation form that the values already taken in the game have changed.
+  - `GAME_CREATION_FACTORY_UPDATED`: Informs clients that are preparing a game creation form that the values already taken in a group's game factory have changed. This type of notification is not yet described in the [Client-server exchange protocol](PROTOCOLE.md). Its payload format (group ID, option ID, or updated exclusions list) remains to be defined.
 
   **Example:**
   ```python

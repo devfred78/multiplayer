@@ -653,7 +653,7 @@ Chaque message introduit par une révision mineure est signalé dans sa descript
 | Révision | Contenu |
 |---|---|
 | 2.0 | Révision initiale de la version 2 du protocole. |
-| 2.1 | Factories de joueurs : messages de gestion des modèles de factory (`FACTORY_TEMPLATE_LIST`, `FACTORY_TEMPLATE_GET`, `FACTORY_TEMPLATE_CREATE`, `FACTORY_TEMPLATE_UPDATE`, `FACTORY_TEMPLATE_DELETE`), consultation de la factory d'une partie et création d'un joueur à partir de celle-ci (`GAME_FACTORY_GET`, `GAME_FACTORY_JOIN`), notification `GAME_FACTORY_UPDATED`, champ `factory_template_id` de `GAME_CREATE`, champ `has_player_factory` de `GAME_LIST_RESPONSE`, contrôles des options de la factory et champ `details` de `GAME_JOIN_RESPONSE`, champs `static_attributes` et `dynamic_attributes` de `PLAYER_CREATE`, et codes d'erreur associés (`FACTORY_TEMPLATE_NOT_FOUND`, `INVALID_OPTION`, `INVALID_OPTION_VALUE`, `LACKING_OPTION`, `NO_PLAYER_FACTORY`, `OPTION_ALREADY_EXISTS`, `OPTION_VALUE_ALREADY_GIVEN`). Factories de parties : champ `factory_type` des messages `FACTORY_TEMPLATE_*`, champ `game_factory_template_id` de `GROUP_CREATE`, requêtes `GROUP_FACTORY_SET` et `GROUP_FACTORY_GET`, champ `game_factory_values` de `GAME_CREATE`, notification `GAME_CREATION_FACTORY_UPDATED`, et codes d'erreur associés (`GROUP_HAS_GAMES`, `NO_GAME_FACTORY`). Annonce de la révision : requête `PROTOCOL_INFO` et champ `revision` de `DISCOVERY_RESPONSE`. |
+| 2.1 | Factories de joueurs : messages de gestion des modèles de factory (`FACTORY_TEMPLATE_LIST`, `FACTORY_TEMPLATE_GET`, `FACTORY_TEMPLATE_CREATE`, `FACTORY_TEMPLATE_UPDATE`, `FACTORY_TEMPLATE_DELETE`), consultation de la factory d'une partie et création d'un joueur à partir de celle-ci (`GAME_FACTORY_GET`, `GAME_FACTORY_JOIN`), notification `GAME_FACTORY_UPDATED`, champ `factory_template_id` de `GAME_CREATE`, champ `has_player_factory` de `GAME_LIST_RESPONSE`, contrôles des options de la factory et champ `details` de `GAME_JOIN_RESPONSE`, champs `static_attributes` et `dynamic_attributes` de `PLAYER_CREATE`, et codes d'erreur associés (`FACTORY_TEMPLATE_NOT_FOUND`, `INVALID_OPTION`, `INVALID_OPTION_VALUE`, `LACKING_OPTION`, `NO_PLAYER_FACTORY`, `OPTION_ALREADY_EXISTS`, `OPTION_VALUE_ALREADY_GIVEN`). Factories de parties : champ `factory_type` des messages `FACTORY_TEMPLATE_*`, champ `game_factory_template_id` de `GROUP_CREATE`, requêtes `GROUP_FACTORY_SET` et `GROUP_FACTORY_GET`, champ `game_factory_values` de `GAME_CREATE`, notification `GAME_CREATION_FACTORY_UPDATED`, champ `has_game_factory` de `GROUP_LIST_RESPONSE` et de `GROUP_FACTORY_SET_RESPONSE`, et codes d'erreur associés (`GROUP_HAS_GAMES`, `NO_GAME_FACTORY`). Annonce de la révision : requête `PROTOCOL_INFO` et champ `revision` de `DISCOVERY_RESPONSE`. |
 
 Compatibilité entre les révisions 2.0 et 2.1 : un client de révision 2.0 continue de fonctionner avec un serveur de révision 2.1. Il ne peut toutefois rejoindre en tant que joueur une partie dotée d'une factory de joueurs (`GAME_JOIN`) que si son joueur porte les valeurs attendues par la factory ; à défaut, il reçoit l'un des codes d'erreur `LACKING_OPTION`, `INVALID_OPTION_VALUE` ou `OPTION_VALUE_ALREADY_GIVEN`, qu'il traite comme toute autre erreur. Un client de révision 2.1 connecté à un serveur de révision 2.0 ne doit pas utiliser les messages introduits par la révision 2.1 : le serveur répondrait `UNKNOWN_TYPE`, et ignorerait les nouveaux champs optionnels. Un client de révision 2.1 ne doit utiliser les messages et champs des factories de parties que si le serveur annonce la fonctionnalité `game_factory` dans sa liste `features`.
 
@@ -833,7 +833,7 @@ Une fonctionnalité regroupe un ensemble de messages et de champs. Sa présence 
 | Fonctionnalité | Révision minimale | Messages et champs concernés |
 |---|---|---|
 | `player_factory` | 2.1 | Messages de gestion des modèles de factory (`FACTORY_TEMPLATE_*`), requêtes `GAME_FACTORY_GET` et `GAME_FACTORY_JOIN`, notification `GAME_FACTORY_UPDATED`, champ `factory_template_id` de `GAME_CREATE`, champ `has_player_factory` de `GAME_LIST_RESPONSE`. |
-| `game_factory` | 2.1 | Champ `factory_type` des messages `FACTORY_TEMPLATE_*`, champ `game_factory_template_id` de `GROUP_CREATE`, requêtes `GROUP_FACTORY_SET` et `GROUP_FACTORY_GET`, champ `game_factory_values` de `GAME_CREATE`, notification `GAME_CREATION_FACTORY_UPDATED`, codes d'erreur `GROUP_HAS_GAMES` et `NO_GAME_FACTORY`. |
+| `game_factory` | 2.1 | Champ `factory_type` des messages `FACTORY_TEMPLATE_*`, champ `game_factory_template_id` de `GROUP_CREATE`, requêtes `GROUP_FACTORY_SET` et `GROUP_FACTORY_GET`, champ `game_factory_values` de `GAME_CREATE`, notification `GAME_CREATION_FACTORY_UPDATED`, champ `has_game_factory` de `GROUP_LIST_RESPONSE` et de `GROUP_FACTORY_SET_RESPONSE`, codes d'erreur `GROUP_HAS_GAMES` et `NO_GAME_FACTORY`. |
 
 ---
 
@@ -3604,7 +3604,8 @@ Récupère la liste des groupes disponibles sur le serveur.
         "group_id": "uuid_1",
         "name": "Tournoi d'été",
         "games_count": 5,
-        "requires_password": true
+        "requires_password": true,
+        "has_game_factory": true
       }
     ]
   }
@@ -3629,6 +3630,7 @@ Récupère la liste des groupes disponibles sur le serveur.
 | `payload.groups[].name` | `string` | - | Nom du groupe. |
 | `payload.groups[].games_count` | `number` | - | Nombre de parties dans ce groupe. |
 | `payload.groups[].requires_password` | `boolean` | - | `true` si un mot de passe est requis pour accéder au groupe. |
+| `payload.groups[].has_game_factory` | `boolean` | - | `true` si le groupe est doté d'une factory de parties. Le client peut alors proposer un formulaire de création de partie (voir `GROUP_FACTORY_GET`). Révision minimale : 2.1 (fonctionnalité `game_factory`). |
 
 ---
 

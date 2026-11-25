@@ -43,8 +43,9 @@ except ImportError:  # pragma: no cover - optional dependency
 PROTOCOL_VERSION = 2
 # Revision assumed for a server that does not announce its revision.
 BASE_REVISION = "2.0"
-# Optional protocol feature used by the player factory methods.
+# Optional protocol features used by the factory methods.
 FEATURE_PLAYER_FACTORY = "player_factory"
+FEATURE_GAME_FACTORY = "game_factory"
 SERVICE_NAME = "multiplayer_server"
 LENGTH_HEADER_SIZE = 4
 
@@ -68,6 +69,7 @@ NOTIFICATION_TYPES = frozenset(
         "GAME_STATE_CHANGED",
         "GAME_TURN_CHANGED",
         "GAME_FACTORY_UPDATED",
+        "GAME_CREATION_FACTORY_UPDATED",
     }
 )
 
@@ -826,6 +828,7 @@ class GameClient:
         group_id: Optional[str] = None,
         group_password: Optional[str] = None,
         factory_template_id: Optional[str] = None,
+        game_factory_values: Optional[Dict[str, Any]] = None,
         attributes: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Creates a game on the server.
@@ -847,6 +850,9 @@ class GameClient:
                 to ``None``.
             factory_template_id (str | None): The ID of the factory template
                 to apply to the game. Defaults to ``None``.
+            game_factory_values (dict | None): The values chosen for the options
+                of the game factory of the group, indexed by option ID. Defaults
+                to ``None``.
             attributes (dict | None): The custom attributes of the game.
                 Defaults to ``None``.
 
@@ -862,6 +868,8 @@ class GameClient:
         """
         if factory_template_id is not None:
             self._require_feature(FEATURE_PLAYER_FACTORY)
+        if game_factory_values is not None:
+            self._require_feature(FEATURE_GAME_FACTORY)
         arguments: Dict[str, Any] = {
             "name": name,
             "min_players": min_players,
@@ -874,6 +882,7 @@ class GameClient:
             "group_id": group_id,
             "group_password": group_password,
             "factory_template_id": factory_template_id,
+            "game_factory_values": game_factory_values,
             "attributes": attributes,
         }
         arguments.update({key: value for key, value in optional.items() if value is not None})
@@ -901,15 +910,20 @@ class GameClient:
         self._require_feature(FEATURE_PLAYER_FACTORY)
         return self.send_request(command, **kwargs)
 
-    def list_factory_templates(self) -> Dict[str, Any]:
+    def list_factory_templates(self, factory_type: Optional[str] = None) -> Dict[str, Any]:
         """Retrieves the factory templates available on the server.
 
         Returns:
             Dict[str, Any]: The ``FACTORY_TEMPLATE_LIST_RESPONSE`` payload.
         """
-        return self._factory_request("FACTORY_TEMPLATE_LIST")
+        arguments: Dict[str, Any] = {}
+        if factory_type is not None:
+            arguments["factory_type"] = factory_type
+        return self._factory_request("FACTORY_TEMPLATE_LIST", **arguments)
 
-    def get_factory_template(self, template_id: str) -> Dict[str, Any]:
+    def get_factory_template(
+        self, template_id: str, factory_type: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Retrieves the full definition of a factory template.
 
         Args:
@@ -918,9 +932,17 @@ class GameClient:
         Returns:
             Dict[str, Any]: The ``FACTORY_TEMPLATE_GET_RESPONSE`` payload.
         """
-        return self._factory_request("FACTORY_TEMPLATE_GET", template_id=template_id)
+        arguments: Dict[str, Any] = {"template_id": template_id}
+        if factory_type is not None:
+            arguments["factory_type"] = factory_type
+        return self._factory_request("FACTORY_TEMPLATE_GET", **arguments)
 
-    def create_factory_template(self, name: str, options: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def create_factory_template(
+        self,
+        name: str,
+        options: List[Dict[str, Any]],
+        factory_type: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """Creates a factory template on the server (administrator).
 
         Args:
@@ -930,13 +952,17 @@ class GameClient:
         Returns:
             Dict[str, Any]: The ``FACTORY_TEMPLATE_CREATE_RESPONSE`` payload.
         """
-        return self._factory_request("FACTORY_TEMPLATE_CREATE", name=name, options=options)
+        arguments: Dict[str, Any] = {"name": name, "options": options}
+        if factory_type is not None:
+            arguments["factory_type"] = factory_type
+        return self._factory_request("FACTORY_TEMPLATE_CREATE", **arguments)
 
     def update_factory_template(
         self,
         template_id: str,
         name: Optional[str] = None,
         options: Optional[List[Dict[str, Any]]] = None,
+        factory_type: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Updates a factory template on the server (administrator).
 
@@ -956,13 +982,17 @@ class GameClient:
             raise ValueError("A new name or a new list of options is required.")
         self._require_feature(FEATURE_PLAYER_FACTORY)
         arguments: Dict[str, Any] = {"template_id": template_id}
+        if factory_type is not None:
+            arguments["factory_type"] = factory_type
         if name is not None:
             arguments["name"] = name
         if options is not None:
             arguments["options"] = options
         return self.send_request("FACTORY_TEMPLATE_UPDATE", **arguments)
 
-    def delete_factory_template(self, template_id: str) -> Dict[str, Any]:
+    def delete_factory_template(
+        self, template_id: str, factory_type: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Deletes a factory template from the server (administrator).
 
         Args:
@@ -971,7 +1001,167 @@ class GameClient:
         Returns:
             Dict[str, Any]: The ``FACTORY_TEMPLATE_DELETE_RESPONSE`` payload.
         """
-        return self._factory_request("FACTORY_TEMPLATE_DELETE", template_id=template_id)
+        arguments: Dict[str, Any] = {"template_id": template_id}
+        if factory_type is not None:
+            arguments["factory_type"] = factory_type
+        return self._factory_request("FACTORY_TEMPLATE_DELETE", **arguments)
+
+    # ------------------------------------------------------------------ #
+    # Game factories
+    # ------------------------------------------------------------------ #
+    def _game_factory_request(self, command: str, **kwargs: Any) -> Dict[str, Any]:
+        """Sends a request requiring the ``game_factory`` feature.
+
+        Args:
+            command (str): The command to send.
+            **kwargs: The arguments of the command.
+
+        Returns:
+            Dict[str, Any]: The payload of the server response.
+
+        Raises:
+            UnsupportedFeatureError: If the server does not offer the feature.
+            MultiplayerError: If the server returns an error.
+            ConnectionError: If the client is not connected.
+        """
+        self._require_feature(FEATURE_GAME_FACTORY)
+        return self.send_request(command, **kwargs)
+
+    def list_game_factory_templates(self) -> Dict[str, Any]:
+        """Retrieves the game factory templates available on the server.
+
+        Returns:
+            Dict[str, Any]: The ``FACTORY_TEMPLATE_LIST_RESPONSE`` payload,
+            filtered on ``game_factory`` templates.
+        """
+        return self._game_factory_request(
+            "FACTORY_TEMPLATE_LIST", factory_type=FEATURE_GAME_FACTORY
+        )
+
+    def get_game_factory_template(self, template_id: str) -> Dict[str, Any]:
+        """Retrieves the full definition of a game factory template.
+
+        Args:
+            template_id (str): The ID of the template.
+
+        Returns:
+            Dict[str, Any]: The ``FACTORY_TEMPLATE_GET_RESPONSE`` payload.
+        """
+        return self._game_factory_request(
+            "FACTORY_TEMPLATE_GET",
+            template_id=template_id,
+            factory_type=FEATURE_GAME_FACTORY,
+        )
+
+    def create_game_factory_template(
+        self, name: str, options: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Creates a game factory template on the server (administrator).
+
+        Args:
+            name (str): The name of the template.
+            options (list[dict]): The definitions of the options.
+
+        Returns:
+            Dict[str, Any]: The ``FACTORY_TEMPLATE_CREATE_RESPONSE`` payload.
+        """
+        return self._game_factory_request(
+            "FACTORY_TEMPLATE_CREATE",
+            name=name,
+            options=options,
+            factory_type=FEATURE_GAME_FACTORY,
+        )
+
+    def update_game_factory_template(
+        self,
+        template_id: str,
+        name: Optional[str] = None,
+        options: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
+        """Updates a game factory template on the server (administrator).
+
+        Args:
+            template_id (str): The ID of the template.
+            name (str | None): The new name. Defaults to ``None`` (unchanged).
+            options (list[dict] | None): The new complete list of options.
+                Defaults to ``None`` (unchanged).
+
+        Returns:
+            Dict[str, Any]: The ``FACTORY_TEMPLATE_UPDATE_RESPONSE`` payload.
+
+        Raises:
+            ValueError: If neither a name nor options are provided.
+        """
+        if name is None and options is None:
+            raise ValueError("A new name or a new list of options is required.")
+        arguments: Dict[str, Any] = {
+            "template_id": template_id,
+            "factory_type": FEATURE_GAME_FACTORY,
+        }
+        if name is not None:
+            arguments["name"] = name
+        if options is not None:
+            arguments["options"] = options
+        return self._game_factory_request("FACTORY_TEMPLATE_UPDATE", **arguments)
+
+    def delete_game_factory_template(self, template_id: str) -> Dict[str, Any]:
+        """Deletes a game factory template from the server (administrator).
+
+        Args:
+            template_id (str): The ID of the template.
+
+        Returns:
+            Dict[str, Any]: The ``FACTORY_TEMPLATE_DELETE_RESPONSE`` payload.
+        """
+        return self._game_factory_request(
+            "FACTORY_TEMPLATE_DELETE",
+            template_id=template_id,
+            factory_type=FEATURE_GAME_FACTORY,
+        )
+
+    def get_group_game_factory(
+        self, group_id: str, group_password: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Retrieves the game factory of a group.
+
+        A successful request subscribes the session to the
+        ``GAME_CREATION_FACTORY_UPDATED`` notifications of the group.
+
+        Args:
+            group_id (str): The ID of the group.
+            group_password (str | None): The password of a protected group.
+                Defaults to ``None``.
+
+        Returns:
+            Dict[str, Any]: The ``GROUP_FACTORY_GET_RESPONSE`` payload.
+        """
+        arguments: Dict[str, Any] = {"group_id": group_id}
+        if group_password is not None:
+            arguments["group_password"] = group_password
+        return self._game_factory_request("GROUP_FACTORY_GET", **arguments)
+
+    def set_group_game_factory(
+        self,
+        group_id: str,
+        template_id: Optional[str],
+        group_password: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Defines, replaces or removes the game factory of a group.
+
+        Args:
+            group_id (str): The ID of the group.
+            template_id (str | None): The game factory template to apply, or
+                ``None`` to remove the factory of the group.
+            group_password (str | None): The password of a protected group.
+                Defaults to ``None``.
+
+        Returns:
+            Dict[str, Any]: The ``GROUP_FACTORY_SET_RESPONSE`` payload.
+        """
+        arguments: Dict[str, Any] = {"group_id": group_id, "template_id": template_id}
+        if group_password is not None:
+            arguments["group_password"] = group_password
+        return self._game_factory_request("GROUP_FACTORY_SET", **arguments)
 
     def get_game_factory(
         self,

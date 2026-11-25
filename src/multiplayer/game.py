@@ -11,6 +11,7 @@ import bcrypt
 from . import UserRole, GameState, ParameterFamily, OptionType
 from .exceptions import (
     GameHasPlayersError,
+    GroupNotFoundError,
     InvalidOptionValueError,
     LackingOptionError,
     OptionAlreadyExistsError,
@@ -30,14 +31,17 @@ from .exceptions import (
     GameNotTurnBasedError,
     GameNotFoundError,
     GameNotFoundInGroupError,
+    GameFactoryNotDefinedError,
+    GroupHasGamesError,
+    PlayerFactoryTemplateNotFoundError,
 )
 
 # Pattern of the runtime constants usable in the default value of an option.
 _CONSTANT_PATTERN = re.compile(r"%%([A-Z_]+)%%")
 # Runtime constants computed by the library itself.
 _LIBRARY_CONSTANTS = frozenset({"CURRENT_TIME", "RANDOM_NUMBER", "RANDOM_CHOICE"})
-# Runtime constants provided by the player factory.
-_FACTORY_CONSTANTS = frozenset({"GAMENAME"})
+# Runtime constants provided by a factory.
+_FACTORY_CONSTANTS = frozenset({"GAMENAME", "GROUPNAME"})
 # Runtime constants provided by the caller through a context dictionary.
 _CONTEXT_CONSTANTS = frozenset({"USERNAME", "SERVERNAME", "CLIENTADDRESS", "SERVERADDRESS"})
 _KNOWN_CONSTANTS = _LIBRARY_CONSTANTS | _FACTORY_CONSTANTS | _CONTEXT_CONSTANTS
@@ -48,6 +52,22 @@ _ABS_TOL = 1e-9
 _MAX_ENUMERATED_VALUES = 10000
 # Attributes of a Player object that an option can be associated with.
 _PLAYER_ATTRIBUTES = ("name",)
+# Direct attributes of a Game object that an option can be associated with.
+_GAME_ATTRIBUTES = frozenset(
+    {
+        "name",
+        "max_players",
+        "max_observers",
+        "min_players",
+        "turn_based",
+        "player_factory_template",
+        "password",
+        "observer_password",
+    }
+)
+_GAME_INTEGER_ATTRIBUTES = frozenset({"max_players", "max_observers", "min_players"})
+_GAME_TEXT_ATTRIBUTES = frozenset({"name", "player_factory_template"})
+_GAME_PASSWORD_ATTRIBUTES = frozenset({"password", "observer_password"})
 # Representations of the ``player_attribute`` parameter of an option.
 _TARGET_ATTRIBUTE = "ATTRIBUTE"
 _TARGET_BY_FAMILY = {ParameterFamily.STATIC: "STATIC", ParameterFamily.DYNAMIC: "DYNAMIC"}
@@ -124,6 +144,53 @@ def _check_player_attribute(option: "Option", player_attribute: Any) -> None:
         raise TypeError(
             f"Only TEXT and LIST options can be associated with the player attribute "
             f"{player_attribute!r} (option type: {option.option_type.name})."
+        )
+
+
+def _check_game_attribute(option: "Option", game_attribute: Any) -> None:
+    """Checks the ``game_attribute`` parameter associated with an option.
+
+    Args:
+        option (Option): The option concerned.
+        game_attribute (Any): The value to check.
+
+    Raises:
+        TypeError: If the value is neither a string nor a ``ParameterFamily``
+            member, or if the option type is incompatible with it.
+        ValueError: If the value is not a supported game attribute.
+    """
+    if isinstance(game_attribute, ParameterFamily):
+        return
+    if not isinstance(game_attribute, str):
+        raise TypeError(
+            f"game_attribute must be a string or a ParameterFamily member, "
+            f"got {game_attribute!r}."
+        )
+    if game_attribute not in _GAME_ATTRIBUTES:
+        raise ValueError(f"Unsupported game attribute: {game_attribute!r}.")
+    option_type = option.option_type
+    if game_attribute in _GAME_INTEGER_ATTRIBUTES:
+        if option_type != OptionType.RANGE or not option._integer:
+            raise TypeError(
+                f"Only entire RANGE options can be associated with the game "
+                f"attribute {game_attribute!r}."
+            )
+    elif game_attribute == "turn_based":
+        if option_type != OptionType.CHECK:
+            raise TypeError(
+                f"Only CHECK options can be associated with the game attribute "
+                f"{game_attribute!r}."
+            )
+    elif game_attribute in _GAME_PASSWORD_ATTRIBUTES:
+        if option_type != OptionType.TEXT:
+            raise TypeError(
+                f"Only TEXT options can be associated with the game attribute "
+                f"{game_attribute!r}."
+            )
+    elif option_type not in (OptionType.TEXT, OptionType.LIST):
+        raise TypeError(
+            f"Only TEXT and LIST options can be associated with the game "
+            f"attribute {game_attribute!r}."
         )
 
 
@@ -728,6 +795,7 @@ class OptionEntry:
         unicity: bool = False,
         key: str | None = None,
         hide: bool = False,
+        is_game: bool = False,
     ):
         """Initializes a new entry.
 
@@ -753,7 +821,10 @@ class OptionEntry:
         """
         if not isinstance(option, Option):
             raise TypeError(f"An Option instance is required, got {option!r}.")
-        _check_player_attribute(option, player_attribute)
+        if is_game:
+            _check_game_attribute(option, player_attribute)
+        else:
+            _check_player_attribute(option, player_attribute)
         if not isinstance(unicity, bool):
             raise TypeError(f"unicity must be a boolean, got {unicity!r}.")
         if not isinstance(hide, bool):
@@ -812,6 +883,15 @@ class OptionEntry:
         return self._player_attribute
 
     @property
+    def game_attribute(self) -> str | ParameterFamily:
+        """Alias of :attr:`player_attribute` for game factory entries.
+
+        Returns:
+            str | ParameterFamily: The attribute name or the family.
+        """
+        return self._player_attribute
+
+    @property
     def key(self) -> str:
         """The frozen key of the option.
 
@@ -863,7 +943,7 @@ class OptionEntry:
         return data
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "OptionEntry":
+    def from_dict(cls, data: Dict[str, Any], is_game: bool = False) -> "OptionEntry":
         """Creates an entry from its dictionary representation.
 
         Args:
@@ -896,6 +976,7 @@ class OptionEntry:
             unicity=False if unicity is None else unicity,
             key=data.get("key"),
             hide=False if hide is None else hide,
+            is_game=is_game,
         )
 
 
@@ -998,6 +1079,10 @@ class PlayerFactoryTemplate:
         name (str): The name of the template.
     """
 
+    _registry: weakref.WeakValueDictionary[str, "PlayerFactoryTemplate"] = (
+        weakref.WeakValueDictionary()
+    )
+
     def __init__(self, name: str):
         """Initializes a new, empty template.
 
@@ -1012,6 +1097,7 @@ class PlayerFactoryTemplate:
         self._id: str = str(uuid.uuid4())
         self.name: str = name
         self._entries: List[OptionEntry] = []
+        self.__class__._registry[self._id] = self
 
     @property
     def ID(self) -> str:
@@ -1030,6 +1116,41 @@ class PlayerFactoryTemplate:
             list[tuple[str, str]]: A new list of (ID, name) tuples.
         """
         return [(entry._option.ID, entry._option.name) for entry in self._entries]
+
+    @classmethod
+    def get_by_id(cls, template_id: str) -> "PlayerFactoryTemplate | None":
+        """Looks up a template from its ID.
+
+        Args:
+            template_id (str): The ID of the template.
+
+        Returns:
+            PlayerFactoryTemplate, optional: The template, or None.
+        """
+        return cls._registry.get(template_id)
+
+    @classmethod
+    def _resolve(cls, template: "PlayerFactoryTemplate | str") -> "PlayerFactoryTemplate":
+        """Resolves a template given as an object or as an ID.
+
+        Args:
+            template (PlayerFactoryTemplate | str): The template or its ID.
+
+        Returns:
+            PlayerFactoryTemplate: The resolved template.
+
+        Raises:
+            PlayerFactoryTemplateNotFoundError: If the ID is unknown.
+        """
+        if isinstance(template, cls):
+            return template
+        if isinstance(template, str):
+            found = cls.get_by_id(template)
+            if found is not None:
+                return found
+        raise PlayerFactoryTemplateNotFoundError(
+            template if isinstance(template, str) else None
+        )
 
     def add_option(
         self,
@@ -1649,6 +1770,406 @@ class PlayerFactory:
             factory._entries.append(entry)
         return factory
 
+class GameFactoryTemplate(PlayerFactoryTemplate):
+    """Defines the creation options of the games of a group.
+
+    A template holds options, their uniqueness parameter, their associated game
+    attribute (or parameter family) and their frozen key. It is independent of
+    any group and is used by :meth:`GameGroup.create_game_factory` to create
+    the game factory of a group.
+    """
+
+    _registry: weakref.WeakValueDictionary[str, "GameFactoryTemplate"] = (
+        weakref.WeakValueDictionary()
+    )
+
+    def add_option(
+        self,
+        option: Option,
+        game_attribute: str | ParameterFamily,
+        hide: bool = False,
+        unicity: bool = False,
+    ) -> None:
+        """Adds a copy of an option to the template.
+
+        Args:
+            option (Option): The option to add.
+            game_attribute (str | ParameterFamily): The attribute of the Game
+                object, the ``player_factory_template`` reference, or a
+                parameter family associated with the option.
+            hide (bool, optional): Whether to hide the option in the game
+                creation form. Defaults to False.
+            unicity (bool, optional): Whether a value can only be carried by a
+                single game of the group. Defaults to False.
+
+        Raises:
+            TypeError: If a parameter has an unexpected type or is incompatible
+                with the option type.
+            ValueError: If ``game_attribute`` is an unsupported attribute.
+            OptionAlreadyExistsError: If a similar option is already present.
+        """
+        if not isinstance(option, Option):
+            raise TypeError(f"An Option instance is required, got {option!r}.")
+        self._add_entry(OptionEntry(option, game_attribute, unicity, hide=hide, is_game=True))
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "GameFactoryTemplate":
+        """Creates a template from its dictionary representation.
+
+        The creation is atomic: if one of the options is rejected, no template
+        is created.
+
+        Args:
+            data (dict): The representation, as returned by :meth:`to_dict`.
+
+        Returns:
+            GameFactoryTemplate: The created template.
+
+        Raises:
+            TypeError: If the data has an unexpected type.
+            ValueError: If the data is inconsistent.
+            OptionAlreadyExistsError: If two options share an ID or a key.
+        """
+        if not isinstance(data, dict):
+            raise TypeError(f"A template representation must be a dictionary, got {data!r}.")
+        if "name" not in data:
+            raise ValueError("Missing key 'name' in template representation.")
+        options = data.get("options")
+        if options is None:
+            options = []
+        if not isinstance(options, list):
+            raise TypeError(f"The options of a template must be a list, got {options!r}.")
+        template = cls(data["name"])
+        template_id = data.get("template_id")
+        if template_id is not None:
+            if not isinstance(template_id, str):
+                raise TypeError(f"template_id must be a string, got {template_id!r}.")
+            template._id = template_id
+        for item in options:
+            template._add_entry(OptionEntry.from_dict(item, is_game=True))
+        return template
+
+
+class GameFactory:
+    """Creates the games of a group from predefined options.
+
+    A factory belongs to a :class:`GameGroup`; the games of the group are the
+    only reference used to compute the values excluded by unique options. It is
+    created by :meth:`GameGroup.create_game_factory`.
+    """
+
+    def __init__(self, template: GameFactoryTemplate, group_id: str):
+        """Initializes a new factory from a template.
+
+        The options of the template are copied and receive new IDs.
+
+        Args:
+            template (GameFactoryTemplate): The template to copy.
+            group_id (str): The ID of the associated group.
+
+        Raises:
+            TypeError: If the template is not a GameFactoryTemplate.
+        """
+        if not isinstance(template, GameFactoryTemplate):
+            raise TypeError(f"A GameFactoryTemplate instance is required, got {template!r}.")
+        self._id: str = str(uuid.uuid4())
+        self._group_id: str = group_id
+        self._entries: List[OptionEntry] = [
+            OptionEntry(
+                entry._option._copy(keep_id=False),
+                entry.player_attribute,
+                entry.unicity,
+                entry.key,
+                entry.hide,
+                is_game=True,
+            )
+            for entry in template._entries
+        ]
+
+    @property
+    def ID(self) -> str:
+        """The unique identifier of the factory."""
+        return self._id
+
+    @property
+    def group_id(self) -> str:
+        """The ID of the group the factory is associated with."""
+        return self._group_id
+
+    @property
+    def options(self) -> List[Tuple[str, str]]:
+        """The IDs and names of the options of the factory."""
+        return [(entry._option.ID, entry._option.name) for entry in self._entries]
+
+    # ------------------------------------------------------------------ #
+    # Internal helpers
+    # ------------------------------------------------------------------ #
+    def _find(self, option_id: str) -> OptionEntry:
+        """Returns the entry of an option.
+
+        Raises:
+            KeyError: If the option does not exist in the factory.
+        """
+        for entry in self._entries:
+            if entry._option_id == option_id:
+                return entry
+        raise KeyError(option_id)
+
+    def _group(self) -> "GameGroup":
+        """Returns the associated group.
+
+        Raises:
+            GroupNotFoundError: If the group no longer exists.
+        """
+        group = GameGroup.get_by_id(self._group_id)
+        if group is None:
+            raise GroupNotFoundError(self._group_id)
+        return group
+
+    def _group_games(self) -> List["Game"]:
+        """Returns the existing games of the associated group."""
+        group = self._group()
+        games = (Game.get_by_id(game_id) for game_id in group.games)
+        return [game for game in games if game is not None]
+
+    @staticmethod
+    def _read_value(game: "Game", entry: OptionEntry) -> Tuple[bool, Any]:
+        """Reads the value of an option carried by a game.
+
+        Password attributes are hashes and cannot be read back, so they are
+        treated as absent values.
+        """
+        attribute = entry.player_attribute
+        if isinstance(attribute, ParameterFamily):
+            state = game.static_state if attribute == ParameterFamily.STATIC else game.dynamic_state
+            if entry.key in state:
+                return True, state[entry.key]
+            return False, None
+        if attribute in _GAME_PASSWORD_ATTRIBUTES:
+            return False, None
+        if attribute == "max_players":
+            return True, game._max_players
+        if attribute == "max_observers":
+            return True, game._max_observers
+        if attribute == "min_players":
+            return True, game.min_players
+        if attribute == "player_factory_template":
+            return True, game.player_factory_template_id
+        return True, getattr(game, attribute, None)
+
+    @staticmethod
+    def _normalize(entry: OptionEntry, value: Any) -> Any:
+        """Converts a value when possible, according to the rules of the option."""
+        try:
+            return entry._option._convert(value)
+        except TypeError:
+            return value
+
+    @staticmethod
+    def _checked_value(entry: OptionEntry, value: Any) -> Any:
+        """Converts and validates a value for an option."""
+        return PlayerFactory._checked_value(entry, value)
+
+    def _exclusions(self, entry: OptionEntry, ignored_game_id: str | None = None) -> List[Any]:
+        """Computes the values excluded for an option from the games of the group."""
+        if not entry.unicity:
+            return []
+        exclusions: List[Any] = []
+        for game in self._group_games():
+            if game.ID == ignored_game_id:
+                continue
+            present, value = self._read_value(game, entry)
+            if not present or value is None:
+                continue
+            value = self._normalize(entry, value)
+            if not entry._option._is_excluded(value, exclusions):
+                exclusions.append(value)
+        return exclusions
+
+    def _proposed_value(
+        self,
+        entry: OptionEntry,
+        context: Dict[str, str] | None,
+        exclusions: List[Any],
+    ) -> Any:
+        """Computes the proposed value of an option.
+
+        The ``GROUPNAME`` runtime constant is evaluated from the name of the
+        associated group; ``GAMENAME`` is not provided and evaluates to an
+        empty string.
+        """
+        ctx = dict(context or {})
+        if "GROUPNAME" not in ctx:
+            group = GameGroup.get_by_id(self._group_id)
+            ctx["GROUPNAME"] = "" if group is None else str(group.name)
+        option = entry._option
+        value = option.evaluate_default(ctx, exclusions)
+        if value is None:
+            return None
+        value = self._normalize(entry, value)
+        if not option._is_excluded(value, exclusions):
+            return value
+        return PlayerFactory._next_value(self, option, value, exclusions)
+
+    def _check_game(self, game: "Game") -> None:
+        """Checks that a game meets the constraints of the factory.
+
+        Args:
+            game (Game): The game about to join the group.
+
+        Raises:
+            LackingOptionError: If the game does not carry a value for an
+                option, with reason ``ABSENT_FROM_GAME``.
+            InvalidOptionValueError: If a value has an incompatible type or is
+                invalid.
+            OptionValueAlreadyGivenError: If a unique value is already carried
+                by another game of the group.
+        """
+        for entry in self._entries:
+            option_id = entry._option_id
+            present, raw = self._read_value(game, entry)
+            if not present or raw is None:
+                raise LackingOptionError(option_id, "ABSENT_FROM_GAME")
+            value = self._checked_value(entry, raw)
+            if entry.unicity and entry._option._is_excluded(
+                value, self._exclusions(entry, ignored_game_id=game.ID)
+            ):
+                raise OptionValueAlreadyGivenError(option_id, raw)
+
+    @staticmethod
+    def _template_from_value(value: Any) -> PlayerFactoryTemplate:
+        """Resolves a player factory template given as an object or an ID."""
+        if isinstance(value, PlayerFactoryTemplate):
+            return value
+        if isinstance(value, str):
+            return PlayerFactoryTemplate._resolve(value)
+        raise PlayerFactoryTemplateNotFoundError(value if isinstance(value, str) else None)
+
+    # ------------------------------------------------------------------ #
+    # Public methods
+    # ------------------------------------------------------------------ #
+    def get_option(self, option_id: str, context: Dict[str, str] | None = None) -> Dict[str, Any]:
+        """Provides an option of the factory with its exclusions and proposed value.
+
+        Raises:
+            KeyError: If the option does not exist in the factory.
+            GroupNotFoundError: If the associated group no longer exists.
+        """
+        entry = self._find(option_id)
+        exclusions = self._exclusions(entry)
+        return {
+            "entry": entry,
+            "exclusions": list(exclusions),
+            "proposed_value": self._proposed_value(entry, context, exclusions),
+        }
+
+    def create_game(
+        self,
+        values: Dict[str, Any] | None = None,
+        context: Dict[str, str] | None = None,
+    ) -> "Game":
+        """Creates a game from the values chosen for the options.
+
+        The game is not added to the group and no value is reserved.
+
+        Raises:
+            TypeError: If ``values`` is not a dictionary.
+            InvalidOptionValueError: If a key is unknown, or if a value is of
+                an incompatible type or invalid.
+            OptionValueAlreadyGivenError: If a value of a unique option is
+                already carried by a game of the group.
+            LackingOptionError: If an absent option has no proposed value.
+            GroupNotFoundError: If the associated group no longer exists.
+            PlayerFactoryTemplateNotFoundError: If a player factory template
+                designated by an option does not exist.
+        """
+        if values is None:
+            values = {}
+        if not isinstance(values, dict):
+            raise TypeError(f"values must be a dictionary, got {values!r}.")
+        known = {entry._option_id for entry in self._entries}
+        for key, value in values.items():
+            if key not in known:
+                raise InvalidOptionValueError(key, value, "UNKNOWN_OPTION")
+
+        assignments: List[Tuple[OptionEntry, Any]] = []
+        for entry in self._entries:
+            option_id = entry._option_id
+            exclusions = self._exclusions(entry)
+            chosen = values.get(option_id)
+            if chosen is None:
+                proposed = self._proposed_value(entry, context, exclusions)
+                if proposed is None:
+                    raise LackingOptionError(option_id, "NO_AVAILABLE_VALUE")
+                value = self._checked_value(entry, proposed)
+            else:
+                value = self._checked_value(entry, chosen)
+                if entry.unicity and entry._option._is_excluded(value, exclusions):
+                    raise OptionValueAlreadyGivenError(option_id, value)
+            assignments.append((entry, value))
+
+        arguments: Dict[str, Any] = {}
+        player_template: PlayerFactoryTemplate | None = None
+        for entry, value in assignments:
+            attribute = entry.player_attribute
+            if isinstance(attribute, ParameterFamily):
+                arguments[entry.key] = (attribute, value)
+            elif attribute == "player_factory_template":
+                if value is not None:
+                    player_template = self._template_from_value(value)
+            else:
+                arguments[attribute] = value
+        game = Game(**arguments)
+        if player_template is not None:
+            game.create_player_factory(player_template)
+        return game
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Provides a dictionary representation of the factory."""
+        return {
+            "factory_id": self._id,
+            "options": [entry.to_dict() for entry in self._entries],
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any], group_id: str) -> "GameFactory":
+        """Recreates a factory from its dictionary representation.
+
+        Raises:
+            TypeError: If the data has an unexpected type.
+            ValueError: If the data is inconsistent.
+            OptionAlreadyExistsError: If two options share an ID, a key or a
+                direct game attribute.
+        """
+        if not isinstance(data, dict):
+            raise TypeError(f"A factory representation must be a dictionary, got {data!r}.")
+        options = data.get("options")
+        if options is None:
+            options = []
+        if not isinstance(options, list):
+            raise TypeError(f"The options of a factory must be a list, got {options!r}.")
+        factory = cls.__new__(cls)
+        factory_id = data.get("factory_id")
+        if factory_id is not None and not isinstance(factory_id, str):
+            raise TypeError(f"factory_id must be a string, got {factory_id!r}.")
+        factory._id = factory_id if factory_id is not None else str(uuid.uuid4())
+        factory._group_id = group_id
+        factory._entries = []
+        for item in options:
+            entry = OptionEntry.from_dict(item, is_game=True)
+            for existing in factory._entries:
+                if (
+                    existing._option_id == entry._option_id
+                    or existing.key == entry.key
+                    or (
+                        isinstance(entry.player_attribute, str)
+                        and existing.player_attribute == entry.player_attribute
+                    )
+                ):
+                    raise OptionAlreadyExistsError(existing._option_id)
+            factory._entries.append(entry)
+        return factory
+
 
 class User:
     """Represents a user account.
@@ -1813,6 +2334,7 @@ class Game:
         self._observers: List[str] = []
         self._game_state: GameState = GameState.PENDING
         self._player_factory: PlayerFactory | None = None
+        self._player_factory_template_id: str | None = None
         self._lock: threading.RLock = threading.RLock()
         self.static_state: Dict[str, Any] = {}
         self.dynamic_state: Dict[str, Any] = {}
@@ -1961,6 +2483,16 @@ class Game:
         """
         return self._player_factory
 
+    @property
+    def player_factory_template_id(self) -> str | None:
+        """The ID of the template used to build the player factory.
+
+        Returns:
+            str, optional: The template ID, or None if the game has no
+            player factory built from a template.
+        """
+        return self._player_factory_template_id
+
     def change_password(self, new_password: str) -> None:
         """Updates the password required to join the game.
 
@@ -1998,10 +2530,12 @@ class Game:
                 raise GameIsFinishedError()
             if template is None:
                 self._player_factory = None
+                self._player_factory_template_id = None
                 return
             if self._players:
                 raise GameHasPlayersError(self._id)
             self._player_factory = PlayerFactory(template, self._id)
+            self._player_factory_template_id = template.ID
 
     def join_game_as_player(self, player: Player | str, password: str | None = None) -> None:
         """Adds a player to the game session.
@@ -2251,13 +2785,17 @@ class Game:
 class GameGroup:
     """Represents a collection of game sessions.
 
-    A GameGroup allows managing multiple games together and can store
-    shared parameters. The group only keeps the IDs of its games.
+    A GameGroup allows managing multiple games together and can store shared
+    parameters. It may be equipped with a :class:`GameFactory`, which helps
+    create the games of the group and checks their parameters when they join.
+    The group only keeps the IDs of its games.
 
     Attributes:
         name (str): The name of the game group.
         parameters (dict): Custom parameters for the group.
     """
+
+    _registry: weakref.WeakValueDictionary[str, "GameGroup"] = weakref.WeakValueDictionary()
 
     def __init__(self, name: str, password: str | None = None, **kwargs: Any):
         """Initializes a new game group.
@@ -2275,24 +2813,24 @@ class GameGroup:
             bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
             if password else None
         )
+        self._game_factory: GameFactory | None = None
+        self._lock = threading.RLock()
+        self.__class__._registry[self._id] = self
 
     @property
     def ID(self) -> str:
-        """The unique identifier of the game group.
-
-        Returns:
-            str: The unique UUID of the group.
-        """
+        """The unique identifier of the game group."""
         return self._id
 
     @property
     def games(self) -> Tuple[str, ...]:
-        """The IDs of the games currently in the group.
-
-        Returns:
-            Tuple[str, ...]: A read-only tuple of game UUID strings.
-        """
+        """The IDs of the games currently in the group."""
         return tuple(self._games)
+
+    @property
+    def game_factory(self) -> "GameFactory | None":
+        """The game factory of the group, if any."""
+        return self._game_factory
 
     @property
     def hash(self) -> str | None:
@@ -2303,6 +2841,22 @@ class GameGroup:
     def password_required(self) -> bool:
         """Whether access to the group requires a password."""
         return self._hash is not None
+
+    @classmethod
+    def get_by_id(cls, group_id: str) -> "GameGroup | None":
+        """Looks up an existing group from its ID."""
+        return cls._registry.get(group_id)
+
+    @classmethod
+    def _resolve(cls, group: "GameGroup | str") -> "GameGroup":
+        """Resolves a group given as an object or as an ID."""
+        if isinstance(group, cls):
+            return group
+        if isinstance(group, str):
+            found = cls.get_by_id(group)
+            if found is not None:
+                return found
+        raise GroupNotFoundError(group if isinstance(group, str) else None)
 
     def check_password(self, password: str | None) -> bool:
         """Checks a plain-text group password."""
@@ -2319,27 +2873,137 @@ class GameGroup:
             if new_password else None
         )
 
-    def add_game(self, game: Game | str) -> None:
+    def create_game_factory(self, template: GameFactoryTemplate | None) -> None:
+        """Creates, replaces or removes the game factory of the group.
+
+        Creating or replacing the factory is only allowed while the group has
+        no game. Removing it is always allowed.
+
+        Args:
+            template (GameFactoryTemplate | None): The template to use, or None
+                to remove the factory.
+
+        Raises:
+            TypeError: If the template is neither a GameFactoryTemplate nor None.
+            GroupHasGamesError: If a factory is created while the group already
+                has games.
+        """
+        if template is not None and not isinstance(template, GameFactoryTemplate):
+            raise TypeError(
+                f"template must be a GameFactoryTemplate or None, got {template!r}."
+            )
+        with self._lock:
+            if template is not None and self._games:
+                raise GroupHasGamesError(self._id)
+            self._game_factory = (
+                GameFactory(template, self._id) if template is not None else None
+            )
+
+    def _add_game_unlocked(self, game: Game) -> None:
+        """Checks the factory and appends a game; called under the lock."""
+        if self._game_factory is not None:
+            self._game_factory._check_game(game)
+        self._games.append(game.ID)
+
+    def add_game(self, game: Game | str, password: str | None = None) -> None:
         """Adds a game session to the end of the group.
 
         Args:
             game (Game | str): The Game instance to add, or its ID.
+            password (str, optional): The group password, required for a
+                protected group.
 
         Raises:
             GameNotFoundError: If no existing game has the given ID.
+            PasswordError: If the group password is missing or incorrect.
+            LackingOptionError: If the game lacks a value required by the
+                factory.
+            InvalidOptionValueError: If a value is incompatible or invalid.
+            OptionValueAlreadyGivenError: If a unique value is already carried
+                by another game of the group.
         """
-        self._games.append(Game._resolve(game).ID)
+        resolved = Game._resolve(game)
+        if password is not None and self.password_required and not self.check_password(password):
+            raise PasswordError("Group password is missing or incorrect.")
+        with self._lock:
+            self._add_game_unlocked(resolved)
+
+    def create_and_add_game(
+        self,
+        values: Dict[str, Any] | None = None,
+        context: Dict[str, str] | None = None,
+        password: str | None = None,
+    ) -> Game:
+        """Creates a game from the factory and adds it to the group atomically.
+
+        Args:
+            values (dict, optional): The chosen option values.
+            context (dict, optional): The runtime constants for proposed values.
+            password (str, optional): The group password, if required.
+
+        Returns:
+            Game: The created and added game.
+
+        Raises:
+            GameFactoryNotDefinedError: If the group has no game factory.
+            PasswordError: If the group password is missing or incorrect.
+            All the exceptions of :meth:`GameFactory.create_game` and
+            :meth:`add_game`.
+        """
+        if self._game_factory is None:
+            raise GameFactoryNotDefinedError(self._id)
+        if password is not None and self.password_required and not self.check_password(password):
+            raise PasswordError("Group password is missing or incorrect.")
+        with self._lock:
+            game = self._game_factory.create_game(values, context)
+            self._add_game_unlocked(game)
+            return game
 
     def remove_game(self, game: Game | str) -> None:
         """Removes a game session from the group.
-
-        Args:
-            game (Game | str): The Game instance or its ID to remove.
 
         Raises:
             GameNotFoundInGroupError: If the game is not in the group.
         """
         g_id = game.ID if isinstance(game, Game) else game
-        if g_id not in self._games:
-            raise GameNotFoundInGroupError(g_id)
-        self._games.remove(g_id)
+        with self._lock:
+            if g_id not in self._games:
+                raise GameNotFoundInGroupError(g_id)
+            self._games.remove(g_id)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Provides a dictionary representation of the group and its factory."""
+        return {
+            "group_id": self._id,
+            "name": self.name,
+            "password_hash": self._hash,
+            "parameters": dict(self.parameters),
+            "games": list(self._games),
+            "game_factory": (
+                self._game_factory.to_dict() if self._game_factory is not None else None
+            ),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "GameGroup":
+        """Recreates a group from its dictionary representation."""
+        if not isinstance(data, dict):
+            raise TypeError(f"A group representation must be a dictionary, got {data!r}.")
+        group_id = data.get("group_id")
+        if group_id is not None and not isinstance(group_id, str):
+            raise TypeError(f"group_id must be a string, got {group_id!r}.")
+        group = cls.__new__(cls)
+        group._id = group_id if group_id is not None else str(uuid.uuid4())
+        group.name = data.get("name", "")
+        group._hash = data.get("password_hash")
+        parameters = data.get("parameters")
+        group.parameters = dict(parameters) if isinstance(parameters, dict) else {}
+        games = data.get("games")
+        group._games = list(games) if isinstance(games, list) else []
+        factory_data = data.get("game_factory")
+        group._game_factory = (
+            GameFactory.from_dict(factory_data, group._id) if isinstance(factory_data, dict) else None
+        )
+        group._lock = threading.RLock()
+        cls._registry[group._id] = group
+        return group

@@ -20,7 +20,16 @@ from typing import Any, Dict, List, Union
 
 from . import SaveFormat, UserRole, GameState
 from .exceptions import OptionError, SaveError
-from .game import Player, User, Game, GameGroup, PlayerFactory, PlayerFactoryTemplate
+from .game import (
+    Player,
+    User,
+    Game,
+    GameFactory,
+    GameGroup,
+    PlayerFactory,
+    GameFactoryTemplate,
+    PlayerFactoryTemplate,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,10 +41,11 @@ _SUPPORTED_CLASSES: Dict[str, type] = {
     "Game": Game,
     "GameGroup": GameGroup,
     "PlayerFactoryTemplate": PlayerFactoryTemplate,
+    "GameFactoryTemplate": GameFactoryTemplate,
 }
 
 # Classes that a save file produced by an older version may not contain.
-_OPTIONAL_CLASSES = frozenset({"PlayerFactoryTemplate"})
+_OPTIONAL_CLASSES = frozenset({"PlayerFactoryTemplate", "GameFactoryTemplate"})
 
 # Name of the table used for the SQLite storage format.
 _SQLITE_TABLE = "objects"
@@ -221,6 +231,9 @@ def _group_to_dict(group: GameGroup) -> Dict[str, Any]:
         "hash": group.hash,
         "games": list(group.games),
         "parameters": group.parameters,
+        "game_factory": (
+            group.game_factory.to_dict() if group.game_factory is not None else None
+        ),
     }
 
 
@@ -241,6 +254,14 @@ def _group_from_dict(data: Dict[str, Any]) -> GameGroup:
     # Older save files embedded a full copy of each game instead of its ID.
     group._games = [_entry_id(g) for g in data.get("games", [])]
     group.parameters = data.get("parameters", {})
+    factory_data = data.get("game_factory")
+    group._game_factory = (
+        GameFactory.from_dict(factory_data, group._id)
+        if isinstance(factory_data, dict)
+        else None
+    )
+    group._lock = threading.RLock()
+    GameGroup._registry[group._id] = group
     return group
 
 
@@ -253,7 +274,12 @@ def _template_to_dict(template: PlayerFactoryTemplate) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: The serialized representation of the template.
     """
-    return template.to_dict()
+    data = template.to_dict()
+    if isinstance(template, GameFactoryTemplate):
+        data["factory_type"] = "game_factory"
+    else:
+        data["factory_type"] = "player_factory"
+    return data
 
 
 def _template_from_dict(data: Dict[str, Any]) -> PlayerFactoryTemplate:
@@ -269,6 +295,8 @@ def _template_from_dict(data: Dict[str, Any]) -> PlayerFactoryTemplate:
         SaveError: If the serialized template is inconsistent.
     """
     try:
+        if data.get("factory_type") == "game_factory":
+            return GameFactoryTemplate.from_dict(data)
         return PlayerFactoryTemplate.from_dict(data)
     except (TypeError, ValueError, OptionError) as exc:
         raise SaveError(f"Invalid saved factory template: {data.get('template_id')}") from exc
@@ -281,6 +309,7 @@ _SERIALIZERS = {
     "Game": (_game_to_dict, _game_from_dict),
     "GameGroup": (_group_to_dict, _group_from_dict),
     "PlayerFactoryTemplate": (_template_to_dict, _template_from_dict),
+    "GameFactoryTemplate": (_template_to_dict, _template_from_dict),
 }
 
 

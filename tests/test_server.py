@@ -1394,7 +1394,7 @@ def test_protocol_info_is_available_at_open_level():
     assert response["payload"]["success"] is True
     assert response["payload"]["version"] == 2
     assert response["payload"]["revision"] == "2.1"
-    assert response["payload"]["features"] == ["player_factory"]
+    assert response["payload"]["features"] == ["player_factory", "game_factory"]
 
 
 def test_discovery_response_announces_the_revision():
@@ -1436,7 +1436,12 @@ def test_factory_template_crud():
     session, _ = _make_session(server)
     listed = _dispatch(server, session, "FACTORY_TEMPLATE_LIST")
     assert listed["payload"]["templates"] == [
-        {"template_id": template_id, "name": "Chess", "options_count": 2}
+        {
+            "template_id": template_id,
+            "factory_type": "player_factory",
+            "name": "Chess",
+            "options_count": 2,
+        }
     ]
     details = _dispatch(server, session, "FACTORY_TEMPLATE_GET", {"template_id": template_id})
     assert details["payload"]["name"] == "Chess"

@@ -108,6 +108,29 @@ class PlayerFactoryNotDefinedError(MultiplayerError):
         self.game_id = game_id
         super().__init__(f"Game {game_id} has no player factory")
 
+class GameFactoryNotDefinedError(MultiplayerError):
+    """Raised when the game factory of a group without factory is used."""
+    def __init__(self, group_id: str | None = None):
+        self.group_id = group_id
+        super().__init__(f"Group {group_id} has no game factory")
+
+class GroupHasGamesError(MultiplayerError):
+    """Raised when an operation requires a group without any game."""
+    def __init__(self, group_id: str | None = None):
+        self.group_id = group_id
+        super().__init__(f"Group {group_id} already has games")
+
+class PlayerFactoryTemplateNotFoundError(MultiplayerError):
+    """Raised when a player factory template ID is not found."""
+    def __init__(self, template_id: str | None = None):
+        self.template_id = template_id
+        msg = (
+            f"Player factory template not found: {template_id}"
+            if template_id
+            else "Player factory template not found"
+        )
+        super().__init__(msg)
+
 class UnsupportedFeatureError(MultiplayerError):
     """Raised when a protocol feature not offered by the server is used."""
     def __init__(self, feature: str, revision: str | None = None):
@@ -138,7 +161,8 @@ class LackingOptionError(OptionError):
 
     Attributes:
         option_id (str): The ID of the option concerned.
-        reason (str): ``"ABSENT_FROM_PLAYER"`` or ``"NO_AVAILABLE_VALUE"``.
+        reason (str): ``"ABSENT_FROM_PLAYER"``, ``"ABSENT_FROM_GAME"`` or
+            ``"NO_AVAILABLE_VALUE"``.
     """
     def __init__(self, option_id: str, reason: str):
         self.option_id = option_id

@@ -36,6 +36,8 @@ from .exceptions import (
     GameNotPausedError,
     GameNotStartedError,
     GameNotTurnBasedError,
+    GameFactoryNotDefinedError,
+    GroupHasGamesError,
     InvalidOptionValueError,
     LackingOptionError,
     MultiplayerError,
@@ -48,7 +50,15 @@ from .exceptions import (
     PlayerNotFoundInGameError,
     UserAlreadyExistsError,
 )
-from .game import Game, GameGroup, OptionEntry, Player, PlayerFactoryTemplate, User
+from .game import (
+    Game,
+    GameFactoryTemplate,
+    GameGroup,
+    OptionEntry,
+    Player,
+    PlayerFactoryTemplate,
+    User,
+)
 from .save import Save
 
 try:
@@ -65,7 +75,7 @@ logger = logging.getLogger(__name__)
 # the revision and the optional features are announced by the server.
 PROTOCOL_VERSION = 2
 PROTOCOL_REVISION = "2.1"
-PROTOCOL_FEATURES: Tuple[str, ...] = ("player_factory",)
+PROTOCOL_FEATURES: Tuple[str, ...] = ("player_factory", "game_factory")
 SERVICE_NAME = "multiplayer_server"
 LENGTH_HEADER_SIZE = 4
 
@@ -166,6 +176,8 @@ class ClientSession:
         self.joined_games: Set[str] = set()
         # ID of the game whose player factory the session is subscribed to.
         self.factory_game_id: Optional[str] = None
+        # ID of the group whose game factory the session is subscribed to.
+        self.factory_group_id: Optional[str] = None
 
     @property
     def writer(self) -> "asyncio.StreamWriter":
@@ -323,6 +335,8 @@ class GameServer:
         "GROUP_DELETE": AccessLevel.ADMIN,
         "GROUP_GAME_LIST_ALL": AccessLevel.GROUP_ADMIN,
         "GROUP_PASSWORD_SET": AccessLevel.GROUP_ADMIN,
+        "GROUP_FACTORY_GET": AccessLevel.BASE,
+        "GROUP_FACTORY_SET": AccessLevel.GROUP_ADMIN,
         "SERVER_INFO_GET": AccessLevel.ADMIN,
         "SERVER_CONFIG_GET": AccessLevel.ADMIN,
         "SERVER_CONFIG_SET": AccessLevel.ADMIN,
@@ -375,6 +389,8 @@ class GameServer:
         "GROUP_DELETE": "GROUP_DELETE_RESPONSE",
         "GROUP_GAME_LIST_ALL": "GROUP_GAME_LIST_ALL_RESPONSE",
         "GROUP_PASSWORD_SET": "GROUP_PASSWORD_SET_RESPONSE",
+        "GROUP_FACTORY_GET": "GROUP_FACTORY_GET_RESPONSE",
+        "GROUP_FACTORY_SET": "GROUP_FACTORY_SET_RESPONSE",
         "SERVER_INFO_GET": "SERVER_INFO_GET_RESPONSE",
         "SERVER_CONFIG_GET": "SERVER_CONFIG_GET_RESPONSE",
         "SERVER_CONFIG_SET": "SERVER_CONFIG_SET_RESPONSE",
@@ -498,6 +514,7 @@ class GameServer:
         self._groups: Dict[str, GameGroup] = {}
         self._players: Dict[str, Player] = {}
         self._factory_templates: Dict[str, PlayerFactoryTemplate] = {}
+        self._game_factory_templates: Dict[str, GameFactoryTemplate] = {}
         self._game_custom_state: Dict[str, Dict[str, Any]] = {}
         self._game_roles: Dict[str, Dict[str, str]] = {}
         self._game_creator_session: Dict[str, str] = {}
@@ -811,6 +828,8 @@ class GameServer:
                 self._users[user.username] = user
             for template in self._save.load(PlayerFactoryTemplate):
                 self._factory_templates[template.ID] = template
+            for template in self._save.load(GameFactoryTemplate):
+                self._game_factory_templates[template.ID] = template
             self._restore_game_participants()
             creators = config.get("game_creators")
             if isinstance(creators, dict):
@@ -900,6 +919,8 @@ class GameServer:
             for group in self._groups.values():
                 self._save.save(group)
             for template in self._factory_templates.values():
+                self._save.save(template)
+            for template in self._game_factory_templates.values():
                 self._save.save(template)
             # The users are saved before the players: saving a user cleans its
             # list of players, which then gives the players worth persisting.
@@ -1198,6 +1219,7 @@ class GameServer:
         for game_id in list(session.joined_games):
             self._remove_session_players_from_game(session, game_id)
         session.factory_game_id = None
+        session.factory_group_id = None
         try:
             session.writer.close()
         except Exception:  # pragma: no cover - defensive
@@ -1395,6 +1417,66 @@ class GameServer:
         for session in self._sessions.values():
             if session.factory_game_id == game_id:
                 session.factory_game_id = None
+
+    def _game_creation_factory_exclusions(self, group: GameGroup) -> List[Dict[str, Any]]:
+        """Computes the exclusions of the unique options of a group game factory.
+
+        Args:
+            group (GameGroup): The group concerned.
+
+        Returns:
+            List[Dict[str, Any]]: One ``{option_id, exclusions}`` entry per
+            unique option, in their order of definition.
+        """
+        factory = group.game_factory
+        if factory is None:
+            return []
+        result = []
+        for option_id, _ in factory.options:
+            entry = factory._find(option_id)
+            if entry.unicity:
+                result.append({"option_id": option_id, "exclusions": factory._exclusions(entry)})
+        return result
+
+    async def _notify_game_creation_factory_update(self, group_id: str) -> None:
+        """Sends ``GAME_CREATION_FACTORY_UPDATED`` to the subscribed sessions.
+
+        Args:
+            group_id (str): The ID of the group whose game factory changed.
+        """
+        group = self._groups.get(group_id)
+        if group is None or group.game_factory is None:
+            return
+        targets = {
+            session.session_id
+            for session in self._sessions.values()
+            if session.factory_group_id == group_id
+        }
+        if not targets:
+            return
+        message = {
+            "type": "GAME_CREATION_FACTORY_UPDATED",
+            "version": PROTOCOL_VERSION,
+            "payload": {
+                "group_id": group_id,
+                "options": self._game_creation_factory_exclusions(group),
+            },
+        }
+        await self._broadcast(targets, message)
+
+    def _schedule_game_creation_factory_update(self, group_id: str) -> None:
+        """Schedules a group factory update notification from synchronous code."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        loop.create_task(self._notify_game_creation_factory_update(group_id))
+
+    def _unsubscribe_game_creation_factory(self, group_id: str) -> None:
+        """Ends every subscription to the game factory of a group."""
+        for session in self._sessions.values():
+            if session.factory_group_id == group_id:
+                session.factory_group_id = None
 
     async def _garbage_collection_loop(self) -> None:
         """Periodically removes the players that are no longer needed."""
@@ -2137,6 +2219,21 @@ class GameServer:
                     "success": False, "error_code": "INVALID_GROUP_PASSWORD",
                     "message": "Invalid group password.",
                 }
+        factory_values = payload.get("game_factory_values")
+        if factory_values is not None and not isinstance(factory_values, dict):
+            return "GAME_CREATE_RESPONSE", {
+                "success": False,
+                "error_code": "INVALID_DATA",
+                "message": "game_factory_values must be an object.",
+            }
+        if factory_values is not None and (
+            group is None or group.game_factory is None
+        ):
+            return "GAME_CREATE_RESPONSE", {
+                "success": False,
+                "error_code": "NO_GAME_FACTORY",
+                "message": "The group has no game factory.",
+            }
         template_id = payload.get("factory_template_id")
         template = None
         if template_id is not None:
@@ -2148,17 +2245,40 @@ class GameServer:
                     "error_code": "FACTORY_TEMPLATE_NOT_FOUND",
                     "message": "Factory template not found.",
                 }
-        game = Game(
-            name=name,
-            max_players=payload.get("max_players"),
-            max_observers=payload.get("max_observers"),
-            password=payload.get("password"),
-            turn_based=bool(payload.get("turn_based", False)),
-            min_players=min_players,
-        )
-        if template is not None:
-            # The game has just been created: it is pending and has no player.
-            game.create_player_factory(template)
+        if factory_values is not None:
+            context = self._factory_context(session)
+            try:
+                # Creation and addition to the group are atomic.
+                with group._lock:
+                    game = group._game_factory.create_game(factory_values, context)
+                    group._add_game_unlocked(game)
+            except OptionError as exc:
+                return "GAME_CREATE_RESPONSE", self._option_error_payload(exc)
+            except GameFactoryNotDefinedError:
+                return "GAME_CREATE_RESPONSE", {
+                    "success": False,
+                    "error_code": "NO_GAME_FACTORY",
+                    "message": "The group has no game factory.",
+                }
+            except PasswordError:
+                return "GAME_CREATE_RESPONSE", {
+                    "success": False,
+                    "error_code": "INVALID_GROUP_PASSWORD",
+                    "message": "Invalid group password.",
+                }
+        else:
+            game = Game(
+                name=name,
+                max_players=payload.get("max_players"),
+                max_observers=payload.get("max_observers"),
+                password=payload.get("password"),
+                observer_password=payload.get("observer_password"),
+                turn_based=bool(payload.get("turn_based", False)),
+                min_players=min_players,
+            )
+            if template is not None:
+                # The game has just been created: it is pending and has no player.
+                game.create_player_factory(template)
         attributes = payload.get("attributes")
         if isinstance(attributes, dict):
             game.dynamic_state.update(attributes)
@@ -2168,8 +2288,10 @@ class GameServer:
         self._game_creator_session[game.ID] = session.session_id
         if session.user is not None:
             self._game_creator_user[game.ID] = session.user.username
-        if group is not None:
+        if group is not None and factory_values is None:
             group.add_game(game)
+        if group is not None:
+            await self._notify_game_creation_factory_update(group.ID)
         return "GAME_CREATE_RESPONSE", {
             "success": True,
             "game_id": game.ID,
@@ -3073,12 +3195,31 @@ class GameServer:
     # ------------------------------------------------------------------ #
     # Factory template handlers
     # ------------------------------------------------------------------ #
+    def _template_registry(self, factory_type: Any) -> Dict[str, Any]:
+        """Returns the template registry for a protocol factory type.
+
+        Unknown values are treated as ``player_factory`` so that the caller can
+        report the error itself.
+        """
+        if factory_type == "game_factory":
+            return self._game_factory_templates
+        return self._factory_templates
+
+    @staticmethod
+    def _requested_factory_type(payload: Dict[str, Any]) -> Optional[str]:
+        """Reads and validates the optional ``factory_type`` field."""
+        value = payload.get("factory_type", "player_factory")
+        if value in ("player_factory", "game_factory"):
+            return value
+        return None
+
     @staticmethod
     def _build_template(
         name: str,
         options: List[Any],
         template_id: Optional[str] = None,
         keep_identity: bool = False,
+        factory_type: str = "player_factory",
     ) -> Tuple[Optional[PlayerFactoryTemplate], Optional[Dict[str, Any]]]:
         """Builds a template from option definitions sent by a client.
 
@@ -3095,7 +3236,11 @@ class GameServer:
             Tuple: The built template and ``None``, or ``None`` and the error
             payload.
         """
-        template = PlayerFactoryTemplate(name)
+        template = (
+            GameFactoryTemplate(name)
+            if factory_type == "game_factory"
+            else PlayerFactoryTemplate(name)
+        )
         if template_id is not None:
             template._id = template_id
         for index, definition in enumerate(options):
@@ -3111,7 +3256,9 @@ class GameServer:
                 data.pop("option_id", None)
                 data.pop("key", None)
             try:
-                entry = OptionEntry.from_dict(data)
+                entry = OptionEntry.from_dict(
+                    data, is_game=factory_type == "game_factory"
+                )
             except (TypeError, ValueError) as exc:
                 return None, {
                     "success": False,
@@ -3142,13 +3289,21 @@ class GameServer:
         Returns:
             Tuple[str, Dict[str, Any]]: The response type and payload.
         """
+        factory_type = self._requested_factory_type(payload)
+        if factory_type is None:
+            return "FACTORY_TEMPLATE_LIST_RESPONSE", {
+                "success": False,
+                "error_code": "INVALID_DATA",
+                "message": "Unknown factory type.",
+            }
         templates = [
             {
                 "template_id": template.ID,
+                "factory_type": factory_type,
                 "name": template.name,
                 "options_count": len(template.options),
             }
-            for template in self._factory_templates.values()
+            for template in self._template_registry(factory_type).values()
         ]
         return "FACTORY_TEMPLATE_LIST_RESPONSE", {
             "success": True,
@@ -3168,9 +3323,18 @@ class GameServer:
         Returns:
             Tuple[str, Dict[str, Any]]: The response type and payload.
         """
+        factory_type = self._requested_factory_type(payload)
+        if factory_type is None:
+            return "FACTORY_TEMPLATE_GET_RESPONSE", {
+                "success": False,
+                "error_code": "INVALID_DATA",
+                "message": "Unknown factory type.",
+            }
         template_id = payload.get("template_id")
         template = (
-            self._factory_templates.get(template_id) if isinstance(template_id, str) else None
+            self._template_registry(factory_type).get(template_id)
+            if isinstance(template_id, str)
+            else None
         )
         if template is None:
             return "FACTORY_TEMPLATE_GET_RESPONSE", {
@@ -3178,7 +3342,7 @@ class GameServer:
                 "error_code": "FACTORY_TEMPLATE_NOT_FOUND",
                 "message": "Factory template not found.",
             }
-        response = {"success": True}
+        response = {"success": True, "factory_type": factory_type}
         response.update(template.to_dict())
         response["message"] = "Factory template retrieved successfully"
         return "FACTORY_TEMPLATE_GET_RESPONSE", response
@@ -3204,10 +3368,17 @@ class GameServer:
                 "error_code": "INVALID_DATA",
                 "message": "A template name and a list of options are required.",
             }
-        template, error = self._build_template(name, options)
+        factory_type = self._requested_factory_type(payload)
+        if factory_type is None:
+            return response_type, {
+                "success": False,
+                "error_code": "INVALID_DATA",
+                "message": "Unknown factory type.",
+            }
+        template, error = self._build_template(name, options, factory_type=factory_type)
         if template is None:
             return response_type, error  # type: ignore[return-value]
-        self._factory_templates[template.ID] = template
+        self._template_registry(factory_type)[template.ID] = template
         self._audit("FACTORY_TEMPLATE_CREATE", session, template.ID)
         return response_type, {
             "success": True,
@@ -3232,10 +3403,16 @@ class GameServer:
             Tuple[str, Dict[str, Any]]: The response type and payload.
         """
         response_type = "FACTORY_TEMPLATE_UPDATE_RESPONSE"
+        factory_type = self._requested_factory_type(payload)
+        if factory_type is None:
+            return response_type, {
+                "success": False,
+                "error_code": "INVALID_DATA",
+                "message": "Unknown factory type.",
+            }
+        registry = self._template_registry(factory_type)
         template_id = payload.get("template_id")
-        current = (
-            self._factory_templates.get(template_id) if isinstance(template_id, str) else None
-        )
+        current = registry.get(template_id) if isinstance(template_id, str) else None
         if current is None:
             return response_type, {
                 "success": False,
@@ -3266,10 +3443,11 @@ class GameServer:
             options,
             template_id=current.ID,
             keep_identity=keep_identity,
+            factory_type=factory_type,
         )
         if template is None:
             return response_type, error  # type: ignore[return-value]
-        self._factory_templates[template.ID] = template
+        registry[template.ID] = template
         self._audit("FACTORY_TEMPLATE_UPDATE", session, template.ID)
         return response_type, {
             "success": True,
@@ -3290,14 +3468,22 @@ class GameServer:
         Returns:
             Tuple[str, Dict[str, Any]]: The response type and payload.
         """
+        factory_type = self._requested_factory_type(payload)
+        if factory_type is None:
+            return "FACTORY_TEMPLATE_DELETE_RESPONSE", {
+                "success": False,
+                "error_code": "INVALID_DATA",
+                "message": "Unknown factory type.",
+            }
+        registry = self._template_registry(factory_type)
         template_id = payload.get("template_id")
-        if not isinstance(template_id, str) or template_id not in self._factory_templates:
+        if not isinstance(template_id, str) or template_id not in registry:
             return "FACTORY_TEMPLATE_DELETE_RESPONSE", {
                 "success": False,
                 "error_code": "FACTORY_TEMPLATE_NOT_FOUND",
                 "message": "Factory template not found.",
             }
-        self._factory_templates.pop(template_id)
+        registry.pop(template_id)
         self._audit("FACTORY_TEMPLATE_DELETE", session, template_id)
         return "FACTORY_TEMPLATE_DELETE_RESPONSE", {
             "success": True,
@@ -3341,6 +3527,20 @@ class GameServer:
             password=password,
             **group_attributes,
         )
+        template_id = payload.get("game_factory_template_id")
+        if template_id is not None:
+            template = (
+                self._game_factory_templates.get(template_id)
+                if isinstance(template_id, str)
+                else None
+            )
+            if template is None:
+                return "GROUP_CREATE_RESPONSE", {
+                    "success": False,
+                    "error_code": "FACTORY_TEMPLATE_NOT_FOUND",
+                    "message": "Game factory template not found.",
+                }
+            group.create_game_factory(template)
         self._groups[group.ID] = group
         self._audit("GROUP_CREATE", session, group.ID)
         return "GROUP_CREATE_RESPONSE", {
@@ -3367,6 +3567,7 @@ class GameServer:
                 "name": group.name,
                 "games_count": len(group.games),
                 "requires_password": group.password_required,
+                "has_game_factory": group.game_factory is not None,
             }
             for group in self._groups.values()
         ]
@@ -3513,7 +3714,11 @@ class GameServer:
                 "error_code": "INVALID_GROUP_PASSWORD",
                 "message": "Invalid group password.",
             }
-        group.add_game(game)
+        try:
+            with group._lock:
+                group._add_game_unlocked(game)
+        except OptionError as exc:
+            return "GROUP_ADD_GAME_RESPONSE", self._option_error_payload(exc)
         await self._broadcast_group(
             group.ID,
             {
@@ -3522,6 +3727,7 @@ class GameServer:
                 "payload": {"group_id": group.ID, "game": self._game_summary(game)},
             },
         )
+        await self._notify_game_creation_factory_update(group.ID)
         return "GROUP_ADD_GAME_RESPONSE", {
             "success": True,
             "message": "Game added to group successfully",
@@ -3563,6 +3769,7 @@ class GameServer:
                 "error_code": "GAME_NOT_FOUND_IN_GROUP",
                 "message": "Game not found in this group.",
             }
+        await self._notify_game_creation_factory_update(group.ID)
         await self._broadcast_group(
             group.ID,
             {
@@ -3578,6 +3785,131 @@ class GameServer:
         return "GROUP_REMOVE_GAME_RESPONSE", {
             "success": True,
             "message": "Game removed from group successfully",
+        }
+
+
+    def _handle_group_factory_get(
+        self, session: ClientSession, payload: Dict[str, Any]
+    ) -> Tuple[str, Dict[str, Any]]:
+        """Handles a ``GROUP_FACTORY_GET`` request.
+
+        A successful request subscribes the session to the
+        ``GAME_CREATION_FACTORY_UPDATED`` notifications of the group.
+
+        Args:
+            session (ClientSession): The originating session.
+            payload (Dict[str, Any]): The request payload.
+
+        Returns:
+            Tuple[str, Dict[str, Any]]: The response type and payload.
+        """
+        group = self._groups.get(payload.get("group_id"))
+        if group is None:
+            return "GROUP_FACTORY_GET_RESPONSE", {
+                "success": False,
+                "error_code": "GROUP_NOT_FOUND",
+                "message": "Group not found.",
+            }
+        if not self._authorize_group(session, group, payload.get("group_password")):
+            return "GROUP_FACTORY_GET_RESPONSE", {
+                "success": False,
+                "error_code": "INVALID_GROUP_PASSWORD",
+                "message": "Invalid group password.",
+            }
+        factory = group.game_factory
+        if factory is None:
+            return "GROUP_FACTORY_GET_RESPONSE", {
+                "success": False,
+                "error_code": "NO_GAME_FACTORY",
+                "message": "The group has no game factory.",
+            }
+        context = self._factory_context(session)
+        options = []
+        for option_id, _ in factory.options:
+            info = factory.get_option(option_id, context)
+            definition = info["entry"].to_dict()
+            definition["exclusions"] = info["exclusions"]
+            definition["proposed_value"] = info["proposed_value"]
+            options.append(definition)
+        session.factory_group_id = group.ID
+        return "GROUP_FACTORY_GET_RESPONSE", {
+            "success": True,
+            "group_id": group.ID,
+            "factory_id": factory.ID,
+            "options": options,
+            "message": "Game factory retrieved successfully",
+        }
+
+    async def _handle_group_factory_set(
+        self, session: ClientSession, payload: Dict[str, Any]
+    ) -> Tuple[str, Dict[str, Any]]:
+        """Handles a ``GROUP_FACTORY_SET`` request (group administrator).
+
+        Args:
+            session (ClientSession): The originating session.
+            payload (Dict[str, Any]): The request payload.
+
+        Returns:
+            Tuple[str, Dict[str, Any]]: The response type and payload.
+        """
+        group = self._groups.get(payload.get("group_id"))
+        if group is None:
+            return "GROUP_FACTORY_SET_RESPONSE", {
+                "success": False,
+                "error_code": "GROUP_NOT_FOUND",
+                "message": "Group not found.",
+            }
+        if not self._can_admin_group(session, group.ID):
+            return "GROUP_FACTORY_SET_RESPONSE", {
+                "success": False,
+                "error_code": "INSUFFICIENT_PERMISSIONS",
+                "message": "Cannot modify this group.",
+            }
+        if not self._authorize_group(session, group, payload.get("group_password")):
+            return "GROUP_FACTORY_SET_RESPONSE", {
+                "success": False,
+                "error_code": "INVALID_GROUP_PASSWORD",
+                "message": "Invalid group password.",
+            }
+        if "template_id" not in payload:
+            return "GROUP_FACTORY_SET_RESPONSE", {
+                "success": False,
+                "error_code": "INVALID_DATA",
+                "message": "template_id is required.",
+            }
+        template_id = payload["template_id"]
+        template = None
+        if template_id is not None:
+            if not isinstance(template_id, str):
+                return "GROUP_FACTORY_SET_RESPONSE", {
+                    "success": False,
+                    "error_code": "INVALID_DATA",
+                    "message": "template_id must be a string or null.",
+                }
+            template = self._game_factory_templates.get(template_id)
+            if template is None:
+                return "GROUP_FACTORY_SET_RESPONSE", {
+                    "success": False,
+                    "error_code": "FACTORY_TEMPLATE_NOT_FOUND",
+                    "message": "Game factory template not found.",
+                }
+        try:
+            group.create_game_factory(template)
+        except GroupHasGamesError:
+            return "GROUP_FACTORY_SET_RESPONSE", {
+                "success": False,
+                "error_code": "GROUP_HAS_GAMES",
+                "message": "The group already has games; its factory cannot be changed.",
+            }
+        if template is None:
+            self._unsubscribe_game_creation_factory(group.ID)
+        await self._notify_game_creation_factory_update(group.ID)
+        self._audit("GROUP_FACTORY_SET", session, group.ID)
+        return "GROUP_FACTORY_SET_RESPONSE", {
+            "success": True,
+            "group_id": group.ID,
+            "has_game_factory": template is not None,
+            "message": "Game factory set successfully",
         }
 
     def _handle_group_password_set(

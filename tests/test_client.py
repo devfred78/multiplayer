@@ -344,7 +344,7 @@ def test_connect_retrieves_the_protocol_revision(server):
     client.connect()
     try:
         assert client.server_revision == "2.1"
-        assert client.server_features == ("player_factory",)
+        assert client.server_features == ("player_factory", "game_factory")
     finally:
         client.disconnect()
     assert client.server_revision is None and client.server_features == ()

@@ -488,11 +488,12 @@ Examples:
 - start, pause, resume or end a game;
 - change the order of players in a turn-based game;
 - consult the player factory of a game, to build the player creation form;
-- create a player from the player factory of a game and make it join the game.
+- create a player from the player factory of a game and make it join the game;
+- create a game from the game factory of a group, and add it to the group.
 
 #### Factory template management messages
 
-These messages concern the player factory templates (`PlayerFactoryTemplate`) held by the server, which define the customization options of the players of a game.
+These messages concern the factory templates held by the server: the player factory templates (`PlayerFactoryTemplate`), which define the customization options of the players of a game, and the game factory templates (`GameFactoryTemplate`), which define the creation options of the games of a group. The `factory_type` field present in these messages distinguishes the two types (`player_factory` or `game_factory`); it is optional and defaults to `player_factory`.
 
 Transport used: TCP.
 
@@ -502,7 +503,8 @@ Examples:
 
 - list the available templates;
 - consult a template;
-- create, update or delete a template (server administrator).
+- create, update or delete a template (server administrator);
+- list, consult, create, update or delete a game factory template (server administrator).
 
 #### Group management messages
 
@@ -519,6 +521,8 @@ Examples:
 - add a game to a group;
 - remove part of a group;
 - consult the parties of a group;
+- consult the game factory of a group, to build the game creation form;
+- define, replace or remove the game factory of a group (group administrator);
 - modify the settings of a group.
 
 #### Game Messages
@@ -648,9 +652,9 @@ Each message introduced by a minor revision is flagged in its description by the
 | Revision | Content |
 |---|---|
 | 2.0 | Initial revision of version 2 of the protocol. |
-| 2.1 | Player factories: factory template management messages (`FACTORY_TEMPLATE_LIST`, `FACTORY_TEMPLATE_GET`, `FACTORY_TEMPLATE_CREATE`, `FACTORY_TEMPLATE_UPDATE`, `FACTORY_TEMPLATE_DELETE`), consultation of the player factory of a game and creation of a player from it (`GAME_FACTORY_GET`, `GAME_FACTORY_JOIN`), `GAME_FACTORY_UPDATED` notification, `factory_template_id` field of `GAME_CREATE`, `has_player_factory` field of `GAME_LIST_RESPONSE`, checks of the factory options and `details` field of `GAME_JOIN_RESPONSE`, `static_attributes` and `dynamic_attributes` fields of `PLAYER_CREATE`, and associated error codes (`FACTORY_TEMPLATE_NOT_FOUND`, `INVALID_OPTION`, `INVALID_OPTION_VALUE`, `LACKING_OPTION`, `NO_PLAYER_FACTORY`, `OPTION_ALREADY_EXISTS`, `OPTION_VALUE_ALREADY_GIVEN`). Revision announcement: `PROTOCOL_INFO` request and `revision` field of `DISCOVERY_RESPONSE`. |
+| 2.1 | Player factories: factory template management messages (`FACTORY_TEMPLATE_LIST`, `FACTORY_TEMPLATE_GET`, `FACTORY_TEMPLATE_CREATE`, `FACTORY_TEMPLATE_UPDATE`, `FACTORY_TEMPLATE_DELETE`), consultation of the player factory of a game and creation of a player from it (`GAME_FACTORY_GET`, `GAME_FACTORY_JOIN`), `GAME_FACTORY_UPDATED` notification, `factory_template_id` field of `GAME_CREATE`, `has_player_factory` field of `GAME_LIST_RESPONSE`, checks of the factory options and `details` field of `GAME_JOIN_RESPONSE`, `static_attributes` and `dynamic_attributes` fields of `PLAYER_CREATE`, and associated error codes (`FACTORY_TEMPLATE_NOT_FOUND`, `INVALID_OPTION`, `INVALID_OPTION_VALUE`, `LACKING_OPTION`, `NO_PLAYER_FACTORY`, `OPTION_ALREADY_EXISTS`, `OPTION_VALUE_ALREADY_GIVEN`). Game factories: `factory_type` field of the `FACTORY_TEMPLATE_*` messages, `game_factory_template_id` field of `GROUP_CREATE`, `GROUP_FACTORY_SET` and `GROUP_FACTORY_GET` requests, `game_factory_values` field of `GAME_CREATE`, `GAME_CREATION_FACTORY_UPDATED` notification, and associated error codes (`GROUP_HAS_GAMES`, `NO_GAME_FACTORY`). Revision announcement: `PROTOCOL_INFO` request and `revision` field of `DISCOVERY_RESPONSE`. |
 
-Compatibility between revisions 2.0 and 2.1: a revision 2.0 client keeps working with a revision 2.1 server. However, it can only join as a player a game that has a player factory (`GAME_JOIN`) if its player carries the values expected by the factory; otherwise, it receives one of the error codes `LACKING_OPTION`, `INVALID_OPTION_VALUE` or `OPTION_VALUE_ALREADY_GIVEN`, which it handles like any other error. A revision 2.1 client connected to a revision 2.0 server must not use the messages introduced by revision 2.1: the server would respond `UNKNOWN_TYPE`, and would ignore the new optional fields.
+Compatibility between revisions 2.0 and 2.1: a revision 2.0 client keeps working with a revision 2.1 server. However, it can only join as a player a game that has a player factory (`GAME_JOIN`) if its player carries the values expected by the factory; otherwise, it receives one of the error codes `LACKING_OPTION`, `INVALID_OPTION_VALUE` or `OPTION_VALUE_ALREADY_GIVEN`, which it handles like any other error. A revision 2.1 client connected to a revision 2.0 server must not use the messages introduced by revision 2.1: the server would respond `UNKNOWN_TYPE`, and would ignore the new optional fields. A revision 2.1 client must only use the game factory messages and fields if the server announces the `game_factory` feature in its `features` list.
 
 ### General security
 
@@ -789,7 +793,7 @@ A revision 2.0 server does not know this request and responds with the `UNKNOWN_
     "success": true,
     "version": 2,
     "revision": "2.1",
-    "features": ["player_factory"],
+    "features": ["player_factory", "game_factory"],
     "message": "Protocol information retrieved successfully"
   }
 }
@@ -819,6 +823,7 @@ A feature groups a set of messages and fields. Its presence in the `features` li
 | Feature | Minimum revision | Messages and fields concerned |
 |---|---|---|
 | `player_factory` | 2.1 | Factory template management messages (`FACTORY_TEMPLATE_*`), `GAME_FACTORY_GET` and `GAME_FACTORY_JOIN` requests, `GAME_FACTORY_UPDATED` notification, `factory_template_id` field of `GAME_CREATE`, `has_player_factory` field of `GAME_LIST_RESPONSE`. |
+| `game_factory` | 2.1 | `factory_type` field of the `FACTORY_TEMPLATE_*` messages, `game_factory_template_id` field of `GROUP_CREATE`, `GROUP_FACTORY_SET` and `GROUP_FACTORY_GET` requests, `game_factory_values` field of `GAME_CREATE`, `GAME_CREATION_FACTORY_UPDATED` notification, `GROUP_HAS_GAMES` and `NO_GAME_FACTORY` error codes. |
 
 ---
 
@@ -1534,6 +1539,8 @@ Allows you to create a new game instance on the server.
 
 The game can be given, from its creation, a player factory built from a template held by the server (`factory_template_id` field, see `FACTORY_TEMPLATE_LIST`). The template can only be chosen when the game is created: the protocol does not provide any request to add, replace or remove the player factory of an existing game. The options of the factory are copies of those of the template: a later update or deletion of the template has no effect on the game.
 
+When the game is created in a group equipped with a game factory (see `GROUP_CREATE`, `GROUP_FACTORY_SET` and `GROUP_FACTORY_GET`), the values chosen for the options of this factory are transmitted in the `game_factory_values` field. The creation of the game and its addition to the group are then performed in a single operation: if the addition fails, the game is not created. An option absent from `game_factory_values` takes its proposed value, recomputed at request time. If the group is not equipped with a game factory, the creation proceeds normally, but the `game_factory_values` field is refused with the `NO_GAME_FACTORY` code when it is provided. If the game is created without `group_id`, the `game_factory_values` field has no effect.
+
 #### Example
 ```json
 {
@@ -1541,7 +1548,7 @@ The game can be given, from its creation, a player factory built from a template
   "version": 2,
   "payload": {
     "name": "Ma Super Partie",
-    "group_id": "optional_group_uuid",
+    "group_id": "group_uuid",
     "group_password": "group_secret",
     "min_players": 2,
     "max_players": 4,
@@ -1549,6 +1556,10 @@ The game can be given, from its creation, a player factory built from a template
     "turn_based": true,
     "password": "private_game",
     "factory_template_id": "template_uuid",
+    "game_factory_values": {
+      "game_name_option_uuid": "Tournament_2026",
+      "max_players_option_uuid": 4
+    },
     "attributes": {
       "map": "island_01",
       "difficulty": "medium"
@@ -1581,6 +1592,7 @@ The game can be given, from its creation, a player factory built from a template
 | `payload.group_id` | `string` | No | Group UUID in which to create the game. |
 | `payload.group_password` | `string` | No | Group password, required when the session has not already been authorized. |
 | `payload.factory_template_id` | `string` | No | UUID of the player factory template to apply to the game. If absent or `null`, the game has no player factory. Minimum revision: 2.1 (`player_factory` feature). |
+| `payload.game_factory_values` | `object` | No | Values chosen for the options of the game factory of the group, indexed by the UUID of the options of this factory (`option_id` field provided by `GROUP_FACTORY_GET`). Default: empty object (all options take their proposed value). No effect if `group_id` is absent. Minimum revision: 2.1 (`game_factory` feature). |
 | `payload.attributes` | `object` | No | Custom game attributes. |
 
 #### Fields (`GAME_CREATE_RESPONSE`)
@@ -1590,6 +1602,7 @@ The game can be given, from its creation, a player factory built from a template
 | `payload.success` | `boolean` | Yes | `true` if the creation was successful. |
 | `payload.game_id` | `string` | No | UUID of the created game (if successful). |
 | `payload.error_code` | `string` | No | Error code in case of failure (see table below). |
+| `payload.details` | `object` | No | Details about the error, for errors related to option values (`option_id`, and depending on the case `value` and `reason`). See the "Details of errors related to option values" paragraph. Minimum revision: 2.1 (`game_factory` feature). |
 | `payload.message` | `string` | Yes | Information or error message. |
 
 #### Error codes (`GAME_CREATE_RESPONSE`)
@@ -1600,6 +1613,14 @@ The game can be given, from its creation, a player factory built from a template
 | `INVALID_DATA` | Invalid creation parameters. |
 | `LIMIT_REACHED` | The maximum number of games on the server has been reached. |
 | `FACTORY_TEMPLATE_NOT_FOUND` | The factory template indicated by `factory_template_id` does not exist. The game is not created. |
+| `GROUP_NOT_FOUND` | The group indicated by `group_id` does not exist. |
+| `INVALID_GROUP_PASSWORD` | The group password is missing or incorrect. |
+| `NO_GAME_FACTORY` | The `game_factory_values` field was provided while the group is not equipped with a game factory. |
+| `INVALID_OPTION_VALUE` | A key of `game_factory_values` does not match any option of the factory (`details.reason` set to `UNKNOWN_OPTION`), or a value has an incompatible type (`INCOMPATIBLE_TYPE`) or is not valid (`INVALID_VALUE`) for its option. |
+| `OPTION_VALUE_ALREADY_GIVEN` | A value chosen for a unique option is already carried by another game of the group. The `details` field indicates the option (`option_id`) and the value concerned (`value`). |
+| `LACKING_OPTION` | An option absent from `game_factory_values` no longer has any possible value, proposed value set to `null` (`details.reason` set to `NO_AVAILABLE_VALUE`). |
+
+For `GAME_CREATE`, the possible values of `details.reason` are `UNKNOWN_OPTION`, `INCOMPATIBLE_TYPE`, `INVALID_VALUE` and `NO_AVAILABLE_VALUE` (the `ABSENT_FROM_GAME` reason only concerns adding an existing game to a group, an operation that is not the subject of a protocol request).
 
 ---
 
@@ -2366,11 +2387,16 @@ Allows you to modify the order in which players play in a game configured as tur
 
 ## Factory template management messages
 
-This section describes the messages used to consult and manage the player factory templates (`PlayerFactoryTemplate`) held by the server. A template defines a set of player customization options. It is chosen when a game is created (`factory_template_id` field of `GAME_CREATE`), which then receives a player factory built from a copy of its options.
+This section describes the messages used to consult and manage the factory templates held by the server. Two kinds of templates are supported, distinguished by the `factory_type` field:
+
+- `player_factory`: player factory templates (`PlayerFactoryTemplate`), which define a set of player customization options. A template is chosen when a game is created (`factory_template_id` field of `GAME_CREATE`), which then receives a player factory built from a copy of its options.
+- `game_factory`: game factory templates (`GameFactoryTemplate`), which define a set of creation options for the games of a group. A template is chosen when a group is created (`game_factory_template_id` field of `GROUP_CREATE`) or applied to an existing group (`GROUP_FACTORY_SET`), which then receives a game factory built from a copy of its options.
+
+The `factory_type` field is optional and defaults to `player_factory`, which preserves the compatibility of revision 2.1 clients that only know player factories. A client that wants to access game factory templates must provide the value `game_factory`; otherwise, the requested template is treated as nonexistent (`FACTORY_TEMPLATE_NOT_FOUND`).
 
 Templates are common to the whole server. Any client of `BASE` level can consult them, but only a server administrator (`ADMIN` level) can create, update or delete them. When persistence is enabled, templates are saved and restored with the other server data. Their creation, update and deletion are recorded in the server audit log (`FACTORY_TEMPLATE_CREATE`, `FACTORY_TEMPLATE_UPDATE` and `FACTORY_TEMPLATE_DELETE` actions).
 
-The options of a template follow the representation described in the "Option representation" paragraph (see the messages for creating a player from a game's player factory).
+The options of a template follow the representation described in the "Option representation" paragraph (see the messages for creating a player from a game's player factory). For a game factory template, the `target` and `attribute` fields designate an attribute of the **Game** object: see the "Game factory option representation" paragraph of the group management messages.
 
 ### List of factory templates
 
@@ -2378,9 +2404,9 @@ The options of a template follow the representation described in the "Option rep
 **Transport:** TCP  
 **Encoding:** JSON UTF-8  
 **Minimum access level:** `BASE`  
-**Minimum revision:** 2.1 (`player_factory` feature)
+**Minimum revision:** 2.1 (`player_factory` and `game_factory` features)
 
-Retrieves the list of factory templates available on the server, for example to offer the user the choice of the template when creating a game.
+Retrieves the list of factory templates available on the server, for example to offer the user the choice of the template when creating a game (`player_factory` templates) or when configuring a group (`game_factory` templates). The optional `factory_type` field restricts the list to one kind of template; it defaults to `player_factory`.
 
 #### Example
 ```json
@@ -2400,6 +2426,7 @@ Retrieves the list of factory templates available on the server, for example to 
     "templates": [
       {
         "template_id": "template_uuid",
+        "factory_type": "player_factory",
         "name": "Chess",
         "options_count": 2
       }
@@ -2408,6 +2435,14 @@ Retrieves the list of factory templates available on the server, for example to 
   }
 }
 ```
+#### Fields (`FACTORY_TEMPLATE_LIST`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `type` | `string` | Yes | `"FACTORY_TEMPLATE_LIST"` |
+| `version` | `number` | Yes | `2` |
+| `payload.factory_type` | `string` | No | Kind of template to list: `player_factory` or `game_factory`. Default: `player_factory`. Minimum revision: 2.1 (`game_factory` feature for the `game_factory` value). |
+
 #### Fields (`FACTORY_TEMPLATE_LIST_RESPONSE`)
 
 | Field | JSON type | Mandatory | Description |
@@ -2415,6 +2450,7 @@ Retrieves the list of factory templates available on the server, for example to 
 | `payload.success` | `boolean` | Yes | `true` if the request was successful. |
 | `payload.templates` | `array` | No | List of the available templates (if successful). |
 | `payload.templates[].template_id` | `string` | - | UUID of the template. |
+| `payload.templates[].factory_type` | `string` | - | Kind of the template: `player_factory` or `game_factory`. |
 | `payload.templates[].name` | `string` | - | Name of the template. |
 | `payload.templates[].options_count` | `number` | - | Number of options of the template. |
 | `payload.error_code` | `string` | No | Error code on failure. |
@@ -2434,9 +2470,9 @@ Retrieves the list of factory templates available on the server, for example to 
 **Transport:** TCP  
 **Encoding:** JSON UTF-8  
 **Minimum access level:** `BASE`  
-**Minimum revision:** 2.1 (`player_factory` feature)
+**Minimum revision:** 2.1 (`player_factory` and `game_factory` features)
 
-Retrieves the full definition of a factory template, for example to present the user with a preview of the options of the template before applying it to a new game. Default values are provided raw: runtime constants are only evaluated at the level of the player factory of a game (see `GAME_FACTORY_GET`).
+Retrieves the full definition of a factory template, for example to present the user with a preview of the options of the template before applying it to a new game or to a group. The kind of template is indicated by the `factory_type` field, which defaults to `player_factory`. Default values are provided raw: runtime constants are only evaluated at the level of the player factory of a game (see `GAME_FACTORY_GET`) or of a group (see `GROUP_FACTORY_GET`).
 
 #### Example
 ```json
@@ -2444,7 +2480,8 @@ Retrieves the full definition of a factory template, for example to present the 
   "type": "FACTORY_TEMPLATE_GET",
   "version": 2,
   "payload": {
-    "template_id": "template_uuid"
+    "template_id": "template_uuid",
+    "factory_type": "player_factory"
   }
 }
 ```
@@ -2456,6 +2493,7 @@ Retrieves the full definition of a factory template, for example to present the 
   "payload": {
     "success": true,
     "template_id": "template_uuid",
+    "factory_type": "player_factory",
     "name": "Chess",
     "options": [
       {
@@ -2486,6 +2524,7 @@ Retrieves the full definition of a factory template, for example to present the 
 | `type` | `string` | Yes | `"FACTORY_TEMPLATE_GET"` |
 | `version` | `number` | Yes | `2` |
 | `payload.template_id` | `string` | Yes | UUID of the template. |
+| `payload.factory_type` | `string` | No | Kind of template: `player_factory` or `game_factory`. Default: `player_factory`. Minimum revision: 2.1 (`game_factory` feature for the `game_factory` value). |
 
 #### Fields (`FACTORY_TEMPLATE_GET_RESPONSE`)
 
@@ -2493,6 +2532,7 @@ Retrieves the full definition of a factory template, for example to present the 
 |---|---|---:|---|
 | `payload.success` | `boolean` | Yes | `true` if the request was successful. |
 | `payload.template_id` | `string` | No | UUID of the template (if successful). |
+| `payload.factory_type` | `string` | No | Kind of the template: `player_factory` or `game_factory` (if successful). |
 | `payload.name` | `string` | No | Name of the template (if successful). |
 | `payload.options` | `array` | No | Options of the template, in their order of definition (if successful). |
 | `payload.error_code` | `string` | No | Error code in case of failure (see table below). |
@@ -2512,9 +2552,9 @@ Retrieves the full definition of a factory template, for example to present the 
 **Transport:** TCP  
 **Encoding:** JSON UTF-8  
 **Minimum access level:** `ADMIN`  
-**Minimum revision:** 2.1 (`player_factory` feature)
+**Minimum revision:** 2.1 (`player_factory` and `game_factory` features)
 
-Creates a new factory template from a full definition. The options are sent without `option_id` or `key`: the server generates the UUID of each option, and its frozen key corresponds to the name of the option. The options are added to the template in the order of the list, according to the rules of the `add_option` method of the `PlayerFactoryTemplate` class (similarity check, replacement of an option associated with the `name` attribute by a later option of the list associated with the same attribute).
+Creates a new factory template from a full definition, of the kind indicated by the `factory_type` field (`PlayerFactoryTemplate` or `GameFactoryTemplate`; `player_factory` by default). The options are sent without `option_id` or `key`: the server generates the UUID of each option, and its frozen key corresponds to the name of the option. The options are added to the template in the order of the list, according to the rules of the `add_option` method of the corresponding class (similarity check, replacement of an option associated with the same direct attribute of the relevant object by a later option of the list). For a game factory template, the `target` and `attribute` fields designate an attribute of the **Game** object: see the "Game factory option representation" paragraph of the group management messages.
 
 The creation is atomic: if one of the options is rejected, no template is created.
 
@@ -2524,6 +2564,7 @@ The creation is atomic: if one of the options is rejected, no template is create
   "type": "FACTORY_TEMPLATE_CREATE",
   "version": 2,
   "payload": {
+    "factory_type": "player_factory",
     "name": "Chess",
     "options": [
       {
@@ -2568,6 +2609,7 @@ The creation is atomic: if one of the options is rejected, no template is create
 |---|---|---:|---|
 | `type` | `string` | Yes | `"FACTORY_TEMPLATE_CREATE"` |
 | `version` | `number` | Yes | `2` |
+| `payload.factory_type` | `string` | No | Kind of template: `player_factory` or `game_factory`. Default: `player_factory`. Minimum revision: 2.1 (`game_factory` feature for the `game_factory` value). |
 | `payload.name` | `string` | Yes | Name of the template. It is strongly recommended that it be unique on the server. |
 | `payload.options` | `array` | Yes | Options of the template, in the desired order. Can be empty. |
 | `payload.options[].type` | `string` | Yes | Type of the option: `CHECK`, `RANGE`, `LIST` or `TEXT`. |
@@ -2578,10 +2620,10 @@ The creation is atomic: if one of the options is rejected, no template is create
 | `payload.options[].max` | `number`\|`null` | No | Maximum value (`RANGE` options). Default: `null`. |
 | `payload.options[].step` | `number` | No | Increment (`RANGE` options). Default: `1`. |
 | `payload.options[].choices` | `array` | No | Possible choices (`LIST` options). Default: empty list. |
-| `payload.options[].unicity` | `boolean` | No | `true` if a value can only be carried by a single player of the game. Default: `false`. |
-| `payload.options[].hide` | `boolean` | No | `true` if the option must be hidden in the player creation form. It is then used by the game logic but does not have to be initialized by the user. Only meaningful for `STATIC` and `DYNAMIC` targets, ignored otherwise. Default: `false`. |
-| `payload.options[].target` | `string` | Yes | `ATTRIBUTE`, `STATIC` or `DYNAMIC`. The value `ATTRIBUTE` is only accepted for options of type `TEXT` or `LIST`, since the `name` attribute of the player is a character string: for a `CHECK` or `RANGE` option, the request fails with the `INVALID_OPTION` code. |
-| `payload.options[].attribute` | `string` | No | Mandatory if `target` is `ATTRIBUTE` (only possible value for now: `"name"`). Ignored otherwise. |
+| `payload.options[].unicity` | `boolean` | No | `true` if a value can only be carried by a single relevant object: a single player of the game for a player factory template, a single game of the group for a game factory template. Default: `false`. |
+| `payload.options[].hide` | `boolean` | No | `true` if the option must be hidden in the player creation form (player factory) or the game creation form (game factory). It is then used by the game logic but does not have to be initialized by the user. Only meaningful for `STATIC` and `DYNAMIC` targets, ignored otherwise. Default: `false`. |
+| `payload.options[].target` | `string` | Yes | `ATTRIBUTE`, `STATIC` or `DYNAMIC`. For a player factory template, the value `ATTRIBUTE` is only accepted for options of type `TEXT` or `LIST`, since the `name` attribute of the player is a character string: for a `CHECK` or `RANGE` option, the request fails with the `INVALID_OPTION` code. For a game factory template, `ATTRIBUTE` designates a direct attribute of the game (`name`, `max_players`, `max_observers`, `min_players`, `turn_based`, `password`, `observer_password`) or the `player_factory_template` reference; the accepted option types depend on the attribute (see the "Game factory option representation" paragraph). |
+| `payload.options[].attribute` | `string` | No | Mandatory if `target` is `ATTRIBUTE`. For a player factory template, the only possible value for now is `"name"`. For a game factory template: `"name"`, `"max_players"`, `"max_observers"`, `"min_players"`, `"turn_based"`, `"password"`, `"observer_password"` or `"player_factory_template"`. Ignored otherwise. |
 
 #### Fields (`FACTORY_TEMPLATE_CREATE_RESPONSE`)
 
@@ -2599,8 +2641,8 @@ The creation is atomic: if one of the options is rejected, no template is create
 | Code | Description |
 |---|---|
 | `INSUFFICIENT_PERMISSIONS` | Only a server administrator can create a template. |
-| `INVALID_DATA` | The request is malformed (missing name, `options` is not a list, etc.). |
-| `INVALID_OPTION` | An option is invalid: unknown type, inconsistent parameters, unknown or misused runtime constant, unrecognized `target` or `attribute` value, etc. The `details` field indicates the option concerned. |
+| `INVALID_DATA` | The request is malformed (missing name, `options` is not a list, unknown `factory_type`, etc.), or the requested template kind is not supported by the server. |
+| `INVALID_OPTION` | An option is invalid: unknown type, inconsistent parameters, unknown or misused runtime constant, unrecognized `target` or `attribute` value, or option type incompatible with the relevant attribute, etc. The `details` field indicates the option concerned. |
 | `OPTION_ALREADY_EXISTS` | The name of an option is identical to the frozen key of a previous option of the list. The `details` field indicates the option concerned. |
 
 ---
@@ -2611,11 +2653,11 @@ The creation is atomic: if one of the options is rejected, no template is create
 **Transport:** TCP  
 **Encoding:** JSON UTF-8  
 **Minimum access level:** `ADMIN`  
-**Minimum revision:** 2.1 (`player_factory` feature)
+**Minimum revision:** 2.1 (`player_factory` and `game_factory` features)
 
-Changes the name of an existing template and/or replaces all of its options. The template keeps its UUID. When the `options` field is provided, all the existing options of the template are removed, then the options sent are added according to the same rules as for `FACTORY_TEMPLATE_CREATE`: they receive new UUIDs and new frozen keys.
+Changes the name of an existing template and/or replaces all of its options. The kind of the template is indicated by the `factory_type` field, which defaults to `player_factory`; it cannot be changed. The template keeps its UUID. When the `options` field is provided, all the existing options of the template are removed, then the options sent are added according to the same rules as for `FACTORY_TEMPLATE_CREATE`: they receive new UUIDs and new frozen keys.
 
-The update is atomic: if one of the options is rejected, the template remains unchanged. It has no effect on the games that already have a player factory built from this template, whose options are independent copies.
+The update is atomic: if one of the options is rejected, the template remains unchanged. It has no effect on the games or groups that already have a factory built from this template, whose options are independent copies.
 
 #### Example
 ```json
@@ -2624,6 +2666,7 @@ The update is atomic: if one of the options is rejected, the template remains un
   "version": 2,
   "payload": {
     "template_id": "template_uuid",
+    "factory_type": "player_factory",
     "name": "Chess (variant)",
     "options": [
       {
@@ -2659,6 +2702,7 @@ The update is atomic: if one of the options is rejected, the template remains un
 | `type` | `string` | Yes | `"FACTORY_TEMPLATE_UPDATE"` |
 | `version` | `number` | Yes | `2` |
 | `payload.template_id` | `string` | Yes | UUID of the template to update. |
+| `payload.factory_type` | `string` | No | Kind of template: `player_factory` or `game_factory`. Default: `player_factory`. Cannot be changed. Minimum revision: 2.1 (`game_factory` feature for the `game_factory` value). |
 | `payload.name` | `string` | No | New name of the template. If absent, the name is unchanged. |
 | `payload.options` | `array` | No | New complete list of options, in the same format as for `FACTORY_TEMPLATE_CREATE`. If absent, the options are unchanged. |
 
@@ -2670,6 +2714,7 @@ At least one of the `name` or `options` fields must be provided.
 |---|---|---:|---|
 | `payload.success` | `boolean` | Yes | `true` if the template was updated. |
 | `payload.template_id` | `string` | No | UUID of the template (if successful). |
+| `payload.factory_type` | `string` | No | Kind of the template: `player_factory` or `game_factory` (if successful). |
 | `payload.option_ids` | `array` | No | UUIDs of the options of the template after the update, in their order of definition (if successful). |
 | `payload.error_code` | `string` | No | Error code in case of failure (see table below). |
 | `payload.details` | `object` | No | Details about the error, for errors related to options (`option_index`, `reason`). |
@@ -2693,9 +2738,9 @@ At least one of the `name` or `options` fields must be provided.
 **Transport:** TCP  
 **Encoding:** JSON UTF-8  
 **Minimum access level:** `ADMIN`  
-**Minimum revision:** 2.1 (`player_factory` feature)
+**Minimum revision:** 2.1 (`player_factory` and `game_factory` features)
 
-Deletes a factory template from the server. The deletion has no effect on the games that already have a player factory built from this template. The template can no longer be chosen when creating a game.
+Deletes a factory template from the server, of the kind indicated by the `factory_type` field (`player_factory` by default). The deletion has no effect on the games or groups that already have a factory built from this template. The template can no longer be chosen when creating a game or a group.
 
 #### Example
 ```json
@@ -2703,7 +2748,8 @@ Deletes a factory template from the server. The deletion has no effect on the ga
   "type": "FACTORY_TEMPLATE_DELETE",
   "version": 2,
   "payload": {
-    "template_id": "template_uuid"
+    "template_id": "template_uuid",
+    "factory_type": "player_factory"
   }
 }
 ```
@@ -2725,6 +2771,7 @@ Deletes a factory template from the server. The deletion has no effect on the ga
 | `type` | `string` | Yes | `"FACTORY_TEMPLATE_DELETE"` |
 | `version` | `number` | Yes | `2` |
 | `payload.template_id` | `string` | Yes | UUID of the template to delete. |
+| `payload.factory_type` | `string` | No | Kind of template: `player_factory` or `game_factory`. Default: `player_factory`. Minimum revision: 2.1 (`game_factory` feature for the `game_factory` value). |
 
 #### Fields (`FACTORY_TEMPLATE_DELETE_RESPONSE`)
 
@@ -3154,6 +3201,54 @@ Informs clients that part of a group has changed state or visible properties.
 
 ---
 
+### Game factory of a group updated
+
+**Direction:** Server → Client  
+**Broadcast:** Sessions subscribed to the factory of the group  
+**Transport:** TCP  
+**Encoding:** MessagePack  
+**Minimum revision:** 2.1 (`game_factory` feature)
+
+Informs clients preparing a game creation form that the values already taken in the group have changed, so that they can update the choices presented to the user. For example, when a first game of the group uses the name "Tournament_2026", the other users currently filling in the form immediately see that this name is no longer available.
+
+The notification is sent each time a game is added to or removed from the group, when the group is equipped with a game factory, as well as when this factory is defined, replaced or removed (`GROUP_FACTORY_SET`).
+
+A session is subscribed to the factory of a group as soon as it has successfully consulted this factory (`GROUP_FACTORY_GET`). The subscription ends:
+- when the factory of the group is removed (`GROUP_FACTORY_SET` with `template_id` set to `null`);
+- after a successful consultation of the factory of another group (a session is subscribed to only one group factory at a time);
+- when the session closes.
+
+Only the exclusions are transmitted: the proposed values depend on the context of each session (runtime constants) and are not recomputed by the notification. If the client wants a new proposed value, it can consult the factory again with `GROUP_FACTORY_GET`.
+
+#### Example
+```json
+{
+  "type": "GAME_CREATION_FACTORY_UPDATED",
+  "version": 2,
+  "payload": {
+    "group_id": "group_uuid",
+    "options": [
+      {
+        "option_id": "option_uuid",
+        "exclusions": ["Tournament_2026"]
+      }
+    ]
+  }
+}
+```
+#### Fields (`GAME_CREATION_FACTORY_UPDATED`)
+
+| Field | MessagePack Type | Mandatory | Description |
+|---|---|---:|---|
+| `type` | `string` | Yes | `"GAME_CREATION_FACTORY_UPDATED"` |
+| `version` | `number` | Yes | `2` |
+| `payload.group_id` | `string` | Yes | UUID of the group concerned. |
+| `payload.options` | `array` | Yes | New exclusions of the unique options of the factory. Non-unique options are not included. |
+| `payload.options[].option_id` | `string` | Yes | UUID of the option. |
+| `payload.options[].exclusions` | `array` | Yes | Values now carried by the games of the group for this option. |
+
+---
+
 ## Game notification messages
 
 These messages are sent spontaneously by the server to clients connected to a game. For performance reasons, they use the MessagePack format.
@@ -3270,6 +3365,8 @@ This section describes messages for creating, listing, and managing party groups
 
 Allows you to create a new game group on the server.
 
+The group can be equipped, from its creation, with a game factory built from a template held by the server (`game_factory_template_id` field, see `FACTORY_TEMPLATE_LIST`). The options of the factory are copies of those of the template: a later modification or deletion of the template has no effect on the group. The factory can then be replaced or removed with `GROUP_FACTORY_SET`, as long as the group contains no game.
+
 #### Example
 ```json
 {
@@ -3278,6 +3375,7 @@ Allows you to create a new game group on the server.
   "payload": {
     "name": "Summer tournament",
     "password": "group_secret",
+    "game_factory_template_id": "game_template_uuid",
     "attributes": {
       "type": "ranked",
       "season": "2026"
@@ -3305,6 +3403,7 @@ Allows you to create a new game group on the server.
 | `version` | `number` | Yes | `2` |
 | `payload.name` | `string` | Yes | Group name. |
 | `payload.password` | `string` | No | Password protecting access to the group. |
+| `payload.game_factory_template_id` | `string` | No | UUID of the game factory template to apply to the group. If absent or `null`, the group has no game factory. Minimum revision: 2.1 (`game_factory` feature). |
 | `payload.attributes` | `object` | No | Custom group attributes. |
 
 #### Fields (`GROUP_CREATE_RESPONSE`)
@@ -3322,6 +3421,7 @@ Allows you to create a new game group on the server.
 |---|---|
 | `INSUFFICIENT_PERMISSIONS` | The client's access level does not allow creating a group. |
 | `INVALID_DATA` | The data provided for group creation is invalid. |
+| `FACTORY_TEMPLATE_NOT_FOUND` | The game factory template indicated by `game_factory_template_id` does not exist. The group is not created. |
 
 ---
 
@@ -3526,6 +3626,204 @@ by the server; only `requires_password` is exposed.
 The response is `GROUP_PASSWORD_SET_RESPONSE` and contains `success`,
 `group_id`, and `requires_password`. It can return `GROUP_NOT_FOUND`,
 `INVALID_DATA`, or `INSUFFICIENT_PERMISSIONS`.
+
+---
+
+### Consulting the game factory of a group
+
+**Direction:** Client → Server  
+**Transport:** TCP  
+**Encoding:** JSON UTF-8  
+**Minimum access level:** `BASE`  
+**Minimum revision:** 2.1 (`game_factory` feature)
+
+Provides the full description of the game factory of a group, so that the client can build the game creation form. For each option, the server also provides the values already carried by the games of the group (`exclusions`) and the proposed value (`proposed_value`), computed for the client's session: the runtime constants whose source is "Context" (`%%USERNAME%%`, `%%CLIENTADDRESS%%`, `%%SERVERNAME%%`, `%%SERVERADDRESS%%`) are evaluated from the session and the connection of the client, `%%GROUPNAME%%` from the name of the group, and `%%GAMENAME%%` is replaced with an empty string. The context is never provided by the client.
+
+If the group is protected, the group password is required (`group_password`), unless the session is already authorized on this group.
+
+A successful consultation subscribes the session to the `GAME_CREATION_FACTORY_UPDATED` notifications of this group (see the corresponding notification).
+
+Options whose `hide` field is `true` must not be displayed in the game creation form: their proposed value is used as is, which allows the game logic to rely on attributes that the user does not have to initialize.
+
+#### Game factory option representation
+
+The options of a game factory, like those of a game factory template, are represented by the same JSON object as the options of a player factory (see the "Option representation" paragraph of the messages for creating a player from a game's player factory), with the exception of the `target`, `attribute`, `unicity` and `hide` fields:
+
+| Field | JSON type | Description |
+|---|---|---|
+| `target` | `string` | Location of the value in the **Game** object: `ATTRIBUTE` (direct attribute of the game designated by the `attribute` field), `STATIC` (`static_state` dictionary) or `DYNAMIC` (`dynamic_state` dictionary). |
+| `attribute` | `string`\|`null` | When `target` is `ATTRIBUTE`, name of the direct attribute of the game, or the `"player_factory_template"` reference (see the table below). `null` otherwise. |
+| `unicity` | `boolean` | `true` if a value can only be carried by a single game of the group. The value becomes available again as soon as the game carrying it is removed from the group. |
+| `hide` | `boolean` | `true` if the option must be hidden in the game creation form. It is then used by the game logic, but does not have to be initialized by the user. Only meaningful for the `STATIC` and `DYNAMIC` targets: for `ATTRIBUTE` options, the field is ignored. |
+
+The direct attributes of the game and the accepted option types are as follows:
+
+| `attribute` | Accepted option types | Effect |
+|---|---|---|
+| `"name"` | `TEXT`, `LIST` | The chosen value is assigned to the `name` attribute of the game. |
+| `"max_players"` | integer `RANGE` | The chosen value is assigned to the `max_players` attribute of the game. |
+| `"max_observers"` | integer `RANGE` | The chosen value is assigned to the `max_observers` attribute of the game. |
+| `"min_players"` | integer `RANGE` | The chosen value is assigned to the `min_players` attribute of the game. |
+| `"turn_based"` | `CHECK` | The chosen value is assigned to the `turn_based` attribute of the game. |
+| `"player_factory_template"` | `TEXT`, `LIST` | The chosen value is interpreted as the UUID of a player factory template: a player factory built from this template is associated with the created game. A `LIST` option allows the game creator to choose among several templates. |
+| `"password"` | `TEXT` | The chosen value is assigned to the `password` parameter of the game, which is hashed by the server. |
+| `"observer_password"` | `TEXT` | The chosen value is assigned to the `observer_password` parameter of the game, which is hashed by the server. |
+
+A `RANGE` option is said to be **integer** when all of its values are of the integer `number` type. A decimal `RANGE` option cannot be associated with the `max_players`, `max_observers` and `min_players` attributes.
+
+#### Example
+
+```json
+{
+  "type": "GROUP_FACTORY_GET",
+  "version": 2,
+  "payload": {
+    "group_id": "group_uuid",
+    "group_password": "group_secret"
+  }
+}
+```
+
+#### Response (`GROUP_FACTORY_GET_RESPONSE`)
+
+```json
+{
+  "type": "GROUP_FACTORY_GET_RESPONSE",
+  "version": 2,
+  "payload": {
+    "success": true,
+    "group_id": "group_uuid",
+    "factory_id": "factory_uuid",
+    "options": [
+      {
+        "option_id": "option_uuid",
+        "type": "TEXT",
+        "name": "Game name",
+        "description": "Unique name of the game",
+        "default": "Game_%%RANDOM_NUMBER%%",
+        "min": null,
+        "max": null,
+        "step": 1,
+        "choices": [],
+        "unicity": true,
+        "hide": false,
+        "target": "ATTRIBUTE",
+        "attribute": "name",
+        "key": "Game name",
+        "exclusions": ["Tournament_2026"],
+        "proposed_value": "Game_42"
+      }
+    ],
+    "message": "Game factory retrieved successfully"
+  }
+}
+```
+
+#### Fields (`GROUP_FACTORY_GET`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `type` | `string` | Yes | `"GROUP_FACTORY_GET"` |
+| `version` | `number` | Yes | `2` |
+| `payload.group_id` | `string` | Yes | UUID of the group. |
+| `payload.group_password` | `string` | No | Group password (if required). |
+
+#### Fields (`GROUP_FACTORY_GET_RESPONSE`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `payload.success` | `boolean` | Yes | `true` if the request was successful. |
+| `payload.group_id` | `string` | No | UUID of the group (if successful). |
+| `payload.factory_id` | `string` | No | UUID of the game factory of the group (if successful). |
+| `payload.options` | `array` | No | Options of the factory, in their order of definition (if successful). Each option follows the representation described above, completed with the `exclusions` and `proposed_value` fields. |
+| `payload.options[].exclusions` | `array` | - | Values already carried by the games of the group for this option, computed at request time. Empty list for a non-unique option. |
+| `payload.options[].proposed_value` | `boolean`\|`number`\|`string`\|`null` | - | Proposed value for this option, after evaluation of the runtime constants and taking the exclusions into account. `null` if no value is possible anymore. |
+| `payload.error_code` | `string` | No | Error code in case of failure (see table below). |
+| `payload.message` | `string` | Yes | Information or error message. |
+
+#### Error codes (`GROUP_FACTORY_GET_RESPONSE`)
+
+| Code | Description |
+|---|---|
+| `GROUP_NOT_FOUND` | The specified group does not exist. |
+| `NO_GAME_FACTORY` | The group is not equipped with a game factory. |
+| `INVALID_GROUP_PASSWORD` | The group password is missing or incorrect. |
+
+---
+
+### Defining the game factory of a group
+
+**Direction:** Client → Server  
+**Transport:** TCP  
+**Encoding:** JSON UTF-8  
+**Minimum access level:** `GROUP_ADMIN` of the group concerned  
+**Minimum revision:** 2.1 (`game_factory` feature)
+
+Defines, replaces or removes the game factory of a group from a game factory template held by the server. The `template_id` field designates the template to apply; the value `null` removes the factory of the group.
+
+Creating or replacing the factory is only allowed if the group does not contain any game yet: otherwise, the server returns the `GROUP_HAS_GAMES` code and the factory of the group remains unchanged. Removing the factory (`template_id` set to `null`) remains possible when the group already contains games. On failure, no change is applied.
+
+The factory is built from a copy of the options of the template: a later modification or deletion of the template has no effect on the factory of the group.
+
+#### Example
+
+```json
+{
+  "type": "GROUP_FACTORY_SET",
+  "version": 2,
+  "payload": {
+    "group_id": "group_uuid",
+    "template_id": "game_template_uuid",
+    "group_password": "group_secret"
+  }
+}
+```
+
+#### Response (`GROUP_FACTORY_SET_RESPONSE`)
+
+```json
+{
+  "type": "GROUP_FACTORY_SET_RESPONSE",
+  "version": 2,
+  "payload": {
+    "success": true,
+    "group_id": "group_uuid",
+    "has_game_factory": true,
+    "message": "Game factory set successfully"
+  }
+}
+```
+
+#### Fields (`GROUP_FACTORY_SET`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `type` | `string` | Yes | `"GROUP_FACTORY_SET"` |
+| `version` | `number` | Yes | `2` |
+| `payload.group_id` | `string` | Yes | UUID of the group. |
+| `payload.template_id` | `string`\|`null` | Yes | UUID of the game factory template to apply, or `null` to remove the factory of the group. |
+| `payload.group_password` | `string` | No | Group password (if required). |
+
+#### Fields (`GROUP_FACTORY_SET_RESPONSE`)
+
+| Field | JSON type | Mandatory | Description |
+|---|---|---:|---|
+| `payload.success` | `boolean` | Yes | `true` if the operation was successful. |
+| `payload.group_id` | `string` | No | UUID of the group (if successful). |
+| `payload.has_game_factory` | `boolean` | No | `true` if the group is equipped with a game factory after the operation (if successful). |
+| `payload.error_code` | `string` | No | Error code in case of failure (see table below). |
+| `payload.message` | `string` | Yes | Information or error message. |
+
+#### Error codes (`GROUP_FACTORY_SET_RESPONSE`)
+
+| Code | Description |
+|---|---|
+| `GROUP_NOT_FOUND` | The specified group does not exist. |
+| `FACTORY_TEMPLATE_NOT_FOUND` | The game factory template indicated by `template_id` does not exist. |
+| `GROUP_HAS_GAMES` | The group already contains games; its factory can therefore not be created or replaced. |
+| `INSUFFICIENT_PERMISSIONS` | The client does not have administration rights on this group. |
+| `INVALID_GROUP_PASSWORD` | The group password is missing or incorrect. |
+| `INVALID_DATA` | The request is malformed (for example, missing `template_id`). |
 
 ---
 
@@ -4567,6 +4865,23 @@ sequenceDiagram
     U2->>S: GAME_FACTORY_JOIN (values)
     S-->>U2: GAME_FACTORY_JOIN_RESPONSE
 ```
+### Creating a game with the factory of a group
+```mermaid
+sequenceDiagram
+    participant A as Administrator
+    participant C as Creator
+    participant S as Server
+
+    A->>S: FACTORY_TEMPLATE_CREATE (factory_type=game_factory)
+    S-->>A: FACTORY_TEMPLATE_CREATE_RESPONSE
+    A->>S: GROUP_CREATE (game_factory_template_id)
+    S-->>A: GROUP_CREATE_RESPONSE
+    C->>S: GROUP_FACTORY_GET
+    S-->>C: GROUP_FACTORY_GET_RESPONSE
+    C->>S: GAME_CREATE (game_factory_values)
+    S-->>C: GAME_CREATE_RESPONSE
+    S-->>C: GAME_CREATION_FACTORY_UPDATED (exclusions)
+```
 ### Evolution of the game
 ```mermaid
 sequenceDiagram
@@ -4637,6 +4952,7 @@ This table groups together all the notifications sent by the server, classified 
 | `GAME_STATE_CHANGED` | Informs clients that the global or custom state of the game has been changed. | Customers connected to the game |
 | `GAME_TURN_CHANGED` | Notifies connected clients that a new round has started and identifies the active player. | Customers connected to the game |
 | `GAME_FACTORY_UPDATED` | Informs the clients preparing a player creation form that the values already taken in the game have changed. | Sessions subscribed to the player factory of the game (see `GAME_FACTORY_GET`) |
+| `GAME_CREATION_FACTORY_UPDATED` | Informs the clients preparing a game creation form that the values already taken in the game factory of a group have changed. | Sessions subscribed to the factory of the group (see `GROUP_FACTORY_GET`) |
 
 ---
 
@@ -4651,7 +4967,7 @@ This table groups together all the error codes defined in the protocol, classifi
 | `ALREADY_IN_GAME` | The player is already taking part in this game or in another game (a **Player** object can only take part in a single game), or its state cannot be reset while it takes part in a game. | `GAME_JOIN_RESPONSE`, `PLAYER_UPDATE_RESPONSE` |
 | `ALREADY_SUBSCRIBED` | The customer is already subscribed to this group. | `GROUP_SUBSCRIBE_RESPONSE` |
 | `CANNOT_DELETE_SELF` | An administrator cannot delete their own account via this request. | `USER_DELETE_RESPONSE` |
-| `FACTORY_TEMPLATE_NOT_FOUND` | The specified factory template does not exist. | `GAME_CREATE_RESPONSE`, `FACTORY_TEMPLATE_GET_RESPONSE`, `FACTORY_TEMPLATE_UPDATE_RESPONSE`, `FACTORY_TEMPLATE_DELETE_RESPONSE` |
+| `FACTORY_TEMPLATE_NOT_FOUND` | The specified factory template does not exist. | `GAME_CREATE_RESPONSE`, `GROUP_CREATE_RESPONSE`, `GROUP_FACTORY_SET_RESPONSE`, `FACTORY_TEMPLATE_GET_RESPONSE`, `FACTORY_TEMPLATE_UPDATE_RESPONSE`, `FACTORY_TEMPLATE_DELETE_RESPONSE` |
 | `GAME_ALREADY_STARTED` | The game has already started (or no longer accepts players). | `GAME_JOIN_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE`, `GAME_CONTROL_RESPONSE` |
 | `GAME_FINISHED` | The game is already over. | `GAME_PLAYER_ORDER_RESPONSE` |
 | `GAME_FULL` | The maximum number of players or observers has been reached. | `GAME_JOIN_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE` |
@@ -4659,27 +4975,30 @@ This table groups together all the error codes defined in the protocol, classifi
 | `GAME_NOT_STARTED` | The part is not in the state required for the action. | `GAME_CONTROL_RESPONSE` |
 | `GAME_NOT_TURN_BASED` | The game is not configured for turn-based play. | `GAME_PLAYER_ORDER_RESPONSE`, `GAME_NEXT_TURN_RESPONSE` |
 | `GAME_PAUSED` | The action is refused because the game is paused. | `GAME_ACTION_RESPONSE` |
-| `GROUP_NOT_FOUND` | The specified group does not exist. | `GAME_LIST_RESPONSE`, `GROUP_ADD_GAME_RESPONSE`, `GROUP_REMOVE_GAME_RESPONSE`, `GROUP_DELETE_RESPONSE`, `GROUP_GAME_LIST_ALL_RESPONSE` |
+| `GROUP_NOT_FOUND` | The specified group does not exist. | `GAME_LIST_RESPONSE`, `GAME_CREATE_RESPONSE`, `GROUP_ADD_GAME_RESPONSE`, `GROUP_REMOVE_GAME_RESPONSE`, `GROUP_DELETE_RESPONSE`, `GROUP_GAME_LIST_ALL_RESPONSE`, `GROUP_FACTORY_GET_RESPONSE`, `GROUP_FACTORY_SET_RESPONSE` |
+| `GROUP_HAS_GAMES` | The group already contains games; its game factory can therefore not be created or replaced. | `GROUP_FACTORY_SET_RESPONSE` |
 | `GAME_NOT_FOUND_IN_GROUP` | The specified part is not present in this group. | `GROUP_REMOVE_GAME_RESPONSE` |
 | `INSUFFICIENT_PERMISSIONS` | Insufficient rights to perform the action. | `GROUP_GAME_LIST_ALL_RESPONSE`, `PLAYER_LIST_ALL_RESPONSE`, `SERVER_CONFIG_GET_RESPONSE`, `SERVER_CONFIG_SET_RESPONSE`, `SERVER_AUDIT_LOG_GET_RESPONSE`, `GAME_KICK_RESPONSE`, `GAME_PARTICIPANTS_LIST_RESPONSE`, *several other responses* |
 | `PERSISTENCE_ERROR` | An error occurred during a persistence operation. | `SERVER_PERSISTENCE_SAVE_RESPONSE`, `SERVER_PERSISTENCE_RELOAD_RESPONSE` |
 | `INVALID_ACTION` | The requested action is not recognized or refused by logic. | `GAME_CONTROL_RESPONSE`, `GAME_PLAYER_ORDER_RESPONSE`, `GAME_ACTION_RESPONSE` |
 | `INVALID_CREDENTIALS` | Incorrect username or password. | `AUTH_RESPONSE` |
-| `INVALID_DATA` | Invalid or malformed data provided. | `USER_CREATE_RESPONSE`, `USER_UPDATE_RESPONSE`, `GAME_CREATE_RESPONSE`, `GROUP_CREATE_RESPONSE`, `SERVER_CONFIG_SET_RESPONSE`, `SERVER_AUDIT_LOG_GET_RESPONSE`, `PLAYER_CREATE_RESPONSE`, `FACTORY_TEMPLATE_CREATE_RESPONSE`, `FACTORY_TEMPLATE_UPDATE_RESPONSE` |
+| `INVALID_DATA` | Invalid or malformed data provided. | `USER_CREATE_RESPONSE`, `USER_UPDATE_RESPONSE`, `GAME_CREATE_RESPONSE`, `GROUP_CREATE_RESPONSE`, `GROUP_FACTORY_SET_RESPONSE`, `SERVER_CONFIG_SET_RESPONSE`, `SERVER_AUDIT_LOG_GET_RESPONSE`, `PLAYER_CREATE_RESPONSE`, `FACTORY_TEMPLATE_CREATE_RESPONSE`, `FACTORY_TEMPLATE_UPDATE_RESPONSE` |
+| `INVALID_GROUP_PASSWORD` | The group password is missing or incorrect. | `GAME_CREATE_RESPONSE`, `GAME_FACTORY_GET_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE`, `GROUP_ADD_GAME_RESPONSE`, `GROUP_FACTORY_GET_RESPONSE`, `GROUP_FACTORY_SET_RESPONSE`, `GROUP_SUBSCRIBE_RESPONSE` |
 | `INVALID_NAME` | The name provided is invalid or already in use. | `PLAYER_CREATE_RESPONSE`, `PLAYER_UPDATE_RESPONSE` |
-| `INVALID_OPTION` | An option of the definition of a factory template is invalid. | `FACTORY_TEMPLATE_CREATE_RESPONSE`, `FACTORY_TEMPLATE_UPDATE_RESPONSE` |
-| `INVALID_OPTION_VALUE` | An option value is unknown, of an incompatible type or invalid for the player factory of the game. | `GAME_JOIN_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE` |
+| `INVALID_OPTION` | An option of the definition of a factory template (player or game) is invalid. | `FACTORY_TEMPLATE_CREATE_RESPONSE`, `FACTORY_TEMPLATE_UPDATE_RESPONSE` |
+| `INVALID_OPTION_VALUE` | An option value is unknown, of an incompatible type or invalid for the player factory of the game or the game factory of the group. | `GAME_JOIN_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE`, `GAME_CREATE_RESPONSE` |
 | `INVALID_PASSWORD` | The password (server or game) is incorrect. | `AUTH_RESPONSE`, `GAME_JOIN_RESPONSE`, `GAME_FACTORY_GET_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE` |
 | `INVALID_RANK` | The specified rank is out of range. | `GAME_PLAYER_ORDER_RESPONSE` |
-| `LACKING_OPTION` | The player does not carry a value for an option of the player factory of the game, or an option has no possible value left. | `GAME_JOIN_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE` |
+| `LACKING_OPTION` | The player or the game does not carry a value for an option of the factory, or an option has no possible value left. | `GAME_JOIN_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE`, `GAME_CREATE_RESPONSE` |
 | `LIMIT_REACHED` | The maximum number of games on the server has been reached. | `GAME_CREATE_RESPONSE` |
+| `NO_GAME_FACTORY` | The group is not equipped with a game factory. | `GAME_CREATE_RESPONSE`, `GROUP_FACTORY_GET_RESPONSE` |
 | `NO_PLAYER_FACTORY` | The game does not have a player factory. | `GAME_FACTORY_GET_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE` |
 | `NOT_ENOUGH_PLAYERS` | The game does not have the minimum number of players required to start. | `GAME_CONTROL_RESPONSE` |
 | `NOT_IN_GAME` | The player is not present in this part. | `GAME_LEAVE_RESPONSE`, `GAME_KICK_RESPONSE` |
 | `NOT_SUBSCRIBED` | The customer is not subscribed to this group. | `GROUP_UNSUBSCRIBE_RESPONSE` |
 | `NOT_YOUR_TURN` | It is not this player's turn. | `GAME_ACTION_RESPONSE`, `GAME_NEXT_TURN_RESPONSE` |
 | `OPTION_ALREADY_EXISTS` | The name of an option is identical to the frozen key of a previous option of the template. | `FACTORY_TEMPLATE_CREATE_RESPONSE`, `FACTORY_TEMPLATE_UPDATE_RESPONSE` |
-| `OPTION_VALUE_ALREADY_GIVEN` | A value chosen for a unique option is already carried by another player of the game. | `GAME_JOIN_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE` |
+| `OPTION_VALUE_ALREADY_GIVEN` | A value chosen for a unique option is already carried by another player of the game or another game of the group. | `GAME_JOIN_RESPONSE`, `GAME_FACTORY_JOIN_RESPONSE`, `GAME_CREATE_RESPONSE` |
 | `PLAYER_NOT_FOUND` | The specified player does not exist or is not found. | `PLAYER_UPDATE_RESPONSE`, `GAME_JOIN_RESPONSE`, `GAME_LEAVE_RESPONSE`, `GAME_CONTROL_RESPONSE`, `GAME_PLAYER_ORDER_RESPONSE`, `GAME_ACTION_RESPONSE`, `GAME_KICK_RESPONSE` |
 | `REGISTRATION_DISABLED` | Account creation is disabled for this access level. | `USER_CREATE_RESPONSE` |
 | `UNKNOWN_TYPE` | The message type is not recognized by the server, for example a message introduced by a protocol revision that the server does not support. | `ERROR` |

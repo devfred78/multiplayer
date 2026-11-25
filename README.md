@@ -7,7 +7,8 @@ A Python library for managing multiplayer game sessions, users, and groups.
 - **Player Management**: Create players with static and dynamic attributes.
 - **User Accounts**: Authentication and role-based permissions (Player, Group Admin, Server Admin).
 - **Game Sessions**: Support for turn-based and simultaneous games, private games with passwords, and observers.
-- **Game Groups**: Organize multiple games into manageable groups.
+- **Game Groups**: Organize multiple games into manageable groups, optionally with a game factory that creates games and enforces unique option values.
+- **Factories**: Define reusable player and game factory templates, with options, exclusions and proposed values exposed to clients.
 - **Persistence**: Save and restore your game state using JSON or SQLite formats.
 - **Networking**: Client-Server architecture using TCP with optional TLS 1.3 encryption, automatic server discovery, and real-time notifications.
 - **Name Suggestions**: Built-in utility to suggest random names for players and games from various categories.
@@ -65,6 +66,61 @@ from multiplayer.game import GameGroup
 group = GameGroup(name="Summer Tournament")
 group.add_game(game)   # or group.add_game(game.ID)
 print(group.games)     # tuple of game IDs
+```
+
+### Using Game Factories
+
+A `GameFactoryTemplate` defines how the games of a group are created. The group factory copies its options and computes the values already taken by the games of the group.
+
+```python
+from multiplayer import OptionType
+from multiplayer.game import GameFactoryTemplate, GameGroup, Option
+
+template = GameFactoryTemplate("Tournament")
+template.add_option(
+    Option("Game name", OptionType.TEXT, default="Game_%%RANDOM_NUMBER%%"),
+    "name",
+    unicity=True,
+)
+template.add_option(
+    Option("Max players", OptionType.RANGE, min_value=2, max_value=4, default=4),
+    "max_players",
+)
+
+group = GameGroup("Summer Tournament", password="secret")
+group.create_game_factory(template)
+
+factory = group.game_factory
+name_option_id = factory.options[0][0]
+info = factory.get_option(name_option_id)  # entry, exclusions, proposed_value
+print(info["exclusions"], info["proposed_value"])
+
+game = group.create_and_add_game({name_option_id: "Final_1"}, password="secret")
+print(game.name, group.games)  # unique names are enforced when games join the group
+```
+
+Over a network, the server can announce the `game_factory` feature. An administrator creates a game factory template, applies it to a group (`GROUP_FACTORY_SET` is also available), then clients build their creation form from `get_group_game_factory` and call `create_game(..., game_factory_values=...)`. They can subscribe to `GAME_CREATION_FACTORY_UPDATED` to refresh their form when other games take a value.
+
+```python
+# Administrator (client is a connected GameClient logged in as admin)
+options = [
+    {"type": "TEXT", "name": "Game name", "default": "Game_%%RANDOM_NUMBER%%",
+     "unicity": True, "target": "ATTRIBUTE", "attribute": "name"},
+    {"type": "RANGE", "name": "Max players", "min": 2, "max": 4, "default": 4,
+     "target": "ATTRIBUTE", "attribute": "max_players"},
+]
+template_id = client.create_game_factory_template("Tournament", options)["template_id"]
+group_id = client.send_request(
+    "GROUP_CREATE", name="Summer Tournament", game_factory_template_id=template_id
+)["group_id"]
+
+# Player preparing a game
+client.on_notification("GAME_CREATION_FACTORY_UPDATED", lambda n: print(n["payload"]))
+form = client.get_group_game_factory(group_id)
+option_id = form["options"][0]["option_id"]
+game_id = client.create_game(
+    "Tournament", group_id=group_id, game_factory_values={option_id: "Final_1"}
+)
 ```
 
 ### Persistence
@@ -136,6 +192,8 @@ Press `CTRL+C` to stop it cleanly.
 
 For more detailed information, please refer to:
 - [REFERENCE.md](REFERENCE.md): Full API reference.
+- [INSTRUCTION.md](INSTRUCTION.md): Detailed design of the library classes.
+- [PROTOCOLE.md](PROTOCOLE.md): Client-server protocol, including the `game_factory` feature.
 - [INSTALL_DOCKER_CONTAINER_SYNOLOGY_DSM71.md](INSTALL_DOCKER_CONTAINER_SYNOLOGY_DSM71.md): Install the Docker image on Synology DSM 7.1, including data and TLS certificate volume mappings.
 
 ## Development

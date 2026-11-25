@@ -7,7 +7,8 @@ This document provides a comprehensive reference for the `multiplayer` library's
 ### Option
 `multiplayer.game.Option(name, option_type, description, default, min_value, max_value, step, choices)`
 
-A player customization option, whose value is chosen when a player is created by a player factory.
+A customization option whose value is chosen when a player is created by a player factory
+or a game is created by a game factory.
 
 **Parameters:**
 
@@ -16,7 +17,7 @@ A player customization option, whose value is chosen when a player is created by
 | `name` | `str` | The name of the option. | Yes | - |
 | `option_type` | `OptionType` | The type of the option. | Yes | - |
 | `description` | `str` | The description of the option. | No | `""` |
-| `default` | `bool\|int\|float\|str\|None` | The default value, which can contain runtime constants (`%%USERNAME%%`, `%%RANDOM_NUMBER%%`, ...). `None` means "first available value". | No | `None` |
+| `default` | `bool\|int\|float\|str\|None` | The default value, which can contain runtime constants (`%%USERNAME%%`, `%%RANDOM_NUMBER%%`, `%%GROUPNAME%%` for game factories, ...). `None` means "first available value". | No | `None` |
 | `min_value` | `float\|int\|None` | Minimum value (`RANGE` options). | No | `None` |
 | `max_value` | `float\|int\|None` | Maximum value (`RANGE` options). | No | `None` |
 | `step` | `float\|int` | Increment between two possible values (`RANGE` options). | No | `1` |
@@ -39,7 +40,12 @@ A player customization option, whose value is chosen when a player is created by
 ### OptionEntry
 `multiplayer.game.OptionEntry`
 
-Immutable description of an option registered in a template or a factory: `option` (copy keeping the ID), `unicity`, `hide`, `player_attribute` (`"name"` or a `ParameterFamily`) and `key` (frozen key). Provides `to_dict` (option representation plus `unicity`, `target`, `attribute`, `key`, `hide`) and `from_dict`.
+Immutable description of an option registered in a template or a factory: `option` (copy
+keeping the ID), `unicity`, `hide`, `player_attribute` (`"name"` for a player factory,
+a game attribute or `"player_factory_template"` for a game factory, or a `ParameterFamily`),
+`game_attribute` (alias of `player_attribute`) and `key` (frozen key). Provides `to_dict`
+(option representation plus `unicity`, `target`, `attribute`, `key`, `hide`) and
+`from_dict(data, is_game=False)` (set `is_game=True` for a game factory option).
 
 ---
 
@@ -55,6 +61,7 @@ Set of options defining how the players of a game are customized. Independent of
 | Method | Description | Parameters | Raises |
 |--------|-------------|------------|--------|
 | `add_option` | Adds a copy of an option. An option associated with `"name"` replaces the previous one. | `option (Option)`, `player_attribute (str\|ParameterFamily)`, `hide (bool = False)`, `unicity (bool = False)` | `TypeError`, `ValueError`, `OptionAlreadyExistsError` |
+| `get_by_id` (class method) | Returns the template with the given ID, or `None`. Templates are recorded in a global registry of weak references. | `template_id (str)` | - |
 | `get_option` | Returns the `OptionEntry` of an option. | `option_id (str)` | `KeyError` |
 | `del_option` | Removes an option. | `option_id (str)` | `KeyError` |
 | `to_dict` / `from_dict` | Dictionary representation (`template_id`, `name`, `options`). | - / `data (dict)` | `TypeError`, `ValueError`, `OptionAlreadyExistsError` |
@@ -75,6 +82,53 @@ Creates the players of a game from a copy of the options of a template (the opti
 | `get_option` | Returns `{"entry", "exclusions", "proposed_value"}` for an option. | `option_id (str)`, `context (dict[str, str]\|None)` | `KeyError` |
 | `create_player` | Creates a `Player` from the chosen values (absent options take their proposed value). The player is not added to the game. | `values (dict\|None)`, `context (dict[str, str]\|None)` | `InvalidOptionValueError`, `OptionValueAlreadyGivenError`, `LackingOptionError` |
 | `to_dict` / `from_dict` | Dictionary representation (`factory_id`, `options`); `from_dict` is reserved for restoration. | - / `data (dict)`, `game_id (str)` | `TypeError`, `ValueError`, `OptionAlreadyExistsError` |
+
+---
+
+### GameFactoryTemplate
+`multiplayer.game.GameFactoryTemplate(name)`
+
+Set of options defining how the games of a group are created. Independent of any group;
+used by `GameGroup.create_game_factory`. An option can target a direct `Game` attribute
+(`name`, `max_players`, `max_observers`, `min_players`, `turn_based`, `password`,
+`observer_password`) or the `"player_factory_template"` reference, which builds the
+player factory of the created game from a `PlayerFactoryTemplate` ID. It can also target a
+`ParameterFamily` (`static_state` or `dynamic_state`, under the option's frozen key).
+
+**Attributes & Properties:** `ID` (read-only), `name` (settable), `options` (new list of
+`(ID, name)` tuples).
+
+**Methods:**
+
+| Method | Description | Parameters | Raises |
+|--------|-------------|------------|--------|
+| `add_option` | Adds a copy of an option. A new option targeting the same direct game attribute replaces the previous one. | `option (Option)`, `game_attribute (str\|ParameterFamily)`, `hide (bool = False)`, `unicity (bool = False)` | `TypeError`, `ValueError`, `OptionAlreadyExistsError` |
+| `get_by_id` (class method) | Returns the template with the given ID, or `None`. | `template_id (str)` | - |
+| `get_option` | Returns the `OptionEntry` of an option. | `option_id (str)` | `KeyError` |
+| `del_option` | Removes an option. | `option_id (str)` | `KeyError` |
+| `to_dict` / `from_dict` | Dictionary representation (`template_id`, `name`, `options`). | - / `data (dict)` | `TypeError`, `ValueError`, `OptionAlreadyExistsError` |
+
+---
+
+### GameFactory
+`multiplayer.game.GameFactory(template, group_id)`
+
+Creates the games of a group from a copy of the options of a `GameFactoryTemplate` (the
+options receive new IDs). Created by `GameGroup.create_game_factory`. The excluded values of
+unique options are computed from the games present in the group; a value becomes available
+again when the game carrying it is removed. The `%%GROUPNAME%%` runtime constant is
+evaluated from the name of the group; `%%GAMENAME%%` evaluates to an empty string. The
+factory keeps no value being entered: each creation is independent.
+
+**Attributes & Properties:** `ID`, `group_id`, `options` (new list of `(ID, name)` tuples).
+
+**Methods:**
+
+| Method | Description | Parameters | Raises |
+|--------|-------------|------------|--------|
+| `get_option` | Returns `{"entry", "exclusions", "proposed_value"}` for an option. | `option_id (str)`, `context (dict[str, str]\|None)` | `KeyError`, `GroupNotFoundError` |
+| `create_game` | Creates a `Game` from the chosen values (absent options take their proposed value). The game is not added to the group. | `values (dict\|None)`, `context (dict[str, str]\|None)` | `InvalidOptionValueError`, `OptionValueAlreadyGivenError`, `LackingOptionError`, `GroupNotFoundError`, `PlayerFactoryTemplateNotFoundError` |
+| `to_dict` / `from_dict` | Dictionary representation (`factory_id`, `options`); `from_dict` is reserved for restoration. | - / `data (dict)`, `group_id (str)` | `TypeError`, `ValueError`, `OptionAlreadyExistsError` |
 
 ---
 
@@ -169,6 +223,7 @@ Manages a single game session, players, and state transitions.
 | `turn_based` | `bool` | Turn-based flag. | No | - |
 | `min_players` | `int` | Effective min players required to start the game. | No | Initialized from the `min_players` parameter, capped at `max_players` when greater. |
 | `player_factory` | `PlayerFactory \| None` | The player factory of the game, or `None`. | No | Set by `create_player_factory`. |
+| `player_factory_template_id` | `str \| None` | ID of the template used to build the player factory. | No | Set by `create_player_factory`. |
 | `players` | `tuple[str]` | Read-only tuple of the IDs of the players, in turn order. | No | Backed by internal list `_players` (of player IDs). |
 | `observers` | `tuple[str]` | Read-only tuple of the IDs of the observers. | No | Backed by internal list `_observers` (of player IDs). |
 | `current_player` | `str \| None` | The ID of the player whose turn it is. | No | Only relevant for turn-based games. |
@@ -201,13 +256,15 @@ Manages a single game session, players, and state transitions.
 ### GameGroup
 `multiplayer.game.GameGroup`
 
-Organizes multiple games into a group for parallel management.
+Organizes multiple games into a group for parallel management. The group may be equipped
+with a `GameFactory`, which helps create its games and checks their values when they join.
 
 **Parameters:**
 
 | Name | Type | Description | Required | Default |
 |------|------|-------------|----------|---------|
 | `name` | `str` | The name of the group. | Yes | - |
+| `password` | `str \| None` | Optional password required to access the group. | No | `None` |
 | `**kwargs` | variable | Optional custom parameters. | No | - |
 
 **Attributes & Properties:**
@@ -217,12 +274,17 @@ Organizes multiple games into a group for parallel management.
 | `ID` | `str` | Unique identifier. | No | Automatically generated using `uuid.uuid4()`. |
 | `name` | `str` | The name of the group. | Yes | - |
 | `games` | `tuple[str]` | Read-only tuple of the IDs of the games in the group. | No | Backed by internal list `_games` (of game IDs). |
+| `game_factory` | `GameFactory \| None` | The game factory of the group, or `None`. | No | Set by `create_game_factory`. |
 | `parameters` | `dict` | Custom group parameters. | Yes | Initialized from `kwargs`. |
 
 **Methods:**
 
-- `add_game(game: Game | str)`: Adds the ID of a game to the end of the group. The game can be given by its ID, as long as the `Game` object still exists. Raises `GameNotFoundError` if no existing game matches.
-- `remove_game(game: Game | str)`: Removes the ID of a game from the group. Raises `GameNotFoundInGroupError` if not present.
+- `get_by_id(group_id: str)` (class method): Returns the group with the given ID, or `None`. Groups are recorded in a global registry of weak references.
+- `create_game_factory(template: GameFactoryTemplate | None)`: Creates, replaces or removes (`None`) the game factory. Creating or replacing it is only allowed while the group has no game; removal is always allowed. Raises `TypeError` or `GroupHasGamesError`.
+- `add_game(game: Game | str, password: str | None = None)`: Adds a game, checking the constraints of the factory if any. Raises `GameNotFoundError`, `PasswordError`, `LackingOptionError`, `InvalidOptionValueError` or `OptionValueAlreadyGivenError`.
+- `create_and_add_game(values: dict | None = None, context: dict[str, str] | None = None, password: str | None = None)`: Creates a game from the factory and adds it atomically; returns the `Game`. Raises `GameFactoryNotDefinedError` and the exceptions of `create_game` / `add_game`.
+- `remove_game(game: Game | str)`: Removes a game from the group. Raises `GameNotFoundInGroupError` if not present. The values carried by that game become available again in the factory.
+- `to_dict` / `from_dict(data)`: Dictionary representation, including the game factory; `from_dict` is reserved for restoration.
 
 ---
 
@@ -265,7 +327,11 @@ Organizes multiple games into a group for parallel management.
 ### Save
 `multiplayer.save.Save(file_path, save_format)`
 
-Handles saving and restoring `Player`, `User`, `Game`, `GameGroup` and `PlayerFactoryTemplate` instances to and from a save file. `Option` and `PlayerFactory` objects are saved within the template or the game that contains them. Objects are kept in an in-memory buffer and written to disk only when `flush()` is called. Save files produced before templates were introduced remain readable.
+Handles saving and restoring `Player`, `User`, `Game`, `GameGroup`, `PlayerFactoryTemplate`
+and `GameFactoryTemplate` instances to and from a save file. `Option`, `PlayerFactory` and
+`GameFactory` objects are saved within the template, game or group that contains them.
+Objects are kept in an in-memory buffer and written to disk only when `flush()` is called.
+Save files produced before templates or game factories were introduced remain readable.
 
 **Parameters:**
 
@@ -287,7 +353,7 @@ Handles saving and restoring `Player`, `User`, `Game`, `GameGroup` and `PlayerFa
 
 | Method | Description | Parameters | Raises |
 |--------|-------------|------------|--------|
-| `save` | Saves or updates an instance in the in-memory buffer (replaces if same class and ID). Before saving a `User`, cleans its `players_id` list of players no longer associated with any unfinished game. | `obj (Player\|User\|Game\|GameGroup\|PlayerFactoryTemplate)` | `SaveError` |
+| `save` | Saves or updates an instance in the in-memory buffer (replaces if same class and ID). Before saving a `User`, cleans its `players_id` list of players no longer associated with any unfinished game. | `obj (Player\|User\|Game\|GameGroup\|PlayerFactoryTemplate\|GameFactoryTemplate)` | `SaveError` |
 | `load` | Returns the list of all stored instances of a given class. | `target (str\|type)` | `SaveError` |
 | `reset` | Clears the buffer and rewrites the file with an empty valid structure. | - | `SaveError` |
 | `flush` | Persists the in-memory buffer to the save file. | - | `SaveError` |
@@ -299,7 +365,13 @@ Handles saving and restoring `Player`, `User`, `Game`, `GameGroup` and `PlayerFa
 ### GameServer
 `multiplayer.server.GameServer(host, port, unencrypted_port, password, name, use_tls, tls_self_signed, tls_domain, tls_cert_path, tls_key_path, discoverable, multicast_group, multicast_port, persistence_mode, persistence_path, persistence_periodicity, garbage_collection_periodicity)`
 
-Manages the server side of the multiplayer protocol (version 2, revision 2.1, features `player_factory`). It handles client connections, authentication, game state distribution, and holds a registry of player factory templates (`FACTORY_TEMPLATE_*` requests, persisted with the other server data).
+Manages the server side of the multiplayer protocol (version 2, revision 2.1, features
+`player_factory` and `game_factory`). It handles client connections, authentication, game
+state distribution, and holds registries of player and game factory templates
+(`FACTORY_TEMPLATE_*` requests with the `factory_type` field, persisted with the other
+server data). Groups can be equipped with a game factory (`GROUP_FACTORY_GET`,
+`GROUP_FACTORY_SET`), and games can be created from it with `GAME_CREATE.game_factory_values`.
+Sessions preparing such a form receive `GAME_CREATION_FACTORY_UPDATED` notifications.
 
 **Parameters:**
 
@@ -378,13 +450,17 @@ Client side for connecting to and communicating with a `GameServer`.
 | `login` | Authenticates a user and retrieves the account info. | `username (str)`, `password (str)` |
 | `create_player` | Creates a new player for the session. Raises `UnsupportedFeatureError` if static attributes are sent to a revision 2.0 server. | `name (str)`, `is_default (bool = True)`, `static_attributes (dict\|None = None)`, `dynamic_attributes (dict\|None = None)` |
 | `update_player` | Renames a player of the session and/or empties its `static_state` and `dynamic_state` (refused while the player takes part in a game). | `player_id (str)`, `name (str\|None = None)`, `reset_state (bool = False)` |
-| `create_game` | Creates a game, optionally with a player factory built from a server template; returns its ID. | `name (str)`, `min_players`, `max_players`, `max_observers`, `turn_based`, `password`, `group_id`, `group_password`, `factory_template_id`, `attributes` |
-| `list_factory_templates` / `get_factory_template` | Lists / details the factory templates of the server. | - / `template_id (str)` |
-| `create_factory_template` / `update_factory_template` / `delete_factory_template` | Manages the factory templates (admin only). | `name`, `options` / `template_id`, `name`, `options` / `template_id` |
+| `create_game` | Creates a game, optionally with a player factory built from a server template and/or values from the game factory of a group; returns its ID. | `name (str)`, `min_players`, `max_players`, `max_observers`, `turn_based`, `password`, `group_id`, `group_password`, `factory_template_id`, `game_factory_values (dict\|None)`, `attributes` |
+| `list_factory_templates` / `get_factory_template` | Lists / details the factory templates of the server. | `factory_type (str\|None = None)` / `template_id (str)`, `factory_type (str\|None = None)` |
+| `create_factory_template` / `update_factory_template` / `delete_factory_template` | Manages the factory templates (admin only); pass `factory_type="game_factory"` for game factory templates. | `name`, `options`, `factory_type` / `template_id`, `name`, `options`, `factory_type` / `template_id`, `factory_type` |
+| `list_game_factory_templates` / `get_game_factory_template` | Lists / details the game factory templates of the server (requires the `game_factory` feature). | - / `template_id (str)` |
+| `create_game_factory_template` / `update_game_factory_template` / `delete_game_factory_template` | Manages the game factory templates (admin only, requires the `game_factory` feature). | `name`, `options` / `template_id`, `name`, `options` / `template_id` |
+| `get_group_game_factory` | Retrieves the options, exclusions and proposed values of a group's game factory; subscribes to `GAME_CREATION_FACTORY_UPDATED`. | `group_id (str)`, `group_password (str\|None)` |
+| `set_group_game_factory` | Defines, replaces or removes (`template_id=None`) the game factory of a group (group admin only). | `group_id (str)`, `template_id (str\|None)`, `group_password (str\|None)` |
 | `get_game_factory` | Retrieves the player factory of a game (exclusions, proposed values) and subscribes to `GAME_FACTORY_UPDATED`. | `game_id (str)`, `password (str\|None)`, `group_password (str\|None)` |
 | `join_game_with_factory` | Creates a player from the factory of a game and joins it. | `game_id (str)`, `values (dict\|None)`, `password`, `group_password`, `is_default (bool\|None)` |
 | `send_request` | Sends a protocol request and returns its response payload. | `command (str)`, `timeout (float = 10.0)`, `**kwargs` |
-| `on_notification` | Registers a callback to handle server notifications. | `notification_type (str\|None)`, `callback (Callable[[dict], None])` |
+| `on_notification` | Registers a callback to handle server notifications, including `GAME_FACTORY_UPDATED` and `GAME_CREATION_FACTORY_UPDATED`. | `notification_type (str\|None)`, `callback (Callable[[dict], None])` |
 | `save_persistence` | Requests an immediate persistence save from the server (admin only). | - |
 
 ---
@@ -452,10 +528,13 @@ All exceptions inherit from `multiplayer.exceptions.MultiplayerError`.
 | `GameNotFoundInGroupError` | Raised when trying to remove a game not present in the specified group. |
 | `SaveError` | Raised when a save file is incompatible or corrupted, when an unknown save format is requested, or when an unsupported class is saved or loaded. |
 | `GameHasPlayersError` | Raised when a player factory is created or replaced in a game that already has players. |
+| `GameFactoryNotDefinedError` | Raised when the game factory of a group without factory is used (returns the group ID). |
+| `GroupHasGamesError` | Raised when a game factory is created or replaced in a group that already has games (returns the group ID). |
+| `PlayerFactoryTemplateNotFoundError` | Raised when a player factory template ID does not exist, in particular for a `player_factory_template` game factory option. |
 | `PlayerFactoryNotDefinedError` | Raised when the player factory of a game without factory is used. |
 | `UnsupportedFeatureError` | Raised by `GameClient` when a protocol feature not offered by the server is used. |
 | `OptionError` | Base class of the option-related errors below. |
-| `OptionValueAlreadyGivenError` | A unique option value is already carried by another player (`option_id`, `value`). |
-| `LackingOptionError` | No value is available for an option (`option_id`, `reason`: `ABSENT_FROM_PLAYER` or `NO_AVAILABLE_VALUE`). |
+| `OptionValueAlreadyGivenError` | A unique option value is already carried by another player or another game of the group (`option_id`, `value`). |
+| `LackingOptionError` | No value is available for an option (`option_id`, `reason`: `ABSENT_FROM_PLAYER`, `ABSENT_FROM_GAME` or `NO_AVAILABLE_VALUE`). |
 | `InvalidOptionValueError` | Also a `ValueError`: unknown option, incompatible type or invalid value (`option_id`, `value`, `reason`). |
 | `OptionAlreadyExistsError` | An identical or similar option is already present in a template or factory. |

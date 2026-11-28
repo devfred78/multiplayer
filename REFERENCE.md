@@ -23,7 +23,7 @@ or a game is created by a game factory.
 | `step` | `float\|int` | Increment between two possible values (`RANGE` options). | No | `1` |
 | `choices` | `list[str]\|tuple[str, ...]` | Possible choices (`LIST` options). | No | `[]` |
 
-*Note: Raises `TypeError` or `ValueError` if the parameters are inconsistent (see [INSTRUCTION.md](INSTRUCTION.md)).*
+*Note: Raises `TypeError` or `ValueError` if the parameters are inconsistent (see [SPECIFICATIONS.md](SPECIFICATIONS.md)).*
 
 **Attributes & Properties:** `ID`, `option_type`, `choices`, `min_value`, `max_value`, `step` and `default` (raw, constants unevaluated) are read-only; `name` and `description` are settable.
 

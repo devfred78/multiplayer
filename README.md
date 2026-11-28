@@ -192,7 +192,7 @@ Press `CTRL+C` to stop it cleanly.
 
 For more detailed information, please refer to:
 - [REFERENCE.md](REFERENCE.md): Full API reference.
-- [INSTRUCTION.md](INSTRUCTION.md): Detailed design of the library classes.
+- [SPECIFICATIONS.md](SPECIFICATIONS.md): Detailed design of the library classes.
 - [PROTOCOLE.md](PROTOCOLE.md): Client-server protocol, including the `game_factory` feature.
 - [INSTALL_DOCKER_CONTAINER_SYNOLOGY_DSM71.md](INSTALL_DOCKER_CONTAINER_SYNOLOGY_DSM71.md): Install the Docker image on Synology DSM 7.1, including data and TLS certificate volume mappings.
 
